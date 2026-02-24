@@ -1,0 +1,13 @@
+node_modules
+.next
+.git
+.gitignore
+*.test.ts
+*.test.tsx
+.env*
+data/*.db
+README.md
+AGENTS.md
+.github
+test
+coverage

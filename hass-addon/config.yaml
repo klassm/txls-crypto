@@ -1,0 +1,35 @@
+name: "TXLS Crypto"
+description: "Cryptocurrency transaction analysis platform. Import CSV data from Bitpanda/TradeRepublic, calculate taxes, and track holdings."
+version: "1.0.4"
+slug: "txls_crypto"
+url: "https://github.com/klassm/txls-crypto/tree/main/hass-addon"
+init: false
+arch:
+  - aarch64
+  - amd64
+ports:
+  3000/tcp: null
+ingress: true
+ingress_stream: true
+ingress_port: 3000
+ingress_entry: /
+panel_icon: mdi:bitcoin
+panel_admin: false
+homeassistant_api: true
+hassio_api: true
+map:
+  - config:rw
+  - share:rw
+options:
+  jwt_secret: ""
+  db_connection_string: "./data/txls.db"
+  log_level: "info"
+schema:
+  jwt_secret: str
+  db_connection_string: str
+  log_level: list(info|debug|warn|error)
+startup: services
+environment:
+  HOSTNAME: "0.0.0.0"
+  NODE_ENV: "production"
+

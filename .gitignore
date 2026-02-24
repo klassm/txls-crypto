@@ -1,0 +1,17 @@
+node_modules
+dist
+.next
+.env
+.env.local
+.env.production
+.env.development
+*.log
+coverage
+.turbo
+.DS_Store
+data
+*.data
+.history
+.idea
+*.tsbuildinfo
+test-results

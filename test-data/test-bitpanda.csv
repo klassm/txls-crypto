@@ -1,0 +1,7 @@
+Transaction ID,Timestamp,Transaction Type,In/Out,Amount Fiat,Fiat,Amount Asset,Asset,Asset market price,Asset market price currency,Asset class,Product ID,Fee,Fee asset,Fee percent,Spread,Spread Currency,Tax Fiat
+T12345,2026-02-19 20:00:00,buy,outgoing,1000,EUR,0.05,BTC,20000,EUR,Cryptocurrency,BTC,5.00,EUR,0.5,0.5,EUR,0
+T67890,2026-02-19 19:00:00,sell,incoming,500,EUR,0.025,BTC,20000,EUR,Cryptocurrency,BTC,2.50,EUR,0.5,0.5,EUR,0
+F22222,2026-02-19 18:00:00,deposit,incoming,1000,EUR,1000,EUR,1,EUR,Fiat,EUR,,,,
+11111,2026-02-19 17:00:00,reward,incoming,,EUR,0.001,SOL,150,EUR,Cryptocurrency,SOL,,,,
+13333,2026-02-19 16:00:00,transfer,outgoing,100,EUR,0.1,SOL,1000,EUR,Cryptocurrency,SOL,,,,
+13333,2026-02-19 16:00:01,transfer(stake),incoming,,EUR,0.1,SOL,1000,EUR,Cryptocurrency,SOL,,,,
