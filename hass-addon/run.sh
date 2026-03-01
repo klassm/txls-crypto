@@ -30,4 +30,4 @@ mkdir -p /data
 
 cd /app
 
-exec node /app/node_modules/next/dist/bin/next start
+exec node /app/node_modules/next/dist/bin/next start -H 0.0.0.0
