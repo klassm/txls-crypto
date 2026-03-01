@@ -13,7 +13,7 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  build-base:
+  build-and-test:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -42,11 +42,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push base image
+      - name: Build and push
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./docker/Dockerfile
+          file: ./hass-addon/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
@@ -54,44 +54,13 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
           no-cache: true
 
-  test-ha-addon:
-    runs-on: ubuntu-latest
-    needs: build-base
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Extract version from config.yaml
-        id: version
+      - name: Test container
         run: |
-          VERSION=$(grep '^version:' hass-addon/config.yaml | sed 's/version: *"\(.*\)"/\1/')
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build HA addon image (test only)
-        uses: docker/build-push-action@v6
-        with:
-          context: ./hass-addon
-          file: ./hass-addon/Dockerfile
-          platforms: linux/amd64
-          push: false
-          tags: txls-ha-addon:${{ steps.version.outputs.version }}
-
-      - name: Test HA addon container
-        run: |
-          docker run -d --name txls-test -p 3000:3000 -p 8080:8080 txls-ha-addon:${{ steps.version.outputs.version }}
+          docker run -d --name txls-test -p 3000:3000 -p 8080:8080 ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}
           sleep 5
           # Test Next.js directly (nginx blocks non-HA IPs)
           curl -s http://localhost:3000/ | grep -q "TXLS" && echo "Next.js responding" || (echo "Next.js test failed" && exit 1)
-          # Verify nginx is running
+          # Verify nginx is running and blocking non-HA IPs
           curl -s http://localhost:8080/ | grep -q "403 Forbidden" && echo "Nginx correctly blocking non-HA IPs" || (echo "Nginx test failed" && exit 1)
           docker logs txls-test
           docker rm -f txls-test
