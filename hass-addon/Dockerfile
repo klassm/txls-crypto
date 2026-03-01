@@ -1,4 +1,4 @@
-FROM ghcr.io/klassm/txls-crypto:1.0.8
+FROM ghcr.io/klassm/txls-crypto:1.0.10
 
 COPY icon.png /
 COPY run-hass.sh /run-hass.sh
