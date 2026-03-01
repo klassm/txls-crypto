@@ -23,16 +23,7 @@ export NODE_ENV="production"
 
 mkdir -p /data
 
-INGRESS_PATH=""
-if [ -n "$SUPERVISOR_TOKEN" ]; then
-  INGRESS_PATH=$(wget -qO- --header "Authorization: Bearer $SUPERVISOR_TOKEN" \
-    http://supervisor/addons/self/info 2>/dev/null | jq -r '.data.ingress_url' 2>/dev/null)
-  INGRESS_PATH="${INGRESS_PATH%/}"
-fi
-
-if [ -n "$INGRESS_PATH" ] && [ "$INGRESS_PATH" != "null" ]; then
-  echo "Detected ingress path: $INGRESS_PATH"
-  cat > /etc/nginx/nginx.conf << EOF
+cat > /etc/nginx/nginx.conf << 'EOF'
 events {
     worker_connections 1024;
 }
@@ -45,61 +36,34 @@ http {
         listen 8080;
         server_name _;
 
+        allow 172.30.32.2;
+        deny all;
+
         location / {
             proxy_pass http://127.0.0.1:3000;
             proxy_http_version 1.1;
-            proxy_set_header Upgrade \$http_upgrade;
+            proxy_set_header Upgrade $http_upgrade;
             proxy_set_header Connection "upgrade";
-            proxy_set_header Host \$host;
-            proxy_set_header X-Real-IP \$remote_addr;
-            proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto \$scheme;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
 
-            sub_filter 'src="/_next/' 'src="$INGRESS_PATH/_next/';
-            sub_filter 'href="/_next/' 'href="$INGRESS_PATH/_next/';
-            sub_filter 'href="/api/' 'href="$INGRESS_PATH/api/';
-            sub_filter 'action="/api/' 'action="$INGRESS_PATH/api/';
-            sub_filter 'url("/_next/' 'url("$INGRESS_PATH/_next/';
-            sub_filter "url('/_next/" "url('$INGRESS_PATH/_next/";
+            sub_filter 'src="/_next/' 'src="$http_x_ingress_path/_next/';
+            sub_filter 'href="/_next/' 'href="$http_x_ingress_path/_next/';
+            sub_filter 'href="/api/' 'href="$http_x_ingress_path/api/';
+            sub_filter 'action="/api/' 'action="$http_x_ingress_path/api/';
+            sub_filter 'url("/_next/' 'url("$http_x_ingress_path/_next/';
+            sub_filter "url('/_next/" "url('$http_x_ingress_path/_next/";
             sub_filter_once off;
             sub_filter_types text/html text/css application/javascript application/json;
         }
     }
 }
 EOF
-else
-  echo "No ingress path, using simple proxy"
-  cat > /etc/nginx/nginx.conf << EOF
-events {
-    worker_connections 1024;
-}
-
-http {
-    include /etc/nginx/mime.types;
-    default_type application/octet-stream;
-
-    server {
-        listen 8080;
-        server_name _;
-
-        location / {
-            proxy_pass http://127.0.0.1:3000;
-            proxy_http_version 1.1;
-            proxy_set_header Upgrade \$http_upgrade;
-            proxy_set_header Connection "upgrade";
-            proxy_set_header Host \$host;
-            proxy_set_header X-Real-IP \$remote_addr;
-            proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto \$scheme;
-        }
-    }
-}
-EOF
-fi
 
 echo "Starting TXLS..."
 node /app/node_modules/next/dist/bin/next start -H 0.0.0.0 &
-NEXT_PID=$!
 
 sleep 2
 

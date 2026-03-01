@@ -1,9 +1,8 @@
-FROM ghcr.io/klassm/txls-crypto:latest
+FROM txls-base:latest
 
 RUN apk add --no-cache nginx
 
-COPY nginx.conf /etc/nginx/nginx.conf
-COPY run-hass.sh /run-hass.sh
+COPY hass-addon/run-hass.sh /run-hass.sh
 RUN chmod a+x /run-hass.sh
 
 EXPOSE 8080
