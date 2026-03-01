@@ -1,8 +1,23 @@
 #!/bin/sh
 
+cd /app
+
+CONFIG_FILE="/tmp/ingress-configured"
+
+if [ -f "$CONFIG_FILE" ]; then
+  echo "Ingress already configured, skipping"
+  exec /run.sh
+fi
+
 echo "Configuring Home Assistant ingress..."
 
-cd /app
+# Wait for SUPERVISOR_TOKEN to be available (retry up to 30 times)
+RETRIES=0
+while [ -z "$SUPERVISOR_TOKEN" ] && [ $RETRIES -lt 30 ]; do
+  echo "Waiting for SUPERVISOR_TOKEN... ($RETRIES)"
+  sleep 1
+  RETRIES=$((RETRIES + 1))
+done
 
 # Get ingress path from Supervisor API
 if [ -n "$SUPERVISOR_TOKEN" ]; then
@@ -21,4 +36,5 @@ else
     -exec sed -i "s|/__INGRESS_PATH_HOLDER__||g" {} + 2>/dev/null
 fi
 
+touch "$CONFIG_FILE"
 exec /run.sh
