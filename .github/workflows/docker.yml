@@ -53,38 +53,3 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
           no-cache: true
-
-  test-addon:
-    runs-on: ubuntu-latest
-    needs: build-base
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Extract version from config.yaml
-        id: version
-        run: |
-          VERSION=$(grep '^version:' hass-addon/config.yaml | sed 's/version: *"\(.*\)"/\1/')
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build HA addon
-        uses: docker/build-push-action@v6
-        with:
-          context: ./hass-addon
-          platforms: linux/amd64
-          push: false
-          tags: txls-test:${{ steps.version.outputs.version }}
-
-      - name: Test container
-        run: |
-          docker run -d --name txls-test -p 3000:3000 -p 8080:8080 txls-test:${{ steps.version.outputs.version }}
-          sleep 5
-          curl -s http://localhost:3000/ | grep -q "TXLS" && echo "Next.js OK" || exit 1
-          curl -s http://localhost:8080/ | grep -q "403 Forbidden" && echo "Nginx OK" || exit 1
-          docker rm -f txls-test

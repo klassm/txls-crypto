@@ -1,4 +1,4 @@
-FROM ghcr.io/klassm/txls-crypto:1.0.14
+FROM ghcr.io/klassm/txls-crypto:latest
 
 RUN apk add --no-cache nginx
 
