@@ -28,20 +28,28 @@ async function deleteAccount(page: import('@playwright/test').Page) {
 
 test.describe('Application Flow', () => {
   test('complete full user flow', async ({ page }) => {
-    await test.step('Navigate to app and onboard', async () => {
+    await test.step('Navigate to app and onboard or login', async () => {
       await page.goto('/')
       await expect(page.getByText('TXLS')).toBeVisible()
       
       await page.waitForTimeout(1000)
       
-      await page.getByRole('textbox', { name: 'Full Name' }).fill(TEST_USER.name)
-      await page.getByRole('textbox', { name: 'Username' }).fill(TEST_USER.username)
-      await page.getByRole('textbox', { name: 'Email' }).fill(TEST_USER.email)
-      await page.getByRole('textbox', { name: 'Password', exact: true }).fill(TEST_USER.password)
-      await page.getByRole('textbox', { name: 'Confirm Password' }).fill(TEST_USER.password)
-      await page.getByRole('button', { name: 'Create Account' }).click()
+      const isOnboarding = await page.getByRole('textbox', { name: 'Full Name' }).isVisible()
+      
+      if (isOnboarding) {
+        await page.getByRole('textbox', { name: 'Full Name' }).fill(TEST_USER.name)
+        await page.getByRole('textbox', { name: 'Username' }).fill(TEST_USER.username)
+        await page.getByRole('textbox', { name: 'Email' }).fill(TEST_USER.email)
+        await page.getByRole('textbox', { name: 'Password', exact: true }).fill(TEST_USER.password)
+        await page.getByRole('textbox', { name: 'Confirm Password' }).fill(TEST_USER.password)
+        await page.getByRole('button', { name: 'Create Account' }).click()
+      } else {
+        await page.getByRole('textbox', { name: 'Username' }).fill(TEST_USER.username)
+        await page.getByRole('textbox', { name: 'Password' }).fill(TEST_USER.password)
+        await page.getByRole('button', { name: 'Sign In' }).click()
+      }
+      
       await page.waitForURL(/\/$/, { timeout: 10000 })
-
       await expect(page.getByRole('heading', { name: 'Accounts' })).toBeVisible({ timeout: 10000 })
     })
 
