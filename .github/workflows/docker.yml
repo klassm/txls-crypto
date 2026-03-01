@@ -87,7 +87,11 @@ jobs:
 
       - name: Test HA addon container
         run: |
-          docker run -d --name txls-test -p 8080:8080 txls-ha-addon:${{ steps.version.outputs.version }}
+          docker run -d --name txls-test -p 3000:3000 -p 8080:8080 txls-ha-addon:${{ steps.version.outputs.version }}
           sleep 5
-          curl -s --header "X-Ingress-Path: /api/hassio_ingress/test" http://localhost:8080/ | grep -q "TXLS" && echo "HA addon test passed" || (echo "HA addon test failed" && docker logs txls-test && exit 1)
+          # Test Next.js directly (nginx blocks non-HA IPs)
+          curl -s http://localhost:3000/ | grep -q "TXLS" && echo "Next.js responding" || (echo "Next.js test failed" && exit 1)
+          # Verify nginx is running
+          curl -s http://localhost:8080/ | grep -q "403 Forbidden" && echo "Nginx correctly blocking non-HA IPs" || (echo "Nginx test failed" && exit 1)
+          docker logs txls-test
           docker rm -f txls-test
