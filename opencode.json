@@ -5,8 +5,8 @@
       "*": "deny"
     },
     "bash": {
-      "git push*": "deny",
       "git *": "allow",
+      "git push*": "deny",
       "npm *": "allow",
       "grep *": "allow",
       "cat *": "allow",

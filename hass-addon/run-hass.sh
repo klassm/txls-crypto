@@ -48,6 +48,7 @@ http {
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header Accept-Encoding "";
 
             sub_filter 'src="/_next/' 'src="$http_x_ingress_path/_next/';
             sub_filter 'href="/_next/' 'href="$http_x_ingress_path/_next/';
@@ -56,7 +57,7 @@ http {
             sub_filter 'url("/_next/' 'url("$http_x_ingress_path/_next/';
             sub_filter "url('/_next/" "url('$http_x_ingress_path/_next/";
             sub_filter_once off;
-            sub_filter_types text/html text/css application/javascript application/json;
+            sub_filter_types *;
         }
     }
 }
