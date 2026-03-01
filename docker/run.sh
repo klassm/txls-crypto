@@ -23,11 +23,17 @@ export JWT_SECRET
 export DB_CONNECTION_STRING="${DB_CONNECTION_STRING:-./data/txls.db}"
 export LOG_LEVEL="${LOG_LEVEL:-info}"
 export HOSTNAME="0.0.0.0"
-export SUPERVISOR_TOKEN="${SUPERVISOR_TOKEN:-}"
 export NODE_ENV="production"
 
 mkdir -p /data
 
 cd /app
+
+# Replace basePath placeholder with empty string for standalone
+if grep -q "__INGRESS_PATH_HOLDER__" .next/server/app/page.js 2>/dev/null; then
+  find .next -type f \( -name "*.js" -o -name "*.json" -o -name "*.html" \) \
+    -exec sed -i "s|/__INGRESS_PATH_HOLDER__||g" {} + 2>/dev/null
+  echo "Path configuration complete"
+fi
 
 exec node /app/node_modules/next/dist/bin/next start -H 0.0.0.0
