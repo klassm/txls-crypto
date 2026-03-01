@@ -54,6 +54,8 @@ http {
             sub_filter 'href="/_next/' 'href="$http_x_ingress_path/_next/';
             sub_filter 'href="/api/' 'href="$http_x_ingress_path/api/';
             sub_filter 'action="/api/' 'action="$http_x_ingress_path/api/';
+            sub_filter '"/api/' '"$http_x_ingress_path/api/';
+            sub_filter "'/api/" "'$http_x_ingress_path/api/";
             sub_filter 'url("/_next/' 'url("$http_x_ingress_path/_next/';
             sub_filter "url('/_next/" "url('$http_x_ingress_path/_next/";
             sub_filter_once off;
