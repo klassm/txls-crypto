@@ -13,7 +13,7 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  build-and-push:
+  build-base:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -42,7 +42,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push
+      - name: Build and push base image
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -53,3 +53,41 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
           no-cache: true
+
+  test-ha-addon:
+    runs-on: ubuntu-latest
+    needs: build-base
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract version from config.yaml
+        id: version
+        run: |
+          VERSION=$(grep '^version:' hass-addon/config.yaml | sed 's/version: *"\(.*\)"/\1/')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build HA addon image (test only)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./hass-addon
+          file: ./hass-addon/Dockerfile
+          platforms: linux/amd64
+          push: false
+          tags: txls-ha-addon:${{ steps.version.outputs.version }}
+
+      - name: Test HA addon container
+        run: |
+          docker run -d --name txls-test -p 8080:8080 txls-ha-addon:${{ steps.version.outputs.version }}
+          sleep 5
+          curl -s --header "X-Ingress-Path: /api/hassio_ingress/test" http://localhost:8080/ | grep -q "TXLS" && echo "HA addon test passed" || (echo "HA addon test failed" && docker logs txls-test && exit 1)
+          docker rm -f txls-test
