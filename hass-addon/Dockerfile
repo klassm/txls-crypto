@@ -1,9 +1,11 @@
-FROM ghcr.io/klassm/txls-crypto:1.0.10
+FROM ghcr.io/klassm/txls-crypto:latest
 
-COPY icon.png /
+RUN apk add --no-cache nginx
+
+COPY nginx.conf /etc/nginx/nginx.conf
 COPY run-hass.sh /run-hass.sh
 RUN chmod a+x /run-hass.sh
 
-EXPOSE 3000
+EXPOSE 8080
 
 CMD ["/run-hass.sh"]

@@ -6,8 +6,6 @@ COPY package*.json ./
 RUN npm ci
 
 COPY . .
-# Set basePath placeholder - will be replaced at runtime by run.sh
-RUN sed -i 's/const nextConfig: NextConfig = {/const nextConfig: NextConfig = {\n  basePath: "\/__INGRESS_PATH_HOLDER__",/' next.config.ts
 RUN npm run build
 
 FROM node:24-alpine
