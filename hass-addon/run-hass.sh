@@ -15,6 +15,20 @@ if [ -z "$JWT_SECRET" ] || [ "$JWT_SECRET" = "null" ] || [ "$JWT_SECRET" = "" ];
   echo "Generated random JWT_SECRET"
 fi
 
+REPLACEMENT=""
+if [ -n "$SUPERVISOR_TOKEN" ]; then
+  INGRESS_URL=$(curl -s -H "Authorization: Bearer $SUPERVISOR_TOKEN" \
+    http://supervisor/addons/self/info 2>/dev/null | jq -r '.data.ingress_url // empty')
+  if [ -n "$INGRESS_URL" ] && [ "$INGRESS_URL" != "null" ] && [ "$INGRESS_URL" != "" ]; then
+    REPLACEMENT="$INGRESS_URL"
+    echo "Ingress URL: $REPLACEMENT"
+  fi
+fi
+
+echo "Replacing /__INGRESS_PATH__ with '$REPLACEMENT' in .next files..."
+find /app/.next -type f \( -name "*.js" -o -name "*.json" -o -name "*.html" -o -name "*.rsc" -o -name "*.map" \) -exec sed -i "s|/__INGRESS_PATH__|$REPLACEMENT|g" {} \;
+echo "Done replacing paths"
+
 export JWT_SECRET
 export DB_CONNECTION_STRING="${DB_CONNECTION_STRING:-./data/txls.db}"
 export LOG_LEVEL="${LOG_LEVEL:-info}"
@@ -23,48 +37,5 @@ export NODE_ENV="production"
 
 mkdir -p /data
 
-cat > /etc/nginx/nginx.conf << 'EOF'
-events {
-    worker_connections 1024;
-}
-
-http {
-    include /etc/nginx/mime.types;
-    default_type application/octet-stream;
-
-    server {
-        listen 8080;
-        server_name _;
-
-        allow 172.30.32.2;
-        deny all;
-
-        location / {
-            proxy_pass http://127.0.0.1:3000;
-            proxy_http_version 1.1;
-            proxy_set_header Upgrade $http_upgrade;
-            proxy_set_header Connection "upgrade";
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
-            proxy_set_header Accept-Encoding "";
-            proxy_set_header X-Ingress-Path $http_x_ingress_path;
-            proxy_set_header Authorization $http_authorization;
-
-            sub_filter_types *;
-            sub_filter_once off;
-            sub_filter '/_next/' '$http_x_ingress_path/_next/';
-            sub_filter '/api/' '$http_x_ingress_path/api/';
-        }
-    }
-}
-EOF
-
 echo "Starting TXLS..."
-node /app/node_modules/next/dist/bin/next start -H 0.0.0.0 &
-
-sleep 2
-
-echo "Starting nginx..."
-nginx -g "daemon off;"
+exec node /app/node_modules/next/dist/bin/next start -H 0.0.0.0

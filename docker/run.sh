@@ -29,4 +29,8 @@ mkdir -p /data
 
 cd /app
 
+echo "Replacing /__INGRESS_PATH__ with '' in .next files..."
+find /app/.next -type f \( -name "*.js" -o -name "*.json" -o -name "*.html" -o -name "*.rsc" -o -name "*.map" \) -exec sed -i "s|/__INGRESS_PATH__||g" {} \;
+echo "Done replacing paths"
+
 exec node /app/node_modules/next/dist/bin/next start -H 0.0.0.0
