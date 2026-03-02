@@ -50,6 +50,7 @@ http {
             proxy_set_header X-Forwarded-Proto $scheme;
             proxy_set_header Accept-Encoding "";
             proxy_set_header X-Ingress-Path $http_x_ingress_path;
+            proxy_set_header Authorization $http_authorization;
 
             sub_filter 'src="/_next/' 'src="$http_x_ingress_path/_next/';
             sub_filter 'href="/_next/' 'href="$http_x_ingress_path/_next/';

@@ -1,6 +1,6 @@
 name: "TXLS Crypto"
 description: "Cryptocurrency transaction analysis platform. Import CSV data from Bitpanda/TradeRepublic, calculate taxes, and track holdings."
-version: "1.0.17"
+version: "1.0.18"
 slug: "txls_crypto"
 url: "https://github.com/klassm/txls-crypto/tree/main/hass-addon"
 init: false
