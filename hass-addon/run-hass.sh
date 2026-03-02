@@ -25,7 +25,7 @@ if [ -n "$SUPERVISOR_TOKEN" ]; then
     BODY=$(echo "$RESPONSE" | sed '$d')
     echo "Attempt $i: HTTP $HTTP_CODE"
     if [ "$HTTP_CODE" = "200" ] && [ -n "$BODY" ]; then
-      INGRESS_PATH=$(echo "$BODY" | jq -r '.data.ingress_url // empty')
+      INGRESS_PATH=$(echo "$BODY" | jq -r '.data.ingress_url // empty' | sed 's:/$::')
       if [ -n "$INGRESS_PATH" ] && [ "$INGRESS_PATH" != "null" ] && [ "$INGRESS_PATH" != "" ]; then
         echo "Ingress path: $INGRESS_PATH"
         break
@@ -46,6 +46,14 @@ fi
 echo "Replacing /__INGRESS_PATH__ with '$INGRESS_PATH' in .next files..."
 find /app/.next -type f \( -name "*.js" -o -name "*.json" -o -name "*.html" -o -name "*.rsc" -o -name "*.map" \) -exec sed -i "s|/__INGRESS_PATH__|$INGRESS_PATH|g" {} \;
 echo "Done replacing paths"
+
+echo "Verifying replacement..."
+COUNT=$(grep -r "__INGRESS_PATH__" /app/.next 2>/dev/null | wc -l)
+echo "Remaining placeholders: $COUNT"
+if [ "$COUNT" -gt 0 ]; then
+  echo "WARNING: Some placeholders not replaced!"
+  grep -r "__INGRESS_PATH__" /app/.next 2>/dev/null | head -5
+fi
 
 export JWT_SECRET
 export DB_CONNECTION_STRING="${DB_CONNECTION_STRING:-./data/txls.db}"
