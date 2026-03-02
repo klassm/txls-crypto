@@ -49,6 +49,7 @@ http {
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Proto $scheme;
             proxy_set_header Accept-Encoding "";
+            proxy_set_header X-Ingress-Path $http_x_ingress_path;
 
             sub_filter 'src="/_next/' 'src="$http_x_ingress_path/_next/';
             sub_filter 'href="/_next/' 'href="$http_x_ingress_path/_next/';
