@@ -15,18 +15,36 @@ if [ -z "$JWT_SECRET" ] || [ "$JWT_SECRET" = "null" ] || [ "$JWT_SECRET" = "" ];
   echo "Generated random JWT_SECRET"
 fi
 
-REPLACEMENT=""
+INGRESS_PATH=""
 if [ -n "$SUPERVISOR_TOKEN" ]; then
-  INGRESS_URL=$(curl -s -H "Authorization: Bearer $SUPERVISOR_TOKEN" \
-    http://supervisor/addons/self/info 2>/dev/null | jq -r '.data.ingress_url // empty')
-  if [ -n "$INGRESS_URL" ] && [ "$INGRESS_URL" != "null" ] && [ "$INGRESS_URL" != "" ]; then
-    REPLACEMENT="$INGRESS_URL"
-    echo "Ingress URL: $REPLACEMENT"
-  fi
+  echo "Fetching ingress URL from Supervisor API..."
+  for i in 1 2 3 4 5; do
+    RESPONSE=$(curl -s -w "\n%{http_code}" -H "Authorization: Bearer $SUPERVISOR_TOKEN" \
+      http://supervisor/addons/self/info 2>/dev/null)
+    HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+    BODY=$(echo "$RESPONSE" | sed '$d')
+    echo "Attempt $i: HTTP $HTTP_CODE"
+    if [ "$HTTP_CODE" = "200" ] && [ -n "$BODY" ]; then
+      INGRESS_PATH=$(echo "$BODY" | jq -r '.data.ingress_url // empty')
+      if [ -n "$INGRESS_PATH" ] && [ "$INGRESS_PATH" != "null" ] && [ "$INGRESS_PATH" != "" ]; then
+        echo "Ingress path: $INGRESS_PATH"
+        break
+      fi
+    fi
+    echo "Response: $BODY" | head -c 200
+    sleep 2
+  done
+else
+  echo "No SUPERVISOR_TOKEN found"
 fi
 
-echo "Replacing /__INGRESS_PATH__ with '$REPLACEMENT' in .next files..."
-find /app/.next -type f \( -name "*.js" -o -name "*.json" -o -name "*.html" -o -name "*.rsc" -o -name "*.map" \) -exec sed -i "s|/__INGRESS_PATH__|$REPLACEMENT|g" {} \;
+if [ -z "$INGRESS_PATH" ] || [ "$INGRESS_PATH" = "null" ]; then
+  echo "WARNING: No ingress path available, using empty path"
+  INGRESS_PATH=""
+fi
+
+echo "Replacing /__INGRESS_PATH__ with '$INGRESS_PATH' in .next files..."
+find /app/.next -type f \( -name "*.js" -o -name "*.json" -o -name "*.html" -o -name "*.rsc" -o -name "*.map" \) -exec sed -i "s|/__INGRESS_PATH__|$INGRESS_PATH|g" {} \;
 echo "Done replacing paths"
 
 export JWT_SECRET
@@ -34,8 +52,9 @@ export DB_CONNECTION_STRING="${DB_CONNECTION_STRING:-./data/txls.db}"
 export LOG_LEVEL="${LOG_LEVEL:-info}"
 export HOSTNAME="0.0.0.0"
 export NODE_ENV="production"
+export NEXT_BASE_PATH="$INGRESS_PATH"
 
 mkdir -p /data
 
-echo "Starting TXLS..."
+echo "Starting TXLS with basePath: $NEXT_BASE_PATH"
 exec node /app/node_modules/next/dist/bin/next start -H 0.0.0.0
