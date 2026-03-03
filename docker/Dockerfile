@@ -1,28 +1,63 @@
-FROM node:24-alpine AS builder
-
+# Build stage for shared
+FROM node:24-alpine AS shared-builder
 WORKDIR /app
-
+RUN apk add --no-cache python3 make g++
 COPY package*.json ./
-RUN npm ci
+COPY shared/package.json ./shared/
+RUN npm ci -w shared
+COPY shared ./shared
+RUN npm run build -w shared
 
-COPY . .
-RUN npm run build
+# Build stage for server
+FROM node:24-alpine AS server-builder
+WORKDIR /app
+RUN apk add --no-cache python3 make g++
+COPY package*.json ./
+COPY shared/package.json ./shared/
+COPY server/package.json ./server/
+RUN npm ci -w shared -w server && npm rebuild better-sqlite3
+COPY shared ./shared
+COPY server ./server
+RUN npm run build -w shared && npm run build -w server
 
+# Build stage for client
+FROM node:24-alpine AS client-builder
+WORKDIR /app
+COPY package*.json ./
+COPY shared/package.json ./shared/
+COPY client/package.json ./client/
+RUN npm ci -w shared -w client
+COPY shared ./shared
+COPY client ./client
+RUN npm run build -w shared && npm run build -w client
+
+# Runtime stage
 FROM node:24-alpine
 
 WORKDIR /app
 
 ENV NODE_ENV=production
 
-RUN apk add --no-cache sqlite jq openssl
+RUN apk add --no-cache nginx curl sqlite jq openssl python3 make g++
 
 COPY package*.json ./
-RUN npm ci --omit=dev
+COPY shared/package.json ./shared/
+COPY server/package.json ./server/
+RUN npm ci --omit=dev -w shared -w server && npm rebuild better-sqlite3
 
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/dist ./dist
+# Copy built shared (includes migrations in dist/migrations)
+COPY --from=shared-builder /app/shared/dist ./shared/dist
 
+# Copy built server
+COPY --from=server-builder /app/server/dist ./server/dist
+
+# Copy built client
+COPY --from=client-builder /app/client/dist ./client/dist
+
+# Copy public assets for provider logos
+COPY public ./public
+
+COPY docker/nginx.conf /etc/nginx/nginx.conf
 COPY docker/run.sh /run.sh
 RUN chmod a+x /run.sh
 

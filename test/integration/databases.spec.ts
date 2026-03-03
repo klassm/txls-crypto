@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { getDataSource, resetDataSource } from "@/lib/database";
+import { getDataSource, resetDataSource } from "@txls/shared";
 import { rmSync } from "fs";
 import path from "path";
 

@@ -1,0 +1,104 @@
+import { Router, Request, Response } from "express";
+import { getDataSource, UsersService, AUTH_COOKIE_NAME, generateToken, getSessionMaxAge, verifyToken, toISOString, onboardingUserSchema, config, getUserIdFromCookieExpress, logger } from "@txls/shared";
+
+const router = Router();
+
+router.get("/", async (req: Request, res: Response) => {
+  const ingressPath = req.headers["x-ingress-path"] as string | undefined;
+  const authorization = req.headers.authorization;
+  const hassIngress = !!ingressPath && !!config.homeAssistant.supervisorToken;
+
+  logger.info({
+    msg: "GET /api/config",
+    ingressPath,
+    hassIngress,
+    hasAuthorization: !!authorization,
+    hasSupervisorToken: !!config.homeAssistant.supervisorToken,
+  });
+
+  try {
+    const dataSource = await getDataSource();
+    const usersService = new UsersService(undefined, dataSource);
+    const existingUsersCount = await usersService.count();
+
+    let user = null;
+    const userId = getUserIdFromCookieExpress(req);
+
+    logger.info({ msg: "User ID", userId });
+
+    if (userId) {
+      user = await usersService.findById(userId);
+      if (user) {
+        user = {
+          ...user,
+          createdAt: toISOString(user.createdAt) ?? "",
+          updatedAt: toISOString(user.updatedAt) ?? "",
+        };
+      }
+    }
+
+    logger.info({ 
+      msg: "Returning user", 
+      user: user ? { id: user.id, username: user.username } : null 
+    });
+
+    return res.json({
+      canOnboard: existingUsersCount === 0,
+      user,
+      hassIngress,
+    });
+  } catch (error) {
+    logger.error({ msg: "Error in /api/config", error });
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/onboard", async (req: Request, res: Response) => {
+  const dataSource = await getDataSource();
+  const usersService = new UsersService(undefined, dataSource);
+
+  const existingUsersCount = await usersService.count();
+
+  if (existingUsersCount > 0) {
+    if (req.cookies?.[AUTH_COOKIE_NAME]) {
+      return res.status(403).json({ error: "Onboarding is only available when no users exist in the DB" });
+    }
+
+    return res.status(400).json({ error: "Users already exist. Onboarding is not available." });
+  }
+
+  const validationResult = onboardingUserSchema.safeParse(req.body);
+  if (!validationResult.success) {
+    return res.status(400).json({ error: validationResult.error.errors[0].message });
+  }
+
+  const user = await usersService.createOnboardingUser(validationResult.data);
+
+  const token = generateToken({
+    userId: user.id,
+    username: user.username,
+    email: user.email,
+    isAdmin: user.isAdmin,
+  });
+
+  const serializedUser = {
+    ...user,
+    createdAt: toISOString(user.createdAt) ?? "",
+    updatedAt: toISOString(user.updatedAt) ?? "",
+  };
+
+  res.cookie(AUTH_COOKIE_NAME, token, {
+    httpOnly: true,
+    secure: config.nodeEnv === "production",
+    sameSite: "strict",
+    maxAge: getSessionMaxAge() / 1000,
+    path: "/",
+  });
+
+  return res.status(201).json({
+    canOnboard: false,
+    user: serializedUser,
+  });
+});
+
+export default router;

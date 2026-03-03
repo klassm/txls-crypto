@@ -2,10 +2,7 @@ import "reflect-metadata";
 import { join } from "node:path";
 import { DataSource } from "typeorm";
 import { describe, it, expect, afterAll, beforeEach } from "vitest";
-import { TransactionEntity } from "@/server/modules/transactions/transaction.entity.js";
-import { AccountEntity } from "@/server/modules/accounts/account.entity.js";
-import { TransactionType } from "@/lib/types";
-import { TransactionsRepository } from "@/server/modules/transactions/transactions.repository.js";
+import { TransactionEntity, AccountEntity, TransactionType, TransactionsRepository } from "@txls/shared";
 import { DateTime } from "luxon";
 
 const __dirname = import.meta.dirname;

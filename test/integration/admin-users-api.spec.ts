@@ -3,8 +3,7 @@ import { createServer } from "http";
 import { parse } from "url";
 import request from "supertest";
 import { DataSource } from "typeorm";
-import { UserEntity } from "@/server/modules/users/user.entity";
-import { generateToken, verifyToken, AUTH_COOKIE_NAME } from "@/lib/utils/password";
+import { UserEntity, generateToken, verifyToken, AUTH_COOKIE_NAME } from "@txls/shared";
 import { DateTime } from "luxon";
 
 let dataSource: DataSource;
