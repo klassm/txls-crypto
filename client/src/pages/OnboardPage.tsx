@@ -13,6 +13,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useSnackbar } from "../contexts/SnackbarContext";
+import { assetUrl } from "../lib/api-base";
 
 export default function OnboardingPage() {
   const navigate = useNavigate();
@@ -77,7 +78,7 @@ export default function OnboardingPage() {
           <Box sx={{ textAlign: "center", mb: 4 }}>
             <Box
               component="img"
-              src="/assets/logo.png"
+              src={assetUrl("/assets/logo.png")}
               alt="TXLS"
               sx={{
                 width: 80,

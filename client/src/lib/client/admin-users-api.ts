@@ -1,4 +1,5 @@
 import type { User } from "@txls/shared/client";
+import { apiUrl } from "../api-base";
 
 interface CreateAdminUserDto {
   name: string;
@@ -19,7 +20,7 @@ interface ResetPasswordDto {
 }
 
 async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(url, {
+  const response = await fetch(apiUrl(url), {
     headers: {
       'Content-Type': 'application/json',
       ...options?.headers,

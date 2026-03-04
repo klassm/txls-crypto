@@ -7,7 +7,7 @@ on:
     branches: [main, develop]
 
 jobs:
-  test:
+  test-local:
     runs-on: ubuntu-latest
 
     steps:
@@ -38,29 +38,91 @@ jobs:
       - name: Compile migrations
         run: npx tsc --project tsconfig.migrations.json
 
-      - name: Run E2E tests
-        run: npm run test:gui
+      - name: Run E2E tests (local dev)
+        run: npm run test:gui:local
 
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
-          path: playwright-report/
+          name: playwright-report-local
+          path: gui-tests/playwright-report/
           retention-days: 30
 
-      - name: Upload screenshots on failure
-        if: failure()
+  test-docker:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Cache node modules
+        id: cache-npm
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.npm
+            node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install dependencies
+        if: steps.cache-npm.outputs.cache-hit != 'true'
+        run: npm ci
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E tests (Docker)
+        run: npm run test:gui:docker
+
+      - name: Upload test results
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: screenshots
-          path: test-e2e/test-results
+          name: playwright-report-docker
+          path: gui-tests/playwright-report/
           retention-days: 30
 
-      - name: Upload videos on failure
-        if: failure()
+  test-hass:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Cache node modules
+        id: cache-npm
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.npm
+            node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install dependencies
+        if: steps.cache-npm.outputs.cache-hit != 'true'
+        run: npm ci
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E tests (Home Assistant ingress)
+        run: npm run test:gui:hass
+
+      - name: Upload test results
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: videos
-          path: test-e2e/test-results
+          name: playwright-report-hass
+          path: gui-tests/playwright-report/
           retention-days: 30

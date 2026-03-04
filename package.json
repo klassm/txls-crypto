@@ -19,7 +19,10 @@
     "test": "turbo run test",
     "test:unit": "turbo run test:unit",
     "test:integration": "vitest run --no-file-parallelism",
-    "test:gui": "turbo run test --filter=@txls/gui-tests"
+    "test:gui": "turbo run test --filter=@txls/gui-tests",
+    "test:gui:local": "npm run test:local -w @txls/gui-tests",
+    "test:gui:docker": "npm run test:docker -w @txls/gui-tests",
+    "test:gui:hass": "npm run test:hass -w @txls/gui-tests"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",

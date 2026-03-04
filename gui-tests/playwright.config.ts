@@ -24,7 +24,7 @@ export default defineConfig({
     {
       command: 'cd ../server && npm run dev',
       url: 'http://localhost:3001/api/config',
-      reuseExistingServer: false,
+      reuseExistingServer: !process.env.CI,
       timeout: 120000,
       env: {
         JWT_SECRET: process.env.JWT_SECRET || 'test-secret-key-for-jwt-signing-in-tests-sufficiently-long',
@@ -34,7 +34,7 @@ export default defineConfig({
     {
       command: 'cd ../client && npm run dev',
       url: 'http://localhost:3000',
-      reuseExistingServer: false,
+      reuseExistingServer: !process.env.CI,
       timeout: 120000,
     },
   ],

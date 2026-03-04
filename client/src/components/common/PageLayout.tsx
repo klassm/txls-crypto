@@ -1,5 +1,6 @@
 import { AppBar, Container, ContainerProps, Toolbar, Typography, Box } from '@mui/material'
 import UserMenu from '../UserMenu'
+import { assetUrl } from '../../lib/api-base'
 
 interface PageLayoutProps extends ContainerProps {
   children: React.ReactNode
@@ -12,7 +13,7 @@ export function PageLayout({ children, maxWidth = 'xl', sx, ...props }: PageLayo
         <Toolbar>
           <Box
             component="img"
-            src="/assets/logo.png"
+            src={assetUrl("/assets/logo.png")}
             alt="TXLS Logo"
             sx={{ height: 40, mr: 2 }}
           />

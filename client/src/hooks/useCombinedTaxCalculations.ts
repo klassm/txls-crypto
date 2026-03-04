@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import type { TaxTransaction } from "@txls/shared/client";
+import { apiUrl } from "../lib/api-base";
 
 export interface LossCarryover {
   year: number;
@@ -32,7 +33,7 @@ export function useCombinedTaxCalculations(year: number) {
     queryKey: ["tax", "combined", year],
     queryFn: async () => {
       try {
-        const response = await fetch(`/api/tax?year=${year}`);
+        const response = await fetch(apiUrl(`/api/tax?year=${year}`));
         if (!response.ok) {
           const error = await response.json().catch(() => ({ statusCode: response.status }));
           if (error.statusCode === 401 || error.statusCode === 403) {

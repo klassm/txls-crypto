@@ -5,6 +5,7 @@ import {
 } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { User } from "@txls/shared/client";
+import { apiUrl } from "../lib/api-base";
 
 interface AuthContextValue {
   user: User | null;
@@ -38,7 +39,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   } = useQuery({
     queryKey: ["config"],
     queryFn: async () => {
-      const response = await fetch("/api/config");
+      const response = await fetch(apiUrl("/api/config"));
       if (!response.ok) {
         return { user: null, canOnboard: false, hassIngress: false };
       }
@@ -58,7 +59,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       username: string;
       password: string;
     }) => {
-      const response = await fetch("/api/auth/login", {
+      const response = await fetch(apiUrl("/api/auth/login"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
@@ -75,7 +76,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch("/api/auth/logout", {
+      const response = await fetch(apiUrl("/api/auth/logout"), {
         method: "POST",
       });
 
@@ -97,7 +98,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       password: string;
       email: string;
     }) => {
-      const response = await fetch("/api/config/onboard", {
+      const response = await fetch(apiUrl("/api/config/onboard"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),

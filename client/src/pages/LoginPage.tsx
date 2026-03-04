@@ -13,6 +13,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import { assetUrl } from "../lib/api-base";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -61,7 +62,7 @@ export default function LoginPage() {
           <Box sx={{ textAlign: "center", mb: 4 }}>
             <Box
               component="img"
-              src="/assets/logo.png"
+              src={assetUrl("/assets/logo.png")}
               alt="TXLS"
               sx={{
                 width: 80,
