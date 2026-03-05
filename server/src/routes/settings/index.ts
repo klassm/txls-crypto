@@ -1,5 +1,5 @@
 import { Router, Request, Response } from "express";
-import { AUTH_COOKIE_NAME, verifyToken } from "@txls/shared";
+import { AUTH_COOKIE_NAME, verifyToken } from "../../utils/password.js";
 import { getUserIdFromRequest } from "../../utils/session.js";
 
 const router = Router();

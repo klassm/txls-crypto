@@ -10,7 +10,7 @@ import {
   Box,
   Alert,
 } from "@mui/material";
-import { User } from "@txls/shared/client";
+import { User } from "@txls/shared";
 import { useState } from "react";
 import { useResetUserPassword } from "../../hooks/useAdminUsers";
 

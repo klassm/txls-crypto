@@ -3,7 +3,7 @@
 import { Box, Typography } from "@mui/material";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { ProviderType } from "@txls/shared/client";
+import { ProviderType } from "@txls/shared";
 import { PageHeader } from "../../components/common/PageHeader";
 import { AccountStatsCards } from "../../components/account-detail/AccountStatsCards";
 import { AssetSummary } from "../../components/account-detail/AssetSummary";

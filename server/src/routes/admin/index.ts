@@ -1,5 +1,8 @@
 import { Router, Request, Response } from "express";
-import { getDataSource, UsersService, AUTH_COOKIE_NAME, verifyToken, userSchema, updateUserSchema, resetPasswordSchema } from "@txls/shared";
+import { getDataSource } from "../../database.js";
+import { UsersService } from "../../modules/users/users.service.js";
+import { AUTH_COOKIE_NAME, verifyToken } from "../../utils/password.js";
+import { userSchema, updateUserSchema, resetPasswordSchema } from "../../validation/schemas.js";
 import { getUserIdFromRequest } from "../../utils/session.js";
 
 const router = Router();

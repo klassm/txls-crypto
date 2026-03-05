@@ -3,7 +3,7 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
-import { config } from "@txls/shared";
+import { config } from "./config/env.js";
 
 import accountsRouter from "./routes/accounts/index.js";
 import authRouter from "./routes/auth/index.js";

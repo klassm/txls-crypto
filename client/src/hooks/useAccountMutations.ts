@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { accountsApi } from "../lib/client/accounts-api";
-import type { CreateAccountDto } from "@txls/shared/client";
+import type { CreateAccountDto } from "@txls/shared";
 import { useSnackbar } from "../contexts/SnackbarContext";
 
 export function useCreateAccount(options?: { onSuccess?: () => void }) {

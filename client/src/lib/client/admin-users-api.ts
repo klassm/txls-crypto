@@ -1,4 +1,4 @@
-import type { User } from "@txls/shared/client";
+import type { User } from "@txls/shared";
 import { apiUrl } from "../api-base";
 
 interface CreateAdminUserDto {

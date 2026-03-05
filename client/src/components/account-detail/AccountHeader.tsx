@@ -2,7 +2,7 @@
 
 import { ArrowBack } from "@mui/icons-material";
 import { Button, MenuItem, Select } from "@mui/material";
-import { ProviderType } from "@txls/shared/client";
+import { ProviderType } from "@txls/shared";
 import {
   StyledFormControl,
   StyledHeader,

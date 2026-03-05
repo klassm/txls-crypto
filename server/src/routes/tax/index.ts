@@ -1,5 +1,10 @@
 import { Router, Request, Response } from "express";
-import { getDataSource, AccountsRepository, TransactionsRepository, TransactionType, TaxCalculationService, toISOString } from "@txls/shared";
+import { getDataSource } from "../../database.js";
+import { AccountsRepository } from "../../modules/accounts/accounts.repository.js";
+import { TransactionsRepository } from "../../modules/transactions/transactions.repository.js";
+import { TransactionType } from "@txls/shared";
+import { TaxCalculationService } from "../../modules/tax/tax-calculator.service.js";
+import { toISOString } from "../../utils/date.js";
 import { DateTime } from "luxon";
 import { getUserIdFromRequest } from "../../utils/session.js";
 

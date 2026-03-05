@@ -1,7 +1,17 @@
 import { Router } from "express";
 import multer from "multer";
 import { Request, Response } from "express";
-import { getDataSource, AccountsRepository, AccountsService, TransactionsRepository, TransactionsService, ImportDeduplicationService, getProviderConfig, TaxCalculationService, WisoCsvExportService, TransactionType, toISOString, getUserIdFromCookie } from "@txls/shared";
+import { getDataSource } from "../../database.js";
+import { AccountsRepository } from "../../modules/accounts/accounts.repository.js";
+import { AccountsService } from "../../modules/accounts/accounts.service.js";
+import { TransactionsRepository } from "../../modules/transactions/transactions.repository.js";
+import { TransactionsService } from "../../modules/transactions/transactions.service.js";
+import { ImportDeduplicationService } from "../../sources/import-deduplication.service.js";
+import { getProviderConfig } from "../../sources/registry.js";
+import { TaxCalculationService } from "../../modules/tax/tax-calculator.service.js";
+import { WisoCsvExportService } from "../../modules/tax/wiso-csv-export.service.js";
+import { TransactionType } from "@txls/shared";
+import { toISOString } from "../../utils/date.js";
 import { DateTime } from "luxon";
 import { getUserIdFromRequest, verifyToken, AUTH_COOKIE_NAME } from "../../utils/session.js";
 

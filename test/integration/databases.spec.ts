@@ -1,15 +1,18 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { getDataSource, resetDataSource } from "@txls/shared";
+import { getDataSource, resetDataSource } from "../../server/src/database.js";
 import { rmSync } from "fs";
 import path from "path";
 
-const testConfigs = [
+const dbConnectionString = process.env.DB_CONNECTION_STRING;
+
+const allConfigs = [
   {
     name: "better-sqlite3",
     displayName: "SQLite",
-    connectionString: "./data/test-txls.db",
+    match: (cs: string) => cs.includes(":memory:") || cs.endsWith(".db") || !cs.includes("://"),
+    connectionString: dbConnectionString || "./data/test-txls.db",
     setup: async () => {
-      process.env.DB_CONNECTION_STRING = "./data/test-txls.db";
+      process.env.DB_CONNECTION_STRING = dbConnectionString || "./data/test-txls.db";
     },
     teardown: async () => {
       const dbPath = path.join(process.cwd(), "data/test-txls.db");
@@ -22,22 +25,28 @@ const testConfigs = [
   {
     name: "postgres",
     displayName: "PostgreSQL",
-    connectionString: "postgresql://testuser:testpass@localhost:5432/txls_test",
+    match: (cs: string) => cs.startsWith("postgresql://") || cs.startsWith("postgres://"),
+    connectionString: dbConnectionString || "postgresql://testuser:testpass@localhost:5432/txls_test",
     setup: async () => {
-      process.env.DB_CONNECTION_STRING = "postgresql://testuser:testpass@localhost:5432/txls_test";
+      process.env.DB_CONNECTION_STRING = dbConnectionString || "postgresql://testuser:testpass@localhost:5432/txls_test";
     },
     teardown: async () => {},
   },
   {
     name: "mysql",
     displayName: "MySQL",
-    connectionString: "mysql://testuser:testpass@localhost:3306/txls_test",
+    match: (cs: string) => cs.startsWith("mysql://"),
+    connectionString: dbConnectionString || "mysql://testuser:testpass@localhost:3306/txls_test",
     setup: async () => {
-      process.env.DB_CONNECTION_STRING = "mysql://testuser:testpass@localhost:3306/txls_test";
+      process.env.DB_CONNECTION_STRING = dbConnectionString || "mysql://testuser:testpass@localhost:3306/txls_test";
     },
     teardown: async () => {},
   },
 ];
+
+const testConfigs = dbConnectionString 
+  ? allConfigs.filter(c => c.match(dbConnectionString))
+  : allConfigs;
 
 describe.each(testConfigs)("$displayName Database Integration", ({ name, displayName, connectionString, setup, teardown }) => {
   const originalDbConnectionString = process.env.DB_CONNECTION_STRING;

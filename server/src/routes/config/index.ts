@@ -1,5 +1,12 @@
 import { Router, Request, Response } from "express";
-import { getDataSource, UsersService, AUTH_COOKIE_NAME, generateToken, getSessionMaxAge, verifyToken, toISOString, onboardingUserSchema, config, getUserIdFromCookieExpress, logger } from "@txls/shared";
+import { getDataSource } from "../../database.js";
+import { UsersService } from "../../modules/users/users.service.js";
+import { AUTH_COOKIE_NAME, generateToken, getSessionMaxAge, verifyToken } from "../../utils/password.js";
+import { toISOString } from "../../utils/date.js";
+import { onboardingUserSchema } from "../../validation/schemas.js";
+import { config } from "../../config/env.js";
+import { getUserIdFromCookieExpress } from "../../utils/session.js";
+import { logger } from "../../common/logger.js";
 
 const router = Router();
 

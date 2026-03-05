@@ -2,7 +2,7 @@
 
 import { Typography, Box } from "@mui/material";
 import { useState } from "react";
-import { User } from "@txls/shared/client";
+import { User } from "@txls/shared";
 import { useAuth } from "../../contexts/AuthContext";
 import { useAdminUsers } from "../../hooks/useAdminUsers";
 import { PageLayout } from "../../components/common/PageLayout";

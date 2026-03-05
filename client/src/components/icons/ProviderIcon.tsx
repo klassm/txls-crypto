@@ -1,6 +1,6 @@
 "use client";
 
-import { ProviderType } from "@txls/shared/client";
+import { ProviderType } from "@txls/shared";
 import { useState, useEffect } from "react";
 import { useSources } from "../../hooks";
 

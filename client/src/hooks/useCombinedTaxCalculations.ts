@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import type { TaxTransaction } from "@txls/shared/client";
+import type { TaxTransaction } from "@txls/shared";
 import { apiUrl } from "../lib/api-base";
 
 export interface LossCarryover {

@@ -6,7 +6,7 @@ import type {
   TaxTransaction,
   UpdateAccountDto,
   YearStats,
-} from "@txls/shared/client";
+} from "@txls/shared";
 import { apiUrl } from "../api-base";
 
 async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {

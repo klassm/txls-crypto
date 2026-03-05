@@ -15,7 +15,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Cache node modules
         id: cache-npm
@@ -34,9 +34,6 @@ jobs:
 
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps chromium
-
-      - name: Compile migrations
-        run: npx tsc --project tsconfig.migrations.json
 
       - name: Run E2E tests (local dev)
         run: npm run test:gui:local
@@ -57,7 +54,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Cache node modules
         id: cache-npm
@@ -96,7 +93,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Cache node modules
         id: cache-npm

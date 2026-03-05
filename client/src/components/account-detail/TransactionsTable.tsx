@@ -1,8 +1,8 @@
 import { CloudUpload } from "@mui/icons-material";
 import { Box, Button, Chip } from "@mui/material";
 import { type MRT_ColumnDef, MaterialReactTable } from "material-react-table";
-import type { Transaction } from "@txls/shared/client";
-import { TransactionType } from "@txls/shared/client";
+import type { Transaction } from "@txls/shared";
+import { TransactionType } from "@txls/shared";
 import { StyledBox, StyledSectionTitle } from "./TransactionsTable.styles";
 import { DateTime } from "luxon";
 

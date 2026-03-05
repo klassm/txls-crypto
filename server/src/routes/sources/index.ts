@@ -1,5 +1,6 @@
 import { Router, Request, Response } from "express";
-import { ProviderType, sources } from "@txls/shared";
+import { ProviderType } from "@txls/shared";
+import { sources } from "../../sources/registry.js";
 
 const router = Router();
 

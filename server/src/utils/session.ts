@@ -1,6 +1,11 @@
 import { Request } from "express";
-import { AUTH_COOKIE_NAME, verifyToken, config, logger, getDataSource } from "@txls/shared";
+import { AUTH_COOKIE_NAME, verifyToken } from "./password.js";
+import { config } from "../config/env.js";
+import { logger } from "../common/logger.js";
+import { getDataSource } from "../database.js";
 import cookie from "cookie";
+
+export { AUTH_COOKIE_NAME, verifyToken, config, logger, getDataSource };
 
 export async function getUserIdFromRequest(req: Request): Promise<number | null> {
   const authorization = req.headers.authorization || "";
@@ -23,7 +28,28 @@ export async function getUserIdFromRequest(req: Request): Promise<number | null>
   return getUserIdFromCookie(req);
 }
 
-export async function getUserIdFromCookie(req: Request): Promise<number | null> {
+export function getUserIdFromCookie(req: Request): number | null {
+  const cookieHeader = req.headers.cookie;
+  if (!cookieHeader) {
+    return null;
+  }
+
+  const cookies = cookie.parse(cookieHeader);
+  const token = cookies[AUTH_COOKIE_NAME];
+
+  if (!token) {
+    return null;
+  }
+
+  const payload = verifyToken(token);
+  if (!payload) {
+    return null;
+  }
+
+  return payload.userId;
+}
+
+export function getUserIdFromCookieExpress(req: { headers: { cookie?: string } }): number | null {
   const cookieHeader = req.headers.cookie;
   if (!cookieHeader) {
     return null;
@@ -45,7 +71,7 @@ export async function getUserIdFromCookie(req: Request): Promise<number | null> 
 }
 
 async function getHomeAssistantUserId(_req: Request, token: string): Promise<number | null> {
-  const { UsersService } = await import("@txls/shared");
+  const { UsersService } = await import("../modules/users/users.service.js");
 
   try {
     const supervisorToken = config.homeAssistant.supervisorToken;
@@ -116,5 +142,3 @@ async function getHomeAssistantUserId(_req: Request, token: string): Promise<num
     return null;
   }
 }
-
-export { AUTH_COOKIE_NAME, verifyToken, config, logger, getDataSource };

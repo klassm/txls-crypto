@@ -12,7 +12,7 @@ import {
   Box,
   Alert,
 } from "@mui/material";
-import { User } from "@txls/shared/client";
+import { User } from "@txls/shared";
 import { useEffect, useState } from "react";
 import { useUpdateUser } from "../../hooks/useAdminUsers";
 

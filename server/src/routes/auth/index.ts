@@ -1,5 +1,9 @@
 import { Router, Request, Response } from "express";
-import { getDataSource, UsersService, AUTH_COOKIE_NAME, generateToken, getSessionMaxAge, verifyToken, loginSchema, changePasswordSchema, config } from "@txls/shared";
+import { getDataSource } from "../../database.js";
+import { UsersService } from "../../modules/users/users.service.js";
+import { AUTH_COOKIE_NAME, generateToken, getSessionMaxAge, verifyToken } from "../../utils/password.js";
+import { loginSchema, changePasswordSchema } from "../../validation/schemas.js";
+import { config } from "../../config/env.js";
 
 const router = Router();
 

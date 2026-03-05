@@ -1,5 +1,5 @@
 import { Grid } from "@mui/material";
-import type { TransactionSummary } from "@txls/shared/client";
+import type { TransactionSummary } from "@txls/shared";
 import { StatCard } from "./StatCard";
 import { StyledStatsGrid } from "./AccountStatsCards.styles";
 

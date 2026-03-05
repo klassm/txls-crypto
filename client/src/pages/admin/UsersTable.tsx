@@ -1,6 +1,6 @@
 "use client";
 
-import { User } from "@txls/shared/client";
+import { User } from "@txls/shared";
 import {
   Table,
   TableBody,

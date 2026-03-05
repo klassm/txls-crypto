@@ -23,7 +23,7 @@ import {
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { ProviderType } from "@txls/shared/client";
+import { ProviderType } from "@txls/shared";
 import { useAccounts, useCreateAccount, useDeleteAccount, useSources } from "../hooks";
 import { ProviderIcon } from "../components/icons";
 import { PageLayout } from "../components/common/PageLayout";
