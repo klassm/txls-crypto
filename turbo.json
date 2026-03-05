@@ -21,6 +21,15 @@
     "test:integration": {
       "dependsOn": ["^build"]
     },
+    "test:integration:sqlite": {
+      "dependsOn": ["^build"]
+    },
+    "test:integration:postgres": {
+      "dependsOn": ["^build"]
+    },
+    "test:integration:mysql": {
+      "dependsOn": ["^build"]
+    },
     "test:local": {
       "dependsOn": ["@txls/shared#build"]
     },

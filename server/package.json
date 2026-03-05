@@ -11,8 +11,12 @@
     "lint": "biome lint src",
     "lint:fix": "biome lint --write src",
     "format": "biome format --write src",
-    "test": "vitest run --config ../vitest.unit.config.ts",
-    "test:unit": "vitest run --config ../vitest.unit.config.ts"
+    "test": "vitest run --config vitest.unit.config.ts",
+    "test:unit": "vitest run --config vitest.unit.config.ts",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:integration:sqlite": "DB_CONNECTION_STRING=:memory: vitest run --config vitest.integration.config.ts",
+    "test:integration:postgres": "DB_CONNECTION_STRING=postgresql://testuser:testpass@localhost:5432/txls_test vitest run --config vitest.integration.config.ts",
+    "test:integration:mysql": "DB_CONNECTION_STRING=mysql://testuser:testpass@localhost:3306/txls_test vitest run --config vitest.integration.config.ts"
   },
   "dependencies": {
     "@txls/shared": "*",
