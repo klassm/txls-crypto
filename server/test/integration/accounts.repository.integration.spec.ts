@@ -3,8 +3,8 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { DataSource } from "typeorm";
 import { describe, it, expect, afterAll, beforeEach } from "vitest";
-import { AccountEntity } from "../../server/src/modules/accounts/account.entity.js";
-import { AccountsRepository } from "../../server/src/modules/accounts/accounts.repository.js";
+import { AccountEntity } from "../../src/modules/accounts/account.entity.js";
+import { AccountsRepository } from "../../src/modules/accounts/accounts.repository.js";
 import { ProviderType } from "@txls/shared";
 import { DateTime } from "luxon";
 

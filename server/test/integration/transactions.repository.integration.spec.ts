@@ -2,10 +2,10 @@ import "reflect-metadata";
 import { join } from "node:path";
 import { DataSource } from "typeorm";
 import { describe, it, expect, afterAll, beforeEach } from "vitest";
-import { TransactionEntity } from "../../server/src/modules/transactions/transaction.entity.js";
-import { AccountEntity } from "../../server/src/modules/accounts/account.entity.js";
+import { TransactionEntity } from "../../src/modules/transactions/transaction.entity.js";
+import { AccountEntity } from "../../src/modules/accounts/account.entity.js";
 import { TransactionType } from "@txls/shared";
-import { TransactionsRepository } from "../../server/src/modules/transactions/transactions.repository.js";
+import { TransactionsRepository } from "../../src/modules/transactions/transactions.repository.js";
 import { DateTime } from "luxon";
 
 const __dirname = import.meta.dirname;

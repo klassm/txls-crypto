@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { getDataSource, resetDataSource } from "../../server/src/database.js";
+import { getDataSource, resetDataSource } from "../../src/database.js";
 import { rmSync } from "fs";
 import path from "path";
 
