@@ -23,9 +23,9 @@
     "test:integration:postgres": "DB_CONNECTION_STRING=postgresql://testuser:testpass@localhost:5432/txls_test vitest run --config vitest.config.ts",
     "test:integration:mysql": "DB_CONNECTION_STRING=mysql://testuser:testpass@localhost:3306/txls_test vitest run --config vitest.config.ts",
     "test:gui": "turbo run test --filter=@txls/gui-tests",
-    "test:gui:local": "npm run test:local -w @txls/gui-tests",
-    "test:gui:docker": "npm run test:docker -w @txls/gui-tests",
-    "test:gui:hass": "npm run test:hass -w @txls/gui-tests"
+    "test:gui:local": "turbo run test:local --filter=@txls/gui-tests",
+    "test:gui:docker": "turbo run test:docker --filter=@txls/gui-tests",
+    "test:gui:hass": "turbo run test:hass --filter=@txls/gui-tests"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",

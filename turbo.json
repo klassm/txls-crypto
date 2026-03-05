@@ -20,6 +20,15 @@
     },
     "test:integration": {
       "dependsOn": ["^build"]
+    },
+    "test:local": {
+      "dependsOn": ["@txls/shared#build"]
+    },
+    "test:docker": {
+      "dependsOn": ["@txls/shared#build"]
+    },
+    "test:hass": {
+      "dependsOn": ["@txls/shared#build"]
     }
   }
 }
