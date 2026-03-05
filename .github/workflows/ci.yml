@@ -22,6 +22,9 @@ jobs:
     - name: Install dependencies
       run: npm ci
     
+    - name: Rebuild native modules
+      run: npm rebuild better-sqlite3
+    
     - name: Build application
       run: npm run build
       env:
@@ -82,7 +85,10 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         name: build-artifacts
-    
+
+    - name: Rebuild native modules
+      run: npm rebuild better-sqlite3
+
     - name: Run unit tests
       run: npm run test:unit
 
@@ -136,7 +142,10 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         name: build-artifacts
-    
+
+    - name: Rebuild native modules
+      run: npm rebuild better-sqlite3
+
     - name: Run SQLite integration tests
       run: npm run test:integration:sqlite
     
@@ -180,6 +189,9 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: build-artifacts
+
+      - name: Rebuild native modules
+        run: npm rebuild better-sqlite3
 
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps chromium
@@ -226,6 +238,9 @@ jobs:
         with:
           name: build-artifacts
 
+      - name: Rebuild native modules
+        run: npm rebuild better-sqlite3
+
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps chromium
 
@@ -270,6 +285,9 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: build-artifacts
+
+      - name: Rebuild native modules
+        run: npm rebuild better-sqlite3
 
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps chromium
