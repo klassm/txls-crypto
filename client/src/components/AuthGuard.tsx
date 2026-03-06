@@ -20,9 +20,6 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
       if (isPublicRoute) {
         return;
       }
-      if (hassIngress) {
-        return;
-      }
       if (canOnboard) {
         navigate("/onboard", { replace: true });
       } else {
@@ -37,7 +34,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     return null;
   }
 
-  if (!isAuthenticated && hassIngress) {
+  if (!isAuthenticated) {
     return null;
   }
 

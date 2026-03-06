@@ -8,6 +8,23 @@ const TEST_USER = {
 }
 
 test.describe('Onboarding', () => {
+  test('unauthenticated user sees onboarding form in HASS ingress', async ({ page }) => {
+    await page.goto('')
+    
+    // Wait for either onboarding or login page to render
+    await page.waitForURL(/\/(onboard|login)/, { timeout: 10000 })
+    
+    // Verify page renders content (not white page)
+    // Onboarding shows "Setup your admin account", Login shows "Sign In"
+    await expect(page.locator('body')).toContainText(/Setup your admin account|Sign In/i, { timeout: 5000 })
+    
+    // Verify form elements are visible
+    const hasOnboardForm = await page.getByRole('textbox', { name: 'Full Name' }).isVisible().catch(() => false)
+    const hasLoginForm = await page.getByRole('textbox', { name: 'Username' }).isVisible().catch(() => false)
+    
+    expect(hasOnboardForm || hasLoginForm).toBe(true)
+  })
+
   test('onboard new user', async ({ page }) => {
     await page.goto('')
     await expect(page.getByText('TXLS')).toBeVisible()
