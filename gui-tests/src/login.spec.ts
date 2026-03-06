@@ -8,7 +8,7 @@ const TEST_USER = {
 }
 
 async function ensureUserExists(page: import('@playwright/test').Page) {
-  await page.goto('/')
+  await page.goto('')
   await page.waitForURL(/\/(onboard|login)/, { timeout: 10000 })
   
   if (page.url().includes('/onboard')) {
@@ -18,19 +18,19 @@ async function ensureUserExists(page: import('@playwright/test').Page) {
     await page.getByRole('textbox', { name: 'Password', exact: true }).fill(TEST_USER.password)
     await page.getByRole('textbox', { name: 'Confirm Password' }).fill(TEST_USER.password)
     await page.getByRole('button', { name: 'Create Account' }).click()
-    await page.waitForURL('/', { timeout: 20000 })
+    await page.waitForURL(/(\/$|hass-test-session\/?$)/, { timeout: 20000 })
   } else if (page.url().includes('/login')) {
     await page.getByRole('textbox', { name: 'Username' }).fill(TEST_USER.username)
     await page.getByRole('textbox', { name: 'Password' }).fill(TEST_USER.password)
     await page.getByRole('button', { name: 'Sign In' }).click()
-    await page.waitForURL('/', { timeout: 20000 })
+    await page.waitForURL(/(\/$|hass-test-session\/?$)/, { timeout: 20000 })
   }
 }
 
 async function logout(page: import('@playwright/test').Page) {
   await page.getByRole('button', { name: /TU/i }).first().click()
   await page.getByRole('menuitem', { name: 'Logout' }).click()
-  await page.waitForURL('/login', { timeout: 10000 })
+  await page.waitForURL(/\/login/, { timeout: 10000 })
 }
 
 test.describe('Login', () => {
@@ -42,7 +42,7 @@ test.describe('Login', () => {
     await page.getByRole('textbox', { name: 'Password' }).fill(TEST_USER.password)
     await page.getByRole('button', { name: 'Sign In' }).click()
     
-    await page.waitForURL('/', { timeout: 10000 })
+    await page.waitForURL(/(\/$|hass-test-session\/?$)/, { timeout: 10000 })
     await expect(page.getByRole('heading', { name: 'Accounts' })).toBeVisible()
   })
 
@@ -61,8 +61,8 @@ test.describe('Login', () => {
   test('redirect to home when accessing /login while authenticated', async ({ page }) => {
     await ensureUserExists(page)
     
-    await page.goto('/login')
-    await page.waitForURL('/', { timeout: 10000 })
+    await page.goto('./login')
+    await page.waitForURL(/(\/$|hass-test-session\/?$)/, { timeout: 10000 })
     await expect(page.getByRole('heading', { name: 'Accounts' })).toBeVisible()
   })
 })

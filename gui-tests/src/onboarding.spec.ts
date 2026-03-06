@@ -9,7 +9,7 @@ const TEST_USER = {
 
 test.describe('Onboarding', () => {
   test('onboard new user', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('')
     await expect(page.getByText('TXLS')).toBeVisible()
     
     await page.waitForURL(/\/(onboard|login)/, { timeout: 10000 })
@@ -27,7 +27,7 @@ test.describe('Onboarding', () => {
       await page.getByRole('button', { name: 'Create Account' }).click()
     }
     
-    await page.waitForURL('/', { timeout: 20000 })
+    await page.waitForURL(/(\/onboard|\/login|hass-test-session\/?$)/, { timeout: 20000 })
     
     await expect(page.getByRole('heading', { name: 'Accounts' })).toBeVisible({ timeout: 15000 })
     await expect(page.locator('header')).toBeVisible()
