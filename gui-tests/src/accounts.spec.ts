@@ -73,6 +73,14 @@ test.describe('Accounts', () => {
 
     await expect(page.getByRole('button', { name: 'View Details' }).first()).toBeVisible({ timeout: 10000 })
     
+    await page.getByRole('button', { name: 'View Details' }).first().click()
+    await expect(page.getByText('Loading account...')).not.toBeVisible({ timeout: 10000 })
+    await expect(page.getByRole('heading', { name: /Bitpanda|Trade Republic/ })).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('Staking')).toBeVisible()
+    
+    await page.goBack()
+    await expect(page.getByRole('button', { name: 'View Details' }).first()).toBeVisible({ timeout: 10000 })
+    
     await deleteAccount(page)
     await page.waitForTimeout(300)
     
