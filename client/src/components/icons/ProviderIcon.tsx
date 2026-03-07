@@ -3,6 +3,7 @@
 import { ProviderType } from "@txls/shared";
 import { useState, useEffect } from "react";
 import { useSources } from "../../hooks";
+import { assetUrl } from "../../lib/api-base";
 
 interface ProviderIconProps {
   provider: ProviderType;
@@ -18,7 +19,7 @@ export function ProviderIcon({ provider, width = 24, height = 24 }: ProviderIcon
   useEffect(() => {
     if (!config) return;
 
-    fetch(config.logoPath)
+    fetch(assetUrl(config.logoPath))
       .then((response) => response.text())
       .then((svg) => {
         const colorizedSvg = svg

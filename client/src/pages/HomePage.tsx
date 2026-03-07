@@ -103,24 +103,14 @@ export default function HomePage() {
               )}
 {accounts.map((account) => (
                 <Grid size={{ xs: 12, sm: 6, md: 4 }} key={account.id}>
-                  <Card
-                    sx={{
-                      minHeight: 200,
-                      display: "flex",
-                      flexDirection: "column",
-                    }}
-                  >
-                    <Box
-                      component="a"
-                      href={`/accounts/${account.id}`}
+                    <Card
                       sx={{
-                        textDecoration: "none",
-                        color: "inherit",
-                        flex: 1,
+                        minHeight: 200,
                         display: "flex",
                         flexDirection: "column",
                         cursor: "pointer",
                       }}
+                      onClick={() => navigate(`/accounts/${account.id}`)}
                     >
                       <CardContent>
                         <Box
@@ -189,16 +179,15 @@ export default function HomePage() {
                           View Details
                         </Button>
                       </CardActions>
-                    </Box>
-                    <Box sx={{ position: "relative" }}>
-                       <IconButton
-                         sx={{ position: "absolute", right: 8, bottom: 8 }}
-                         onClick={(e) => handleDelete(account.id, e)}
-                       >
-                         <Delete />
-                       </IconButton>
-                     </Box>
-                  </Card>
+                      <Box sx={{ position: "relative" }}>
+                        <IconButton
+                          sx={{ position: "absolute", right: 8, bottom: 8 }}
+                          onClick={(e) => handleDelete(account.id, e)}
+                        >
+                          <Delete />
+                        </IconButton>
+                      </Box>
+                    </Card>
                 </Grid>
               ))}
               {availableSources.length > 0 && (
