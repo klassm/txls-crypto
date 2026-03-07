@@ -39,7 +39,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   } = useQuery({
     queryKey: ["config"],
     queryFn: async () => {
-      const response = await fetch(apiUrl("/api/config"));
+      const response = await fetch(apiUrl("/api/config"), { credentials: "include" });
       if (!response.ok) {
         return { user: null, canOnboard: false, hassIngress: false };
       }
@@ -63,6 +63,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
+        credentials: "include",
       });
 
       if (!response.ok) {
@@ -78,6 +79,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     mutationFn: async () => {
       const response = await fetch(apiUrl("/api/auth/logout"), {
         method: "POST",
+        credentials: "include",
       });
 
       if (!response.ok) {
@@ -102,6 +104,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
+        credentials: "include",
       });
 
       if (!response.ok) {

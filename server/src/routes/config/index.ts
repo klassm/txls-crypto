@@ -96,8 +96,8 @@ router.post("/onboard", async (req: Request, res: Response) => {
 
   res.cookie(AUTH_COOKIE_NAME, token, {
     httpOnly: true,
-    secure: config.nodeEnv === "production",
-    sameSite: "strict",
+    secure: true,
+    sameSite: "none",
     maxAge: getSessionMaxAge() / 1000,
     path: "/",
   });
