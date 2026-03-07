@@ -9,7 +9,6 @@ import {
   Button,
   Card,
   CardContent,
-  Container,
   TextField,
   Typography,
 } from "@mui/material";
@@ -48,17 +47,17 @@ export default function LoginPage() {
   }
 
   return (
-    <Container
-      maxWidth="sm"
+    <Box
       sx={{
-        position: "absolute",
-        top: "50%",
-        left: "50%",
-        transform: "translate(-50%, -50%)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        minHeight: "100vh",
+        p: 2,
       }}
     >
-      <Card sx={{ width: "100%" }}>
-        <CardContent>
+      <Card sx={{ width: "100%", maxWidth: 500 }}>
+        <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
           <Box sx={{ textAlign: "center", mb: 4 }}>
             <Box
               component="img"
@@ -115,6 +114,6 @@ export default function LoginPage() {
           </Box>
         </CardContent>
       </Card>
-    </Container>
+    </Box>
   );
 }
