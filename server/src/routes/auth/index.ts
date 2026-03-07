@@ -42,8 +42,8 @@ router.post("/login", async (req: Request, res: Response) => {
       },
     };
 
-    const isProduction = config.nodeEnv === "production";
-    const isSecure = isProduction && req.secure;
+    const forwardedProto = req.headers["x-forwarded-proto"];
+    const isSecure = forwardedProto === "https" || req.secure;
     res.cookie(AUTH_COOKIE_NAME, token, {
       httpOnly: true,
       secure: isSecure,
