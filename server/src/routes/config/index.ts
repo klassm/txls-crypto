@@ -100,7 +100,7 @@ router.post("/onboard", async (req: Request, res: Response) => {
     httpOnly: true,
     secure: isSecure,
     sameSite: isSecure ? "none" : "lax",
-    maxAge: getSessionMaxAge() / 1000,
+    maxAge: getSessionMaxAge(),
     path: "/",
   });
 
