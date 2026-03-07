@@ -27,7 +27,7 @@ Install directly in Home Assistant:
 6. Click **Install**
 7. Configure options:
    - `jwt_secret`: Secret key for JWT authentication (64 chars recommended, auto-generated if empty)
-   - `db_connection_string`: Database connection string (see Database Options below)
+   - `db_connection_string`: Database connection string (default: `/data/txls.db`, persisted across restarts)
    - `log_level`: Logging level (info, debug, warn, error)
 8. Click **Start** to launch the add-on
 9. Access via:
@@ -50,7 +50,7 @@ Create a `.env.local` file with required environment variables:
 ```bash
 JWT_SECRET=<your-secret-key>
 NODE_ENV=development
-DB_CONNECTION_STRING=./data/txls.db
+DB_CONNECTION_STRING=/data/txls.db
 LOG_LEVEL=info
 ```
 
@@ -82,12 +82,20 @@ TXLS supports multiple database types via the `DB_CONNECTION_STRING` environment
 ### SQLite (Default, Easiest)
 
 ```env
-DB_CONNECTION_STRING=./data/txls.db
-# or absolute path
-DB_CONNECTION_STRING=/path/to/data/txls.db
+DB_CONNECTION_STRING=/data/txls.db
 ```
 
-SQLite is included with the application and requires no additional setup. The database file is stored locally.
+SQLite is included with the application and requires no additional setup. 
+
+**Docker**: Mount a volume to persist data:
+```bash
+docker run -v /path/to/data:/data ...
+```
+
+**Standalone**: Use any path:
+```env
+DB_CONNECTION_STRING=./data/txls.db
+```
 
 ### PostgreSQL
 
@@ -127,7 +135,7 @@ CREATE DATABASE txls;
 | Variable               | Required | Default                   | Description                                                              |
 |------------------------|----------|---------------------------|--------------------------------------------------------------------------|
 | `JWT_SECRET`           | Yes*     | -                         | Secret key for JWT token signing (auto-generated in HA add-on)          |
-| `DB_CONNECTION_STRING` | No       | `./data/txls.db`        | Database connection string (see Database Options above)                  |
+| `DB_CONNECTION_STRING` | No       | `/data/txls.db`        | Database connection string (see Database Options above)                  |
 | `NODE_ENV`             | No       | `development`             | Environment mode (`development` or `production`)                         |
 | `LOG_LEVEL`            | No       | `info`                    | Logging level (`fatal`, `error`, `warn`, `info`, `debug`, `trace`)       |
 | `SUPERVISOR_TOKEN`     | Auto     | (Home Assistant provides) | Home Assistant Supervisor API token (auto-injected in HA add-on)         |

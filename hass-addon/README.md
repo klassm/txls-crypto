@@ -15,12 +15,12 @@ Cryptocurrency transaction analysis platform for Home Assistant. Import CSV data
 | Option | Default | Description |
 |--------|---------|-------------|
 | `jwt_secret` | (auto-generated) | Secret key for JWT authentication (64 chars recommended) |
-| `db_connection_string` | `./data/txls.db` | Database connection string |
+| `db_connection_string` | `/data/txls.db` | Database connection string |
 | `log_level` | `info` | Logging level (info, debug, warn, error) |
 
 ### Database Options
 
-- **SQLite**: `./data/txls.db` (default, no setup required)
+- **SQLite**: `/data/txls.db` (default, persisted across restarts)
 - **PostgreSQL**: `postgresql://user:pass@host:5432/dbname`
 - **MySQL**: `mysql://user:pass@host:3306/dbname`
 

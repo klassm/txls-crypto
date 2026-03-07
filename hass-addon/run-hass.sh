@@ -25,7 +25,7 @@ if [ -z "$JWT_SECRET" ] || [ "$JWT_SECRET" = "null" ] || [ "$JWT_SECRET" = "" ];
 fi
 
 export JWT_SECRET
-export DB_CONNECTION_STRING="${DB_CONNECTION_STRING:-./data/txls.db}"
+export DB_CONNECTION_STRING="${DB_CONNECTION_STRING:-/data/txls.db}"
 export LOG_LEVEL="${LOG_LEVEL:-info}"
 export SUPERVISOR_TOKEN="${SUPERVISOR_TOKEN:-}"
 export HOSTNAME="0.0.0.0"
