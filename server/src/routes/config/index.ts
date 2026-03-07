@@ -5,7 +5,7 @@ import { AUTH_COOKIE_NAME, generateToken, getSessionMaxAge, verifyToken } from "
 import { toISOString } from "../../utils/date.js";
 import { onboardingUserSchema } from "../../validation/schemas.js";
 import { config } from "../../config/env.js";
-import { getUserIdFromCookieExpress } from "../../utils/session.js";
+import { getUserIdFromRequest } from "../../utils/session.js";
 import { logger } from "../../common/logger.js";
 
 const router = Router();
@@ -29,7 +29,7 @@ router.get("/", async (req: Request, res: Response) => {
     const existingUsersCount = await usersService.count();
 
     let user = null;
-    const userId = getUserIdFromCookieExpress(req);
+    const userId = await getUserIdFromRequest(req);
 
     logger.info({ msg: "User ID", userId });
 
@@ -94,10 +94,12 @@ router.post("/onboard", async (req: Request, res: Response) => {
     updatedAt: toISOString(user.updatedAt) ?? "",
   };
 
+  const isProduction = config.nodeEnv === "production";
+  const isSecure = isProduction && req.secure;
   res.cookie(AUTH_COOKIE_NAME, token, {
     httpOnly: true,
-    secure: true,
-    sameSite: "none",
+    secure: isSecure,
+    sameSite: isSecure ? "none" : "lax",
     maxAge: getSessionMaxAge() / 1000,
     path: "/",
   });

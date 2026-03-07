@@ -26,7 +26,7 @@ export default defineConfig({
   webServer: {
     command: `docker build -t txls-hass-test -f ../docker/Dockerfile.hass .. && docker rm -f txls-hass-test-container 2>/dev/null || true && docker run -d --name txls-hass-test-container -p 3002:3000 -e JWT_SECRET=test-secret-key-for-jwt-signing-in-tests-sufficiently-long -e SUPERVISOR_TOKEN=test-supervisor-token txls-hass-test && sleep 5`,
     url: BASE_URL,
-    reuseExistingServer: false,
+    reuseExistingServer: true,
     timeout: 300000,
   },
 })

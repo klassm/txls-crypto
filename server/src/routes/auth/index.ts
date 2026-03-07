@@ -42,10 +42,12 @@ router.post("/login", async (req: Request, res: Response) => {
       },
     };
 
+    const isProduction = config.nodeEnv === "production";
+    const isSecure = isProduction && req.secure;
     res.cookie(AUTH_COOKIE_NAME, token, {
       httpOnly: true,
-      secure: true,
-      sameSite: "none",
+      secure: isSecure,
+      sameSite: isSecure ? "none" : "lax",
       maxAge: getSessionMaxAge() / 1000,
       path: "/",
     });

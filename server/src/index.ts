@@ -16,6 +16,7 @@ import configRouter from "./routes/config/index.js";
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+app.set("trust proxy", true);
 app.use(helmet());
 app.use(cors({
   origin: process.env.NODE_ENV === "production" ? false : "http://localhost:3000",
