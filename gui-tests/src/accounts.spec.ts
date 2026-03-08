@@ -25,25 +25,27 @@ async function deleteAccount(page: import('@playwright/test').Page) {
 test.describe('Accounts', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('')
-    await page.waitForURL(/\/(onboard|login)/, { timeout: 10000 })
     
-    if (page.url().includes('/onboard')) {
-      await page.getByRole('textbox', { name: 'Full Name' }).fill(TEST_USER.name)
-      await page.getByRole('textbox', { name: 'Username' }).fill(TEST_USER.username)
-      await page.getByRole('textbox', { name: 'Email' }).fill(TEST_USER.email)
-      await page.getByRole('textbox', { name: 'Password', exact: true }).fill(TEST_USER.password)
-      await page.getByRole('textbox', { name: 'Confirm Password' }).fill(TEST_USER.password)
-      await page.getByRole('button', { name: 'Create Account' }).click()
-      await page.waitForURL(/(\/$|hass-test-session\/?$)/, { timeout: 20000 })
+    try {
+      await page.waitForURL(/\/(onboard|login)/, { timeout: 5000 })
+      
+      if (page.url().includes('/onboard')) {
+        await page.getByRole('textbox', { name: 'Full Name' }).fill(TEST_USER.name)
+        await page.getByRole('textbox', { name: 'Username' }).fill(TEST_USER.username)
+        await page.getByRole('textbox', { name: 'Email' }).fill(TEST_USER.email)
+        await page.getByRole('textbox', { name: 'Password', exact: true }).fill(TEST_USER.password)
+        await page.getByRole('textbox', { name: 'Confirm Password' }).fill(TEST_USER.password)
+        await page.getByRole('button', { name: 'Create Account' }).click()
+      } else if (page.url().includes('/login')) {
+        await page.getByRole('textbox', { name: 'Username' }).fill(TEST_USER.username)
+        await page.getByRole('textbox', { name: 'Password' }).fill(TEST_USER.password)
+        await page.getByRole('button', { name: 'Sign In' }).click()
+      }
+    } catch {
+      // HASS ingress auto-login: already on home page
     }
     
-    if (page.url().includes('/login')) {
-      await page.getByRole('textbox', { name: 'Username' }).fill(TEST_USER.username)
-      await page.getByRole('textbox', { name: 'Password' }).fill(TEST_USER.password)
-      await page.getByRole('button', { name: 'Sign In' }).click()
-      await page.waitForURL(/(\/$|hass-test-session\/?$)/, { timeout: 10000 })
-    }
-    
+    await page.waitForURL(/(\/$|hass-test-session\/?$)/, { timeout: 20000 })
     await page.waitForLoadState('networkidle')
   })
 

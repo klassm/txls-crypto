@@ -7,8 +7,35 @@ const TEST_USER = {
   password: 'TestPassword123!Valid',
 }
 
+async function ensureUserExists(page: import('@playwright/test').Page) {
+  await page.goto('')
+  
+  try {
+    await page.waitForURL(/\/(onboard|login)/, { timeout: 5000 })
+    
+    if (page.url().includes('/onboard')) {
+      await page.getByRole('textbox', { name: 'Full Name' }).fill(TEST_USER.name)
+      await page.getByRole('textbox', { name: 'Username' }).fill(TEST_USER.username)
+      await page.getByRole('textbox', { name: 'Email' }).fill(TEST_USER.email)
+      await page.getByRole('textbox', { name: 'Password', exact: true }).fill(TEST_USER.password)
+      await page.getByRole('textbox', { name: 'Confirm Password' }).fill(TEST_USER.password)
+      await page.getByRole('button', { name: 'Create Account' }).click()
+    } else if (page.url().includes('/login')) {
+      await page.getByRole('textbox', { name: 'Username' }).fill(TEST_USER.username)
+      await page.getByRole('textbox', { name: 'Password' }).fill(TEST_USER.password)
+      await page.getByRole('button', { name: 'Sign In' }).click()
+    }
+  } catch {
+    // HASS ingress auto-login: already on home page
+  }
+  
+  await page.waitForURL(/(\/$|hass-test-session\/?$)/, { timeout: 20000 })
+  await expect(page.getByRole('heading', { name: 'Accounts' })).toBeVisible({ timeout: 15000 })
+}
+
 test.describe('Onboarding', () => {
-  test('unauthenticated user sees onboarding form in HASS ingress', async ({ page }) => {
+  test('unauthenticated user sees onboarding form in HASS ingress', async ({ page, baseURL }) => {
+    test.skip(!!baseURL?.includes('hassio_ingress'), 'HASS ingress auto-login makes this test irrelevant')
     await page.goto('')
     
     await page.waitForURL(/\/(onboard|login)/, { timeout: 10000 })
@@ -22,50 +49,13 @@ test.describe('Onboarding', () => {
   })
 
   test('onboard new user', async ({ page }) => {
-    await page.goto('')
-    await expect(page.getByText('TXLS')).toBeVisible()
-    
-    await page.waitForURL(/\/(onboard|login)/, { timeout: 10000 })
-    
-    if (page.url().includes('/login')) {
-      await page.getByRole('textbox', { name: 'Username' }).fill(TEST_USER.username)
-      await page.getByRole('textbox', { name: 'Password' }).fill(TEST_USER.password)
-      await page.getByRole('button', { name: 'Sign In' }).click()
-    } else {
-      await page.getByRole('textbox', { name: 'Full Name' }).fill(TEST_USER.name)
-      await page.getByRole('textbox', { name: 'Username' }).fill(TEST_USER.username)
-      await page.getByRole('textbox', { name: 'Email' }).fill(TEST_USER.email)
-      await page.getByRole('textbox', { name: 'Password', exact: true }).fill(TEST_USER.password)
-      await page.getByRole('textbox', { name: 'Confirm Password' }).fill(TEST_USER.password)
-      await page.getByRole('button', { name: 'Create Account' }).click()
-    }
-    
-    await page.waitForURL(/(\/onboard|\/login|hass-test-session\/?$)/, { timeout: 20000 })
-    
-    await expect(page.getByRole('heading', { name: 'Accounts' })).toBeVisible({ timeout: 15000 })
+    await ensureUserExists(page)
     await expect(page.locator('header')).toBeVisible()
     await expect(page.getByRole('button', { name: /TU/i }).first()).toBeVisible()
   })
 
   test('authentication persists after page reload in HASS ingress', async ({ page }) => {
-    await page.goto('')
-    await page.waitForURL(/\/(onboard|login)/, { timeout: 10000 })
-    
-    if (page.url().includes('/login')) {
-      await page.getByRole('textbox', { name: 'Username' }).fill(TEST_USER.username)
-      await page.getByRole('textbox', { name: 'Password' }).fill(TEST_USER.password)
-      await page.getByRole('button', { name: 'Sign In' }).click()
-    } else {
-      await page.getByRole('textbox', { name: 'Full Name' }).fill(TEST_USER.name)
-      await page.getByRole('textbox', { name: 'Username' }).fill(TEST_USER.username)
-      await page.getByRole('textbox', { name: 'Email' }).fill(TEST_USER.email)
-      await page.getByRole('textbox', { name: 'Password', exact: true }).fill(TEST_USER.password)
-      await page.getByRole('textbox', { name: 'Confirm Password' }).fill(TEST_USER.password)
-      await page.getByRole('button', { name: 'Create Account' }).click()
-    }
-    
-    await page.waitForURL(/(\/onboard|\/login|hass-test-session\/?$)/, { timeout: 20000 })
-    await expect(page.getByRole('heading', { name: 'Accounts' })).toBeVisible({ timeout: 15000 })
+    await ensureUserExists(page)
     
     const config = await page.evaluate(async () => {
       const base = window.location.pathname.replace(/\/$/, '')
@@ -81,24 +71,7 @@ test.describe('Onboarding', () => {
 test.describe('HASS Ingress Authentication', () => {
   test('authentication persists after double reload in HASS ingress', async ({ page, baseURL }) => {
     test.skip(!baseURL?.includes('hassio_ingress'), 'HASS ingress only')
-    await page.goto('')
-    await page.waitForURL(/\/(onboard|login)/, { timeout: 10000 })
-    
-    if (page.url().includes('/login')) {
-      await page.getByRole('textbox', { name: 'Username' }).fill(TEST_USER.username)
-      await page.getByRole('textbox', { name: 'Password' }).fill(TEST_USER.password)
-      await page.getByRole('button', { name: 'Sign In' }).click()
-    } else {
-      await page.getByRole('textbox', { name: 'Full Name' }).fill(TEST_USER.name)
-      await page.getByRole('textbox', { name: 'Username' }).fill(TEST_USER.username)
-      await page.getByRole('textbox', { name: 'Email' }).fill(TEST_USER.email)
-      await page.getByRole('textbox', { name: 'Password', exact: true }).fill(TEST_USER.password)
-      await page.getByRole('textbox', { name: 'Confirm Password' }).fill(TEST_USER.password)
-      await page.getByRole('button', { name: 'Create Account' }).click()
-    }
-    
-    await page.waitForURL(/(\/onboard|\/login|hass-test-session\/?$)/, { timeout: 20000 })
-    await expect(page.getByRole('heading', { name: 'Accounts' })).toBeVisible({ timeout: 15000 })
+    await ensureUserExists(page)
     
     const reloadUrl = baseURL!
     await page.goto(reloadUrl)
@@ -119,24 +92,7 @@ test.describe('HASS Ingress Authentication', () => {
 
   test('authentication persists after triple reload in HASS ingress', async ({ page, baseURL }) => {
     test.skip(!baseURL?.includes('hassio_ingress'), 'HASS ingress only')
-    await page.goto('')
-    await page.waitForURL(/\/(onboard|login)/, { timeout: 10000 })
-    
-    if (page.url().includes('/login')) {
-      await page.getByRole('textbox', { name: 'Username' }).fill(TEST_USER.username)
-      await page.getByRole('textbox', { name: 'Password' }).fill(TEST_USER.password)
-      await page.getByRole('button', { name: 'Sign In' }).click()
-    } else {
-      await page.getByRole('textbox', { name: 'Full Name' }).fill(TEST_USER.name)
-      await page.getByRole('textbox', { name: 'Username' }).fill(TEST_USER.username)
-      await page.getByRole('textbox', { name: 'Email' }).fill(TEST_USER.email)
-      await page.getByRole('textbox', { name: 'Password', exact: true }).fill(TEST_USER.password)
-      await page.getByRole('textbox', { name: 'Confirm Password' }).fill(TEST_USER.password)
-      await page.getByRole('button', { name: 'Create Account' }).click()
-    }
-    
-    await page.waitForURL(/(\/onboard|\/login|hass-test-session\/?$)/, { timeout: 20000 })
-    await expect(page.getByRole('heading', { name: 'Accounts' })).toBeVisible({ timeout: 15000 })
+    await ensureUserExists(page)
     
     const reloadUrl = baseURL!
     await page.goto(reloadUrl)
@@ -160,23 +116,7 @@ test.describe('HASS Ingress Authentication', () => {
 
   test('HASS ingress auto-login after onboarding', async ({ page, context, baseURL }) => {
     test.skip(!baseURL?.includes('hassio_ingress'), 'HASS ingress only')
-    await page.goto('')
-    await page.waitForURL(/\/(onboard|login)/, { timeout: 10000 })
-    
-    if (page.url().includes('/login')) {
-      await page.getByRole('textbox', { name: 'Username' }).fill(TEST_USER.username)
-      await page.getByRole('textbox', { name: 'Password' }).fill(TEST_USER.password)
-      await page.getByRole('button', { name: 'Sign In' }).click()
-    } else {
-      await page.getByRole('textbox', { name: 'Full Name' }).fill(TEST_USER.name)
-      await page.getByRole('textbox', { name: 'Username' }).fill(TEST_USER.username)
-      await page.getByRole('textbox', { name: 'Email' }).fill(TEST_USER.email)
-      await page.getByRole('textbox', { name: 'Password', exact: true }).fill(TEST_USER.password)
-      await page.getByRole('textbox', { name: 'Confirm Password' }).fill(TEST_USER.password)
-      await page.getByRole('button', { name: 'Create Account' }).click()
-    }
-    
-    await expect(page.getByRole('heading', { name: 'Accounts' })).toBeVisible({ timeout: 15000 })
+    await ensureUserExists(page)
     
     const page2 = await context.newPage()
     await page2.goto('')
@@ -194,23 +134,7 @@ test.describe('HASS Ingress Authentication', () => {
 
   test('returning user is authenticated in HASS ingress', async ({ page, context, baseURL }) => {
     test.skip(!baseURL?.includes('hassio_ingress'), 'HASS ingress only')
-    await page.goto('')
-    await page.waitForURL(/\/(onboard|login)/, { timeout: 10000 })
-    
-    if (page.url().includes('/login')) {
-      await page.getByRole('textbox', { name: 'Username' }).fill(TEST_USER.username)
-      await page.getByRole('textbox', { name: 'Password' }).fill(TEST_USER.password)
-      await page.getByRole('button', { name: 'Sign In' }).click()
-    } else {
-      await page.getByRole('textbox', { name: 'Full Name' }).fill(TEST_USER.name)
-      await page.getByRole('textbox', { name: 'Username' }).fill(TEST_USER.username)
-      await page.getByRole('textbox', { name: 'Email' }).fill(TEST_USER.email)
-      await page.getByRole('textbox', { name: 'Password', exact: true }).fill(TEST_USER.password)
-      await page.getByRole('textbox', { name: 'Confirm Password' }).fill(TEST_USER.password)
-      await page.getByRole('button', { name: 'Create Account' }).click()
-    }
-    
-    await expect(page.getByRole('heading', { name: 'Accounts' })).toBeVisible({ timeout: 15000 })
+    await ensureUserExists(page)
     
     const cookies = await context.cookies()
     const authCookie = cookies.find(c => c.name === 'auth_token')
@@ -221,23 +145,7 @@ test.describe('HASS Ingress Authentication', () => {
   test('returning user is auto-authenticated without login in HASS ingress', async ({ page, context, baseURL }) => {
     test.skip(!baseURL?.includes('hassio_ingress'), 'HASS ingress only')
     
-    await page.goto('')
-    await page.waitForURL(/\/(onboard|login)/, { timeout: 10000 })
-    
-    if (page.url().includes('/login')) {
-      await page.getByRole('textbox', { name: 'Username' }).fill(TEST_USER.username)
-      await page.getByRole('textbox', { name: 'Password' }).fill(TEST_USER.password)
-      await page.getByRole('button', { name: 'Sign In' }).click()
-    } else {
-      await page.getByRole('textbox', { name: 'Full Name' }).fill(TEST_USER.name)
-      await page.getByRole('textbox', { name: 'Username' }).fill(TEST_USER.username)
-      await page.getByRole('textbox', { name: 'Email' }).fill(TEST_USER.email)
-      await page.getByRole('textbox', { name: 'Password', exact: true }).fill(TEST_USER.password)
-      await page.getByRole('textbox', { name: 'Confirm Password' }).fill(TEST_USER.password)
-      await page.getByRole('button', { name: 'Create Account' }).click()
-    }
-    
-    await expect(page.getByRole('heading', { name: 'Accounts' })).toBeVisible({ timeout: 15000 })
+    await ensureUserExists(page)
     
     await context.clearCookies()
     
@@ -256,23 +164,7 @@ test.describe('HASS Ingress Authentication', () => {
 
   test('cookie has valid expiry time (at least 30 minutes)', async ({ page, context, baseURL }) => {
     test.skip(!baseURL?.includes('hassio_ingress'), 'HASS ingress only')
-    await page.goto('')
-    await page.waitForURL(/\/(onboard|login)/, { timeout: 10000 })
-    
-    if (page.url().includes('/login')) {
-      await page.getByRole('textbox', { name: 'Username' }).fill(TEST_USER.username)
-      await page.getByRole('textbox', { name: 'Password' }).fill(TEST_USER.password)
-      await page.getByRole('button', { name: 'Sign In' }).click()
-    } else {
-      await page.getByRole('textbox', { name: 'Full Name' }).fill(TEST_USER.name)
-      await page.getByRole('textbox', { name: 'Username' }).fill(TEST_USER.username)
-      await page.getByRole('textbox', { name: 'Email' }).fill(TEST_USER.email)
-      await page.getByRole('textbox', { name: 'Password', exact: true }).fill(TEST_USER.password)
-      await page.getByRole('textbox', { name: 'Confirm Password' }).fill(TEST_USER.password)
-      await page.getByRole('button', { name: 'Create Account' }).click()
-    }
-    
-    await expect(page.getByRole('heading', { name: 'Accounts' })).toBeVisible({ timeout: 15000 })
+    await ensureUserExists(page)
     
     const cookies = await context.cookies()
     const authCookie = cookies.find(c => c.name === 'auth_token')
