@@ -1,4 +1,3 @@
-import { useNavigate } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { accountsApi } from "../lib/client/accounts-api";
 import type { CreateAccountDto } from "@txls/shared";
@@ -7,7 +6,6 @@ import { useSnackbar } from "../contexts/SnackbarContext";
 export function useCreateAccount(options?: { onSuccess?: () => void }) {
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useSnackbar();
-  const navigate = useNavigate();
 
   return useMutation({
     mutationFn: (data: CreateAccountDto) => accountsApi.create(data),
@@ -17,9 +15,6 @@ export function useCreateAccount(options?: { onSuccess?: () => void }) {
       options?.onSuccess?.();
     },
     onError: (err: any) => {
-      if (err.statusCode === 401 || err.statusCode === 403) {
-        navigate("/login");
-      }
       showError(err.message || "Failed to create account");
     },
   });
@@ -28,7 +23,6 @@ export function useCreateAccount(options?: { onSuccess?: () => void }) {
 export function useDeleteAccount() {
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useSnackbar();
-  const navigate = useNavigate();
 
   return useMutation({
     mutationFn: (id: number) => accountsApi.delete(id),
@@ -37,9 +31,6 @@ export function useDeleteAccount() {
       showSuccess("Account deleted successfully");
     },
     onError: (err: any) => {
-      if (err.statusCode === 401 || err.statusCode === 403) {
-        navigate("/login");
-      }
       showError(err.message || "Failed to delete account");
     },
   });
@@ -47,7 +38,6 @@ export function useDeleteAccount() {
 
 export function useExportTaxCsv(accountId?: number) {
   const { showSuccess, showError } = useSnackbar();
-  const navigate = useNavigate();
 
   return useMutation({
     mutationFn: (year: number) => {
@@ -65,11 +55,7 @@ export function useExportTaxCsv(accountId?: number) {
       showSuccess("Tax CSV exported successfully");
     },
     onError: (err: any) => {
-      if (err.statusCode === 401 || err.statusCode === 403) {
-        navigate("/login");
-      }
-      const errorMessage = err.message || "Failed to export tax CSV";
-      showError(errorMessage);
+      showError(err.message || "Failed to export tax CSV");
     },
   });
 }
@@ -77,7 +63,6 @@ export function useExportTaxCsv(accountId?: number) {
 export function useImportCsv(accountId?: number, onSuccess?: () => void) {
   const queryClient = useQueryClient();
   const { showSuccess, showError, showInfo } = useSnackbar();
-  const navigate = useNavigate();
 
   return useMutation({
     mutationFn: (file: File) => {
@@ -114,11 +99,7 @@ export function useImportCsv(accountId?: number, onSuccess?: () => void) {
       }
     },
     onError: (err: any) => {
-      if (err.statusCode === 401 || err.statusCode === 403) {
-        navigate("/login");
-      }
-      const errorMessage = err.message || "Failed to import CSV";
-      showError(errorMessage);
+      showError(err.message || "Failed to import CSV");
     },
   });
 }

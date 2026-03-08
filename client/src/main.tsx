@@ -13,7 +13,21 @@ const queryClient = new QueryClient({
       retry: 1,
     },
   },
+  queryCache: undefined,
 });
+
+function handleAuthError(error: unknown) {
+  if (error && typeof error === "object" && "statusCode" in error) {
+    const apiError = error as { statusCode: number };
+    if (apiError.statusCode === 401 || apiError.statusCode === 403) {
+      const basePath = getBasePath();
+      window.location.href = `${basePath}/login`;
+    }
+  }
+}
+
+queryClient.getQueryCache().config.onError = handleAuthError;
+queryClient.getMutationCache().config.onError = handleAuthError;
 
 const theme = createTheme({
   palette: {

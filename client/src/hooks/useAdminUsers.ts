@@ -1,4 +1,3 @@
-import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { adminUsersApi } from "../lib/client/admin-users-api";
 import type { User } from "@txls/shared";
@@ -21,20 +20,10 @@ interface UpdateUserData {
 
 export function useAdminUsers() {
   const { user } = useAuth();
-  const navigate = useNavigate();
 
   return useQuery<User[]>({
     queryKey: ["admin", "users"],
-    queryFn: async () => {
-      try {
-        return await adminUsersApi.getAll();
-      } catch (err: any) {
-        if (err.statusCode === 401 || err.statusCode === 403) {
-          navigate("/login");
-        }
-        throw err;
-      }
-    },
+    queryFn: () => adminUsersApi.getAll(),
     enabled: !!user?.isAdmin,
   });
 }
@@ -42,7 +31,6 @@ export function useAdminUsers() {
 export function useCreateUser() {
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useSnackbar();
-  const navigate = useNavigate();
 
   return useMutation({
     mutationFn: (data: CreateUserData) => adminUsersApi.create(data),
@@ -51,9 +39,6 @@ export function useCreateUser() {
       showSuccess("User created successfully");
     },
     onError: (err: any) => {
-      if (err.statusCode === 401 || err.statusCode === 403) {
-        navigate("/login");
-      }
       showError(err.error || err.message || "Failed to create user");
     },
   });
@@ -62,7 +47,6 @@ export function useCreateUser() {
 export function useUpdateUser() {
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useSnackbar();
-  const navigate = useNavigate();
 
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: UpdateUserData }) =>
@@ -72,9 +56,6 @@ export function useUpdateUser() {
       showSuccess("User updated successfully");
     },
     onError: (err: any) => {
-      if (err.statusCode === 401 || err.statusCode === 403) {
-        navigate("/login");
-      }
       showError(err.error || err.message || "Failed to update user");
     },
   });
@@ -83,7 +64,6 @@ export function useUpdateUser() {
 export function useDeleteUser() {
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useSnackbar();
-  const navigate = useNavigate();
 
   return useMutation({
     mutationFn: (id: number) => adminUsersApi.deleteUser(id),
@@ -92,9 +72,6 @@ export function useDeleteUser() {
       showSuccess("User deleted successfully");
     },
     onError: (err: any) => {
-      if (err.statusCode === 401 || err.statusCode === 403) {
-        navigate("/login");
-      }
       showError(err.error || err.message || "Failed to delete user");
     },
   });
@@ -103,7 +80,6 @@ export function useDeleteUser() {
 export function useResetUserPassword() {
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useSnackbar();
-  const navigate = useNavigate();
 
   return useMutation({
     mutationFn: ({ id, password }: { id: number; password: string }) => adminUsersApi.resetPassword(id, { newPassword: password }),
@@ -112,9 +88,6 @@ export function useResetUserPassword() {
       showSuccess("Password updated successfully");
     },
     onError: (err: any) => {
-      if (err.statusCode === 401 || err.statusCode === 403) {
-        navigate("/login");
-      }
       showError(err.error || err.message || "Failed to update password");
     },
   });
