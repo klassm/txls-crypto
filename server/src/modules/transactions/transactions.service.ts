@@ -95,38 +95,40 @@ export class TransactionsService {
     }
   }
 
-  async importTransactions(
-    providerAccountId: number,
-    transactions: Transaction[],
-  ): Promise<{ imported: number; errors: string[] }> {
-    logger.info({
-      message: "Starting transaction import",
-      providerAccountId,
-      transactionCount: transactions.length,
-    });
+async importTransactions(
+		userId: number,
+		providerAccountId: number,
+		transactions: Transaction[],
+	): Promise<{ imported: number; errors: string[] }> {
+		logger.info({
+			message: "Starting transaction import",
+			userId,
+			providerAccountId,
+			transactionCount: transactions.length,
+		});
 
-    const errors: string[] = [];
-    let imported = 0;
+		const errors: string[] = [];
+		let imported = 0;
 
-    for (const transaction of transactions) {
-      try {
-        const existing = await this.repository.findOneByExternalId(
-          transaction.externalId,
-        );
+		for (const transaction of transactions) {
+			try {
+				const existing = await this.repository.findOneByExternalId(
+					transaction.externalId,
+				);
 
-        if (existing) {
-          const msg = `Transaction ${transaction.externalId} already exists`;
-          errors.push(msg);
-          logger.warn({
-            message: "Duplicate transaction",
-            providerAccountId,
-            externalId: transaction.externalId,
-          });
-          continue;
-        }
+				if (existing) {
+					const msg = `Transaction ${transaction.externalId} already exists`;
+					errors.push(msg);
+					logger.warn({
+						message: "Duplicate transaction",
+						providerAccountId,
+						externalId: transaction.externalId,
+					});
+					continue;
+				}
 
-        const entity = this.dtoToEntity(transaction, providerAccountId);
-        await this.repository.save(entity);
+				const entity = this.dtoToEntity(transaction, userId, providerAccountId);
+				await this.repository.save(entity);
 
         imported++;
         logger.debug({
@@ -176,17 +178,18 @@ export class TransactionsService {
     };
   }
 
-  private dtoToEntity(dto: Transaction, providerAccountId: number): TransactionEntity {
-    const entity = new TransactionEntity();
-    entity.providerAccountId = providerAccountId;
-    entity.externalId = dto.externalId;
-    entity.timestamp = dto.timestamp;
-    entity.type = dto.type as string;
-    entity.asset = dto.asset;
-    entity.quantity = dto.quantity;
-    entity.eurValue = dto.eurValue;
-    entity.eurFee = dto.eurFee;
-    entity.processed = dto.processed;
-    return entity;
-  }
+private dtoToEntity(dto: Transaction, userId: number, providerAccountId: number): TransactionEntity {
+		const entity = new TransactionEntity();
+		entity.userId = userId;
+		entity.providerAccountId = providerAccountId;
+		entity.externalId = dto.externalId;
+		entity.timestamp = dto.timestamp;
+		entity.type = dto.type as string;
+		entity.asset = dto.asset;
+		entity.quantity = dto.quantity;
+		entity.eurValue = dto.eurValue;
+		entity.eurFee = dto.eurFee;
+		entity.processed = dto.processed;
+		return entity;
+	}
 }

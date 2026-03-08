@@ -322,10 +322,10 @@ router.post("/:id/transactions/import", upload.single("file"), async (req: Reque
       });
     }
 
-    const repository = new TransactionsRepository(dataSource);
-    const transactionsService = new TransactionsService(repository);
+const repository = new TransactionsRepository(dataSource);
+		const transactionsService = new TransactionsService(repository);
 
-    const importResult = await transactionsService.importTransactions(accountId, transactions);
+		const importResult = await transactionsService.importTransactions(userId, accountId, transactions);
 
     if (importResult.imported > 0 && transactions.length > 0) {
       const earliestTx = transactions.reduce((earliest, tx) => {

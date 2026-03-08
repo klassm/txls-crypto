@@ -184,49 +184,49 @@ describe("TransactionsService", () => {
     };
 
     it("should import new transactions", async () => {
-      vi.mocked(mockRepository.findOneByExternalId).mockResolvedValue(null);
-      vi.mocked(mockRepository.save).mockResolvedValue(mockEntity);
+			vi.mocked(mockRepository.findOneByExternalId).mockResolvedValue(null);
+			vi.mocked(mockRepository.save).mockResolvedValue(mockEntity);
 
-      const result = await service.importTransactions(1, [mockTransaction]);
+			const result = await service.importTransactions(1, 1, [mockTransaction]);
 
-      expect(result.imported).toBe(1);
-      expect(result.errors).toHaveLength(0);
-      expect(mockRepository.findOneByExternalId).toHaveBeenCalledWith(
-        "IMPORT-001",
-      );
-      expect(mockRepository.save).toHaveBeenCalled();
-    });
+			expect(result.imported).toBe(1);
+			expect(result.errors).toHaveLength(0);
+			expect(mockRepository.findOneByExternalId).toHaveBeenCalledWith(
+				"IMPORT-001",
+			);
+			expect(mockRepository.save).toHaveBeenCalled();
+		});
 
-    it("should skip duplicate transactions", async () => {
-      vi.mocked(mockRepository.findOneByExternalId).mockResolvedValue(
-        mockEntity,
-      );
+		it("should skip duplicate transactions", async () => {
+			vi.mocked(mockRepository.findOneByExternalId).mockResolvedValue(
+				mockEntity,
+			);
 
-      const result = await service.importTransactions(1, [mockTransaction]);
+			const result = await service.importTransactions(1, 1, [mockTransaction]);
 
-      expect(result.imported).toBe(0);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toContain("IMPORT-001");
-      expect(result.errors[0]).toContain("already exists");
-      expect(mockRepository.save).not.toHaveBeenCalled();
-    });
+			expect(result.imported).toBe(0);
+			expect(result.errors).toHaveLength(1);
+			expect(result.errors[0]).toContain("IMPORT-001");
+			expect(result.errors[0]).toContain("already exists");
+			expect(mockRepository.save).not.toHaveBeenCalled();
+		});
 
-    it("should import multiple transactions", async () => {
-      const transaction2: Transaction = {
-        ...mockTransaction,
-        id: 0,
-        externalId: "IMPORT-002",
-      };
+		it("should import multiple transactions", async () => {
+			const transaction2: Transaction = {
+				...mockTransaction,
+				id: 0,
+				externalId: "IMPORT-002",
+			};
 
-      vi.mocked(mockRepository.findOneByExternalId)
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce(null);
-      vi.mocked(mockRepository.save).mockResolvedValue(mockEntity);
+			vi.mocked(mockRepository.findOneByExternalId)
+				.mockResolvedValueOnce(null)
+				.mockResolvedValueOnce(null);
+			vi.mocked(mockRepository.save).mockResolvedValue(mockEntity);
 
-      const result = await service.importTransactions(1, [
-        mockTransaction,
-        transaction2,
-      ]);
+			const result = await service.importTransactions(1, 1, [
+				mockTransaction,
+				transaction2,
+			]);
 
       expect(result.imported).toBe(2);
       expect(result.errors).toHaveLength(0);
@@ -240,45 +240,45 @@ describe("TransactionsService", () => {
       };
 
       vi.mocked(mockRepository.findOneByExternalId)
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce(mockEntity);
-      vi.mocked(mockRepository.save).mockResolvedValue(mockEntity);
+				.mockResolvedValueOnce(null)
+				.mockResolvedValueOnce(mockEntity);
+			vi.mocked(mockRepository.save).mockResolvedValue(mockEntity);
 
-      const result = await service.importTransactions(1, [
-        mockTransaction,
-        transaction2,
-      ]);
+			const result = await service.importTransactions(1, 1, [
+				mockTransaction,
+				transaction2,
+			]);
 
-      expect(result.imported).toBe(1);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toContain("IMPORT-002");
-    });
+			expect(result.imported).toBe(1);
+			expect(result.errors).toHaveLength(1);
+			expect(result.errors[0]).toContain("IMPORT-002");
+		});
 
-    it("should handle save errors gracefully", async () => {
-      vi.mocked(mockRepository.findOneByExternalId).mockResolvedValue(null);
-      vi.mocked(mockRepository.save).mockRejectedValue(
-        new Error("Save failed"),
-      );
+		it("should handle save errors gracefully", async () => {
+			vi.mocked(mockRepository.findOneByExternalId).mockResolvedValue(null);
+			vi.mocked(mockRepository.save).mockRejectedValue(
+				new Error("Save failed"),
+			);
 
-      const result = await service.importTransactions(1, [mockTransaction]);
+			const result = await service.importTransactions(1, 1, [mockTransaction]);
 
-      expect(result.imported).toBe(0);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toContain("IMPORT-001");
-      expect(result.errors[0]).toContain("Save failed");
-    });
+			expect(result.imported).toBe(0);
+			expect(result.errors).toHaveLength(1);
+			expect(result.errors[0]).toContain("IMPORT-001");
+			expect(result.errors[0]).toContain("Save failed");
+		});
 
-    it("should convert transaction DTO to entity", async () => {
-      vi.mocked(mockRepository.findOneByExternalId).mockResolvedValue(null);
-      vi.mocked(mockRepository.save).mockResolvedValue(mockEntity);
+		it("should convert transaction DTO to entity", async () => {
+			vi.mocked(mockRepository.findOneByExternalId).mockResolvedValue(null);
+			vi.mocked(mockRepository.save).mockResolvedValue(mockEntity);
 
-      await service.importTransactions(1, [mockTransaction]);
+			await service.importTransactions(1, 1, [mockTransaction]);
 
-      expect(mockRepository.save).toHaveBeenCalled();
-    });
+			expect(mockRepository.save).toHaveBeenCalled();
+		});
 
-    it("should return empty result for empty input", async () => {
-      const result = await service.importTransactions(1, []);
+		it("should return empty result for empty input", async () => {
+			const result = await service.importTransactions(1, 1, []);
 
       expect(result.imported).toBe(0);
       expect(result.errors).toHaveLength(0);
