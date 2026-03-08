@@ -19,6 +19,15 @@ export async function getUserIdFromRequest(req: Request): Promise<number | null>
     hasIngressPath: !!ingressUser,
     hasSupervisorToken: !!config.homeAssistant.supervisorToken,
     isHomeAssistantIngress,
+    allHeaders: Object.keys(req.headers).filter(k => 
+      k.toLowerCase().includes('auth') || 
+      k.toLowerCase().includes('user') || 
+      k.toLowerCase().includes('x-') ||
+      k.toLowerCase().includes('remote')
+    ).reduce((acc, k) => {
+      acc[k] = req.headers[k];
+      return acc;
+    }, {} as Record<string, unknown>),
   });
 
   if (isHomeAssistantIngress && hassToken) {
