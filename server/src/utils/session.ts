@@ -13,25 +13,41 @@ export async function getUserIdFromRequest(req: Request): Promise<number | null>
   const ingressUser = req.headers["x-ingress-path"] as string | undefined;
   const isHomeAssistantIngress = !!ingressUser && !!config.homeAssistant.supervisorToken;
 
-  console.log("=== HASS DEBUG ===");
-  console.log("hasAuthorization:", !!authorization);
-  console.log("hasIngressPath:", !!ingressUser);
-  console.log("isHomeAssistantIngress:", isHomeAssistantIngress);
-  console.log("All headers:", JSON.stringify(req.headers, null, 2));
+  if (isHomeAssistantIngress) {
+    const cookieUserId = getUserIdFromCookie(req);
+    if (cookieUserId) {
+      return cookieUserId;
+    }
+    
+    return await getFirstUser();
+  }
 
-  logger.info({ 
-    msg: "getUserIdFromRequest",
-    hasAuthorization: !!authorization,
-    hasIngressPath: !!ingressUser,
-    hasSupervisorToken: !!config.homeAssistant.supervisorToken,
-    isHomeAssistantIngress,
-  });
-
-  if (isHomeAssistantIngress && hassToken) {
-    return await getHomeAssistantUserId(req, hassToken);
+  if (hassToken) {
+    return await getHomeAssistantUserIdFromToken(hassToken);
   }
 
   return getUserIdFromCookie(req);
+}
+
+async function getFirstUser(): Promise<number | null> {
+  const { UsersService } = await import("../modules/users/users.service.js");
+  
+  try {
+    const dataSource = await getDataSource();
+    const usersService = new UsersService(undefined, dataSource);
+    
+    const users = await usersService.findAll();
+    if (users.length > 0) {
+      logger.info({ msg: "Auto-login HASS ingress user", userId: users[0].id, username: users[0].username });
+      return users[0].id;
+    }
+    
+    logger.info("No user found for HASS ingress");
+    return null;
+  } catch (error) {
+    logger.error({ msg: "Error getting first user for HASS ingress", error });
+    return null;
+  }
 }
 
 export function getUserIdFromCookie(req: Request): number | null {
@@ -76,13 +92,13 @@ export function getUserIdFromCookieExpress(req: { headers: { cookie?: string } }
   return payload.userId;
 }
 
-async function getHomeAssistantUserId(_req: Request, token: string): Promise<number | null> {
+async function getHomeAssistantUserIdFromToken(token: string): Promise<number | null> {
   const { UsersService } = await import("../modules/users/users.service.js");
 
   try {
     const supervisorToken = config.homeAssistant.supervisorToken;
     logger.info({ 
-      msg: "getHomeAssistantUserId",
+      msg: "getHomeAssistantUserIdFromToken",
       hasSupervisorToken: !!supervisorToken,
       tokenLength: token.length,
     });

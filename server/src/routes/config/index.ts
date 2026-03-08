@@ -5,7 +5,7 @@ import { AUTH_COOKIE_NAME, generateToken, getSessionMaxAge, verifyToken } from "
 import { toISOString } from "../../utils/date.js";
 import { onboardingUserSchema } from "../../validation/schemas.js";
 import { config } from "../../config/env.js";
-import { getUserIdFromRequest } from "../../utils/session.js";
+import { getUserIdFromRequest, getUserIdFromCookie } from "../../utils/session.js";
 import { logger } from "../../common/logger.js";
 
 const router = Router();
@@ -47,6 +47,26 @@ router.get("/", async (req: Request, res: Response) => {
           createdAt: toISOString(user.createdAt) ?? "",
           updatedAt: toISOString(user.updatedAt) ?? "",
         };
+        
+        const hasValidCookie = getUserIdFromCookie(req) !== null;
+        if (hassIngress && !hasValidCookie) {
+          logger.info({ msg: "Setting fresh cookie for HASS ingress auto-auth", userId });
+          const token = generateToken({
+            userId: user.id,
+            username: user.username,
+            email: user.email,
+            isAdmin: user.isAdmin,
+          });
+          const forwardedProto = req.headers["x-forwarded-proto"];
+          const isSecure = forwardedProto === "https" || req.secure;
+          res.cookie(AUTH_COOKIE_NAME, token, {
+            httpOnly: true,
+            secure: isSecure,
+            sameSite: isSecure ? "none" : "lax",
+            maxAge: getSessionMaxAge(),
+            path: "/",
+          });
+        }
       }
     }
 

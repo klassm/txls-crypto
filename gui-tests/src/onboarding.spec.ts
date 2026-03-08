@@ -218,6 +218,42 @@ test.describe('HASS Ingress Authentication', () => {
     expect(authCookie!.httpOnly).toBe(true)
   })
 
+  test('returning user is auto-authenticated without login in HASS ingress', async ({ page, context, baseURL }) => {
+    test.skip(!baseURL?.includes('hassio_ingress'), 'HASS ingress only')
+    
+    await page.goto('')
+    await page.waitForURL(/\/(onboard|login)/, { timeout: 10000 })
+    
+    if (page.url().includes('/login')) {
+      await page.getByRole('textbox', { name: 'Username' }).fill(TEST_USER.username)
+      await page.getByRole('textbox', { name: 'Password' }).fill(TEST_USER.password)
+      await page.getByRole('button', { name: 'Sign In' }).click()
+    } else {
+      await page.getByRole('textbox', { name: 'Full Name' }).fill(TEST_USER.name)
+      await page.getByRole('textbox', { name: 'Username' }).fill(TEST_USER.username)
+      await page.getByRole('textbox', { name: 'Email' }).fill(TEST_USER.email)
+      await page.getByRole('textbox', { name: 'Password', exact: true }).fill(TEST_USER.password)
+      await page.getByRole('textbox', { name: 'Confirm Password' }).fill(TEST_USER.password)
+      await page.getByRole('button', { name: 'Create Account' }).click()
+    }
+    
+    await expect(page.getByRole('heading', { name: 'Accounts' })).toBeVisible({ timeout: 15000 })
+    
+    await context.clearCookies()
+    
+    await page.goto('')
+    await expect(page.getByRole('heading', { name: 'Accounts' })).toBeVisible({ timeout: 15000 })
+    
+    const config = await page.evaluate(async () => {
+      const base = window.location.pathname.replace(/\/$/, '')
+      const response = await fetch(base + '/api/config', { credentials: 'include' })
+      return response.json()
+    })
+    
+    expect(config.user).not.toBeNull()
+    expect(config.user.username).toBe(TEST_USER.username)
+  })
+
   test('cookie has valid expiry time (at least 30 minutes)', async ({ page, context, baseURL }) => {
     test.skip(!baseURL?.includes('hassio_ingress'), 'HASS ingress only')
     await page.goto('')

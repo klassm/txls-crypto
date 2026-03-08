@@ -21,6 +21,7 @@ TXLS is a cryptocurrency transaction analysis platform built with React, Express
 ## Architecture
 
 ### Directory Structure
+
 ```
 client/                   # React frontend (Vite)
 ├── src/
@@ -95,6 +96,7 @@ hass-addon/               # Home Assistant addon
 ### Input Validation
 
 All API routes use Zod schemas defined in `shared/src/validation/schemas.ts`:
+
 - `userSchema` - User creation (name, username 3-50 chars, password 15-255 chars, email)
 - `onboardingUserSchema` - Initial admin user creation
 - `loginSchema` - Login credentials validation
@@ -136,11 +138,19 @@ All API routes use Zod schemas defined in `shared/src/validation/schemas.ts`:
 ## Development Guidelines
 
 ### Component Development
+
 - Use TypeScript with strict typing
 - Client components must have `"use client"` directive
 - Split large components into smaller, reusable parts
 - Use MUI styled components for custom styling
 - Follow existing naming conventions (PascalCase for components)
+
+### Bug Fixes
+
+- When fixing bugs, always reproduce the issue on the closest possible test level
+- For backend, this is usually about unit or integration tests.
+- For frontend, this is usually react-testing-library or Playwright tests
+- After fixing a bug, always check and run the test again, so to verify that we actually fixed the bug
 
 ### Database Schema Changes
 
@@ -161,6 +171,7 @@ When modifying database entities (e.g., AccountEntity, UserEntity):
 **Important**: Database column names should use snake_case (e.g., `provider_account_id`, `created_at`) in migrations, while TypeScript properties use camelCase (e.g., `providerAccountId`, `createdAt`) in entities with `name` decorator mapping.
 
 ### API Development
+
 - API routes should be in `server/src/routes/` directory
 - Always initialize the database connection before queries
 - Use the service layer pattern for business logic
@@ -176,17 +187,21 @@ import { schemaName } from "@txls/shared/validation";
 
 const validationResult = schemaName.safeParse(body);
 if (!validationResult.success) {
-  return res.status(400).json({ error: validationResult.error.errors[0].message });
+  return res
+    .status(400)
+    .json({ error: validationResult.error.errors[0].message });
 }
 ```
 
 ### Styling
+
 - Create separate `.styles.ts` files for styled components
 - Use MUI's `styled()` utility
 - Follow the existing color scheme and spacing
 - Keep styles simple and maintainable
 
 ### Testing
+
 - Use Vitest for unit and integration tests
 - Use Playwright for e2e tests
 - Test files should be co-located or in `test/` directory
