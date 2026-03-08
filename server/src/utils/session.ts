@@ -13,21 +13,18 @@ export async function getUserIdFromRequest(req: Request): Promise<number | null>
   const ingressUser = req.headers["x-ingress-path"] as string | undefined;
   const isHomeAssistantIngress = !!ingressUser && !!config.homeAssistant.supervisorToken;
 
+  console.log("=== HASS DEBUG ===");
+  console.log("hasAuthorization:", !!authorization);
+  console.log("hasIngressPath:", !!ingressUser);
+  console.log("isHomeAssistantIngress:", isHomeAssistantIngress);
+  console.log("All headers:", JSON.stringify(req.headers, null, 2));
+
   logger.info({ 
     msg: "getUserIdFromRequest",
     hasAuthorization: !!authorization,
     hasIngressPath: !!ingressUser,
     hasSupervisorToken: !!config.homeAssistant.supervisorToken,
     isHomeAssistantIngress,
-    allHeaders: Object.keys(req.headers).filter(k => 
-      k.toLowerCase().includes('auth') || 
-      k.toLowerCase().includes('user') || 
-      k.toLowerCase().includes('x-') ||
-      k.toLowerCase().includes('remote')
-    ).reduce((acc, k) => {
-      acc[k] = req.headers[k];
-      return acc;
-    }, {} as Record<string, unknown>),
   });
 
   if (isHomeAssistantIngress && hassToken) {
