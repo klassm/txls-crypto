@@ -11,6 +11,7 @@ import { getProviderConfig } from "../../sources/registry.js";
 import { TaxCalculationService } from "../../modules/tax/tax-calculator.service.js";
 import { WisoCsvExportService } from "../../modules/tax/wiso-csv-export.service.js";
 import { PortfolioSnapshotsService } from "../../modules/portfolio-snapshots/portfolio-snapshots.service.js";
+import { PricesRepository } from "../../modules/prices/prices.repository.js";
 import { TransactionType } from "@txls/shared";
 import { toISOString } from "../../utils/date.js";
 import { DateTime } from "luxon";
@@ -50,6 +51,85 @@ router.post("/", async (req: Request, res: Response) => {
     updatedAt: toISOString(account.updatedAt) ?? "",
   } : null;
   return res.status(201).json(serializedAccount);
+});
+
+router.get("/portfolio-history", async (req: Request, res: Response) => {
+	const userId = await getUserIdFromRequest(req);
+	if (!userId) {
+		return res.status(401).json({ error: "Unauthorized" });
+	}
+
+	const dataSource = await getDataSource();
+	try {
+		const daysParam = req.query.days as string | undefined;
+		const days = daysParam ? Number.parseInt(daysParam, 10) : 30;
+
+		if (isNaN(days) || days < 1 || days > 365) {
+			return res.status(400).json({ error: "Days must be between 1 and 365" });
+		}
+
+		const snapshotsService = new PortfolioSnapshotsService(dataSource);
+		const pricesRepository = new PricesRepository(dataSource);
+
+		const endDate = DateTime.utc().startOf("day");
+		const startDate = endDate.minus({ days });
+
+		const snapshots = await snapshotsService.getPortfolioHistory(
+			userId,
+			undefined,
+			startDate,
+			endDate
+		);
+
+		const snapshotsByDate = new Map<string, Map<string, { amount: number; eurValue: number | null }>>();
+
+		for (const snapshot of snapshots) {
+			const dateKey = snapshot.date.toISODate() || "";
+			if (!snapshotsByDate.has(dateKey)) {
+				snapshotsByDate.set(dateKey, new Map());
+			}
+
+			const existing = snapshotsByDate.get(dateKey)!.get(snapshot.asset);
+			const newAmount = (existing?.amount || 0) + Number(snapshot.amount);
+
+			const pricesForDate = await pricesRepository.getPriceForDate(snapshot.asset, snapshot.date);
+			const eurValue = pricesForDate ? newAmount * Number(pricesForDate.priceEur) : null;
+
+			snapshotsByDate.get(dateKey)!.set(snapshot.asset, {
+				amount: newAmount,
+				eurValue,
+			});
+		}
+
+		const result: Array<{
+			date: string;
+			totalEurValue: number | null;
+			assets: Record<string, { amount: number; eurValue: number | null }>;
+		}> = [];
+
+		for (const [date, assets] of snapshotsByDate) {
+			let totalEurValue: number | null = 0;
+			const assetsObj: Record<string, { amount: number; eurValue: number | null }> = {};
+
+			for (const [asset, data] of assets) {
+				assetsObj[asset] = data;
+				if (data.eurValue !== null) {
+					totalEurValue = (totalEurValue || 0) + data.eurValue;
+				} else {
+					totalEurValue = null;
+				}
+			}
+
+			result.push({ date, totalEurValue, assets: assetsObj });
+		}
+
+		result.sort((a, b) => a.date.localeCompare(b.date));
+
+		return res.json(result);
+	} catch (error) {
+		console.error("Portfolio history failed:", error);
+		return res.status(500).json({ error: error instanceof Error ? error.message : "Internal error" });
+	}
 });
 
 router.get("/:id", async (req: Request, res: Response) => {
@@ -258,13 +338,12 @@ router.post("/:id/transactions/import", upload.single("file"), async (req: Reque
         ? earliestTx.timestamp 
         : DateTime.fromISO(earliestTx.timestamp as unknown as string);
 
-      const snapshotsService = new PortfolioSnapshotsService(dataSource);
-      await snapshotsService.rebuildFromMonth(
-        userId,
-        accountId,
-        earliestTime.year,
-        earliestTime.month,
-      );
+const snapshotsService = new PortfolioSnapshotsService(dataSource);
+		await snapshotsService.rebuildFromDate(
+			userId,
+			accountId,
+			earliestTime.startOf("day"),
+		);
     }
 
     return res.json({
@@ -432,6 +511,93 @@ router.get("/:id/tax/export", async (req: Request, res: Response) => {
       details: error instanceof Error ? error.message : String(error),
     });
   }
+});
+
+router.get("/:id/portfolio-history", async (req: Request, res: Response) => {
+	const userId = await getUserIdFromRequest(req);
+	if (!userId) {
+		return res.status(401).json({ error: "Unauthorized" });
+	}
+
+	const dataSource = await getDataSource();
+	try {
+		const accountId = Number.parseInt(req.params.id as string, 10);
+
+		if (isNaN(accountId)) {
+			return res.status(400).json({ error: "Invalid account ID" });
+		}
+
+		const daysParam = req.query.days as string | undefined;
+		const days = daysParam ? Number.parseInt(daysParam, 10) : 30;
+
+		if (isNaN(days) || days < 1 || days > 365) {
+			return res.status(400).json({ error: "Days must be between 1 and 365" });
+		}
+
+		const snapshotsService = new PortfolioSnapshotsService(dataSource);
+		const pricesRepository = new PricesRepository(dataSource);
+
+		const endDate = DateTime.utc().startOf("day");
+		const startDate = endDate.minus({ days });
+
+		const snapshots = await snapshotsService.getPortfolioHistory(
+			userId,
+			accountId,
+			startDate,
+			endDate
+		);
+
+		const snapshotsByDate = new Map<string, Map<string, { amount: number; eurValue: number | null }>>();
+
+		const allAssets = new Set<string>();
+		for (const snapshot of snapshots) {
+			allAssets.add(snapshot.asset);
+		}
+
+		for (const snapshot of snapshots) {
+			const dateKey = snapshot.date.toISODate() || "";
+			if (!snapshotsByDate.has(dateKey)) {
+				snapshotsByDate.set(dateKey, new Map());
+			}
+
+			const pricesForDate = await pricesRepository.getPriceForDate(snapshot.asset, snapshot.date);
+			const eurValue = pricesForDate ? Number(snapshot.amount) * Number(pricesForDate.priceEur) : null;
+
+			snapshotsByDate.get(dateKey)!.set(snapshot.asset, {
+				amount: Number(snapshot.amount),
+				eurValue,
+			});
+		}
+
+		const result: Array<{
+			date: string;
+			totalEurValue: number | null;
+			assets: Record<string, { amount: number; eurValue: number | null }>;
+		}> = [];
+
+		for (const [date, assets] of snapshotsByDate) {
+			let totalEurValue: number | null = 0;
+			const assetsObj: Record<string, { amount: number; eurValue: number | null }> = {};
+
+			for (const [asset, data] of assets) {
+				assetsObj[asset] = data;
+				if (data.eurValue !== null) {
+					totalEurValue = (totalEurValue || 0) + data.eurValue;
+				} else {
+					totalEurValue = null;
+				}
+			}
+
+			result.push({ date, totalEurValue, assets: assetsObj });
+		}
+
+		result.sort((a, b) => a.date.localeCompare(b.date));
+
+		return res.json(result);
+	} catch (error) {
+		console.error("Portfolio history failed:", error);
+		return res.status(500).json({ error: error instanceof Error ? error.message : "Internal error" });
+	}
 });
 
 export default router;

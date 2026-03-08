@@ -1,171 +1,200 @@
 import "reflect-metadata";
 import type { DataSource, SelectQueryBuilder } from "typeorm";
+import { DateTime } from "luxon";
 import { PortfolioSnapshotEntity } from "./portfolio-snapshot.entity.js";
 
 export interface PortfolioSnapshotData {
-  userId: number;
-  providerAccountId: number;
-  asset: string;
-  year: number;
-  month: number;
-  amount: number;
-  eurInvested: number;
-  buyCount: number;
-  sellCount: number;
+	userId: number;
+	providerAccountId: number;
+	asset: string;
+	date: DateTime;
+	amount: number;
+	eurInvested: number;
+	buyCount: number;
+	sellCount: number;
 }
 
 export class PortfolioSnapshotsRepository {
-  constructor(private dataSource: DataSource) {}
+	constructor(private dataSource: DataSource) {}
 
-  private get qb(): SelectQueryBuilder<PortfolioSnapshotEntity> {
-    return this.dataSource
-      .getRepository(PortfolioSnapshotEntity)
-      .createQueryBuilder("snapshot");
-  }
+	private get qb(): SelectQueryBuilder<PortfolioSnapshotEntity> {
+		return this.dataSource
+			.getRepository(PortfolioSnapshotEntity)
+			.createQueryBuilder("snapshot");
+	}
 
-  async findLatestByAccount(
-    userId: number,
-    providerAccountId: number,
-  ): Promise<PortfolioSnapshotEntity[]> {
-    const latest = await this.dataSource
-      .getRepository(PortfolioSnapshotEntity)
-      .createQueryBuilder("snapshot")
-      .where("snapshot.user_id = :userId AND snapshot.provider_account_id = :providerAccountId", {
-        userId,
-        providerAccountId,
-      })
-      .orderBy("snapshot.year", "DESC")
-      .addOrderBy("snapshot.month", "DESC")
-      .getMany();
+	async findLatestByAccount(
+		userId: number,
+		providerAccountId: number,
+	): Promise<PortfolioSnapshotEntity[]> {
+		const results = await this.dataSource.query(`
+			SELECT ps.*
+			FROM portfolio_snapshots ps
+			INNER JOIN (
+				SELECT asset, MAX(date) as max_date
+				FROM portfolio_snapshots
+				WHERE user_id = ? AND provider_account_id = ?
+				GROUP BY asset
+			) latest ON ps.asset = latest.asset AND ps.date = latest.max_date
+			WHERE ps.user_id = ? AND ps.provider_account_id = ?
+		`, [userId, providerAccountId, userId, providerAccountId]);
 
-    const result: PortfolioSnapshotEntity[] = [];
-    const seenAssets = new Set<string>();
+		return results.map((row: any) => this.mapRowToEntity(row));
+	}
 
-    for (const snapshot of latest) {
-      if (!seenAssets.has(snapshot.asset)) {
-        seenAssets.add(snapshot.asset);
-        result.push(snapshot);
-      }
-    }
+	async findLatestByUser(userId: number): Promise<Map<number, PortfolioSnapshotEntity[]>> {
+		const results = await this.dataSource.query(`
+			SELECT ps.*
+			FROM portfolio_snapshots ps
+			INNER JOIN (
+				SELECT provider_account_id, asset, MAX(date) as max_date
+				FROM portfolio_snapshots
+				WHERE user_id = ?
+				GROUP BY provider_account_id, asset
+			) latest ON ps.provider_account_id = latest.provider_account_id 
+				AND ps.asset = latest.asset 
+				AND ps.date = latest.max_date
+			WHERE ps.user_id = ?
+		`, [userId, userId]);
 
-    return result;
-  }
+		const result = new Map<number, PortfolioSnapshotEntity[]>();
+		for (const row of results) {
+			const accountId = row.provider_account_id;
+			if (!result.has(accountId)) {
+				result.set(accountId, []);
+			}
+			result.get(accountId)!.push(this.mapRowToEntity(row));
+		}
 
-  async findLatestByUser(userId: number): Promise<Map<number, PortfolioSnapshotEntity[]>> {
-    const snapshots = await this.dataSource
-      .getRepository(PortfolioSnapshotEntity)
-      .createQueryBuilder("snapshot")
-      .where("snapshot.user_id = :userId", { userId })
-      .orderBy("snapshot.provider_account_id", "ASC")
-      .addOrderBy("snapshot.year", "DESC")
-      .addOrderBy("snapshot.month", "DESC")
-      .getMany();
+		return result;
+	}
 
-    const result = new Map<number, PortfolioSnapshotEntity[]>();
-    const seenAssetsByAccount = new Map<number, Set<string>>();
+	async findByAccountAndDateRange(
+		userId: number,
+		providerAccountId: number,
+		startDate: DateTime,
+		endDate: DateTime,
+	): Promise<PortfolioSnapshotEntity[]> {
+		return this.qb
+			.where("snapshot.userId = :userId AND snapshot.providerAccountId = :providerAccountId", {
+				userId,
+				providerAccountId,
+			})
+			.andWhere("snapshot.date >= :startDate", { startDate: startDate.toMillis() })
+			.andWhere("snapshot.date <= :endDate", { endDate: endDate.toMillis() })
+			.orderBy("snapshot.date", "ASC")
+			.getMany();
+	}
 
-    for (const snapshot of snapshots) {
-      const accountId = snapshot.providerAccountId;
-      if (!seenAssetsByAccount.has(accountId)) {
-        seenAssetsByAccount.set(accountId, new Set());
-      }
+	async findByUserAndDateRange(
+		userId: number,
+		startDate: DateTime,
+		endDate: DateTime,
+	): Promise<PortfolioSnapshotEntity[]> {
+		return this.qb
+			.where("snapshot.userId = :userId", { userId })
+			.andWhere("snapshot.date >= :startDate", { startDate: startDate.toMillis() })
+			.andWhere("snapshot.date <= :endDate", { endDate: endDate.toMillis() })
+			.orderBy("snapshot.date", "ASC")
+			.getMany();
+	}
 
-      const seenAssets = seenAssetsByAccount.get(accountId)!;
-      if (!seenAssets.has(snapshot.asset)) {
-        seenAssets.add(snapshot.asset);
-        if (!result.has(accountId)) {
-          result.set(accountId, []);
-        }
-        result.get(accountId)!.push(snapshot);
-      }
-    }
+	async findDistinctDates(
+		userId: number,
+		providerAccountId?: number,
+	): Promise<DateTime[]> {
+		let query = this.dataSource
+			.getRepository(PortfolioSnapshotEntity)
+			.createQueryBuilder("snapshot")
+			.select("DISTINCT snapshot.date", "date")
+			.where("snapshot.userId = :userId", { userId });
 
-    return result;
-  }
+		if (providerAccountId) {
+			query = query.andWhere("snapshot.providerAccountId = :providerAccountId", {
+				providerAccountId,
+			});
+		}
 
-  async findByAccountAndDateRange(
-    userId: number,
-    providerAccountId: number,
-    fromYear: number,
-    fromMonth: number,
-  ): Promise<PortfolioSnapshotEntity[]> {
-    return this.dataSource
-      .getRepository(PortfolioSnapshotEntity)
-      .createQueryBuilder("snapshot")
-      .where("snapshot.user_id = :userId AND snapshot.provider_account_id = :providerAccountId", {
-        userId,
-        providerAccountId,
-      })
-      .andWhere(
-        "(snapshot.year > :fromYear OR (snapshot.year = :fromYear AND snapshot.month >= :fromMonth))",
-        { fromYear, fromMonth },
-      )
-      .getMany();
-  }
+		const results = await query
+			.orderBy("snapshot.date", "ASC")
+			.getRawMany();
 
-  async deleteByAccountAndDateRange(
-    userId: number,
-    providerAccountId: number,
-    fromYear: number,
-    fromMonth: number,
-  ): Promise<void> {
-    await this.dataSource
-      .getRepository(PortfolioSnapshotEntity)
-      .createQueryBuilder()
-      .delete()
-      .where("user_id = :userId AND provider_account_id = :providerAccountId", {
-        userId,
-        providerAccountId,
-      })
-      .andWhere(
-        "(year > :fromYear OR (year = :fromYear AND month >= :fromMonth))",
-        { fromYear, fromMonth },
-      )
-      .execute();
-  }
+		return results.map((r: any) => DateTime.fromMillis(Number(r.date)));
+	}
 
-  async save(data: PortfolioSnapshotData): Promise<PortfolioSnapshotEntity> {
-    const entity = new PortfolioSnapshotEntity();
-    entity.userId = data.userId;
-    entity.providerAccountId = data.providerAccountId;
-    entity.asset = data.asset;
-    entity.year = data.year;
-    entity.month = data.month;
-    entity.amount = data.amount;
-    entity.eurInvested = data.eurInvested;
-    entity.buyCount = data.buyCount;
-    entity.sellCount = data.sellCount;
+	async deleteByAccountAndDateRange(
+		userId: number,
+		providerAccountId: number,
+		fromDate: DateTime,
+	): Promise<void> {
+		await this.dataSource
+			.getRepository(PortfolioSnapshotEntity)
+			.createQueryBuilder()
+			.delete()
+			.where("user_id = :userId AND provider_account_id = :providerAccountId", {
+				userId,
+				providerAccountId,
+			})
+			.andWhere("date >= :fromDate", { fromDate: fromDate.toMillis() })
+			.execute();
+	}
 
-    return this.dataSource.getRepository(PortfolioSnapshotEntity).save(entity);
-  }
+	async save(data: PortfolioSnapshotData): Promise<PortfolioSnapshotEntity> {
+		const entity = new PortfolioSnapshotEntity();
+		entity.userId = data.userId;
+		entity.providerAccountId = data.providerAccountId;
+		entity.asset = data.asset;
+		entity.date = data.date;
+		entity.amount = data.amount;
+		entity.eurInvested = data.eurInvested;
+		entity.buyCount = data.buyCount;
+		entity.sellCount = data.sellCount;
 
-  async saveMany(data: PortfolioSnapshotData[]): Promise<PortfolioSnapshotEntity[]> {
-    const entities = data.map((d) => {
-      const entity = new PortfolioSnapshotEntity();
-      entity.userId = d.userId;
-      entity.providerAccountId = d.providerAccountId;
-      entity.asset = d.asset;
-      entity.year = d.year;
-      entity.month = d.month;
-      entity.amount = d.amount;
-      entity.eurInvested = d.eurInvested;
-      entity.buyCount = d.buyCount;
-      entity.sellCount = d.sellCount;
-      return entity;
-    });
+		return this.dataSource.getRepository(PortfolioSnapshotEntity).save(entity);
+	}
 
-    return this.dataSource.getRepository(PortfolioSnapshotEntity).save(entities);
-  }
+	async saveMany(data: PortfolioSnapshotData[]): Promise<PortfolioSnapshotEntity[]> {
+		const entities = data.map((d) => {
+			const entity = new PortfolioSnapshotEntity();
+			entity.userId = d.userId;
+			entity.providerAccountId = d.providerAccountId;
+			entity.asset = d.asset;
+			entity.date = d.date;
+			entity.amount = d.amount;
+			entity.eurInvested = d.eurInvested;
+			entity.buyCount = d.buyCount;
+			entity.sellCount = d.sellCount;
+			return entity;
+		});
 
-  async deleteByAccount(userId: number, providerAccountId: number): Promise<void> {
-    await this.dataSource
-      .getRepository(PortfolioSnapshotEntity)
-      .createQueryBuilder()
-      .delete()
-      .where("user_id = :userId AND provider_account_id = :providerAccountId", {
-        userId,
-        providerAccountId,
-      })
-      .execute();
-  }
+		return this.dataSource.getRepository(PortfolioSnapshotEntity).save(entities);
+	}
+
+	async deleteByAccount(userId: number, providerAccountId: number): Promise<void> {
+		await this.dataSource
+			.getRepository(PortfolioSnapshotEntity)
+			.createQueryBuilder()
+			.delete()
+			.where("user_id = :userId AND provider_account_id = :providerAccountId", {
+				userId,
+				providerAccountId,
+			})
+			.execute();
+	}
+
+	private mapRowToEntity(row: any): PortfolioSnapshotEntity {
+		const entity = new PortfolioSnapshotEntity();
+		entity.id = row.id;
+		entity.userId = row.user_id;
+		entity.providerAccountId = row.provider_account_id;
+		entity.asset = row.asset;
+		entity.date = DateTime.fromMillis(Number(row.date));
+		entity.amount = Number(row.amount);
+		entity.eurInvested = Number(row.eur_invested);
+		entity.buyCount = row.buy_count;
+		entity.sellCount = row.sell_count;
+		entity.createdAt = DateTime.fromMillis(Number(row.created_at));
+		entity.updatedAt = DateTime.fromMillis(Number(row.updated_at));
+		return entity;
+	}
 }

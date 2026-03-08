@@ -90,6 +90,8 @@ describe.each(testConfigs)("$displayName Database Integration", ({ name, display
     expect(tables).toContain("users");
     expect(tables).toContain("provider_accounts");
     expect(tables).toContain("transactions");
+    expect(tables).toContain("coingecko_ids");
+    expect(tables).toContain("asset_prices");
     expect(tables).toContain("migrations");
   });
 

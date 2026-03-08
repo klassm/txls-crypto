@@ -4,6 +4,7 @@ import { AccountEntity } from "./modules/accounts/account.entity.js";
 import { TransactionEntity } from "./modules/transactions/transaction.entity.js";
 import { UserEntity } from "./modules/users/user.entity.js";
 import { PortfolioSnapshotEntity } from "./modules/portfolio-snapshots/portfolio-snapshot.entity.js";
+import { CoinGeckoIdEntity, AssetPriceEntity } from "./modules/prices/index.js";
 import { getDatabaseConfiguration } from "./config/database-config.js";
 import path from "node:path";
 import fs from "node:fs";
@@ -49,7 +50,7 @@ export async function getDataSource(): Promise<DataSource> {
       dataSource = new DataSource({
         type: "better-sqlite3",
         database: options.path || "./data/txls.db",
-        entities: [UserEntity, TransactionEntity, AccountEntity, PortfolioSnapshotEntity],
+        entities: [UserEntity, TransactionEntity, AccountEntity, PortfolioSnapshotEntity, CoinGeckoIdEntity, AssetPriceEntity],
         migrations,
         synchronize: false,
         logging: ["error", "migration"],
@@ -62,7 +63,7 @@ export async function getDataSource(): Promise<DataSource> {
         username: options.username || "postgres",
         password: options.password || "",
         database: options.database || "txls",
-        entities: [UserEntity, TransactionEntity, AccountEntity, PortfolioSnapshotEntity],
+        entities: [UserEntity, TransactionEntity, AccountEntity, PortfolioSnapshotEntity, CoinGeckoIdEntity, AssetPriceEntity],
         migrations,
         synchronize: false,
         logging: ["error", "migration"],
@@ -75,7 +76,7 @@ export async function getDataSource(): Promise<DataSource> {
         username: options.username || "root",
         password: options.password || "",
         database: options.database || "txls",
-        entities: [UserEntity, TransactionEntity, AccountEntity, PortfolioSnapshotEntity],
+        entities: [UserEntity, TransactionEntity, AccountEntity, PortfolioSnapshotEntity, CoinGeckoIdEntity, AssetPriceEntity],
         migrations,
         synchronize: false,
         logging: ["migration"],
