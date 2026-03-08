@@ -1,75 +1,68 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { DataSource } from "typeorm";
+import { getDataSource, resetDataSource } from "../database.js";
 import { ImportDeduplicationService } from "./import-deduplication.service.js";
 import { TransactionEntity } from "../modules/transactions/transaction.entity.js";
 import { TransactionType } from "@txls/shared";
-import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
 import { DateTime } from "luxon";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-
 describe("ImportDeduplicationService", () => {
-  let dataSource: DataSource;
   let deduplicationService: ImportDeduplicationService;
 
   beforeEach(async () => {
-    dataSource = new DataSource({
-      type: "better-sqlite3",
-      database: join(__dirname, "../../data/test-dedup.db"),
-      entities: [TransactionEntity],
-      synchronize: true,
-      dropSchema: true,
-    });
-
-    await dataSource.initialize();
+    process.env.DB_CONNECTION_STRING = ":memory:";
+    resetDataSource();
+    const dataSource = await getDataSource();
     deduplicationService = new ImportDeduplicationService(dataSource);
   });
 
   afterEach(async () => {
-    if (dataSource.isInitialized) {
-      await dataSource.destroy();
+    const ds = await getDataSource();
+    if (ds?.isInitialized) {
+      await ds.destroy();
     }
+    resetDataSource();
+    delete process.env.DB_CONNECTION_STRING;
   });
 
-  const createBaseTransactions = (accountId: number): any[] => [
-    {
-      userId: 1,
-      providerAccountId: accountId,
-      externalId: "TEST-001",
-      timestamp: DateTime.fromISO("2026-02-19T10:00:00.000Z"),
-      type: TransactionType.buy,
-      asset: "BTC",
-      quantity: 0.5,
-      eurValue: 1000,
-      eurFee: 5,
-      processed: false,
-    },
-    {
-      userId: 1,
-      providerAccountId: accountId,
-      externalId: "TEST-002",
-      timestamp: DateTime.fromISO("2026-02-19T11:00:00.000Z"),
-      type: TransactionType.sell,
-      asset: "BTC",
-      quantity: 0.25,
-      eurValue: 500,
-      eurFee: 2,
-      processed: false,
-    },
-    {
-      userId: 1,
-      providerAccountId: accountId,
-      externalId: "TEST-003",
-      timestamp: DateTime.fromISO("2026-02-19T12:00:00.000Z"),
-      type: TransactionType.buy,
-      asset: "ETH",
-      quantity: 1.0,
-      eurValue: 2000,
-      eurFee: 10,
-      processed: false,
-    },
-  ];
+  const createBaseTransactions = (accountId: number): TransactionEntity[] => {
+    const t1 = new TransactionEntity();
+    t1.userId = 1;
+    t1.providerAccountId = accountId;
+    t1.externalId = "TEST-001";
+    t1.timestamp = DateTime.fromISO("2026-02-19T10:00:00.000Z");
+    t1.type = TransactionType.buy;
+    t1.asset = "BTC";
+    t1.quantity = 0.5;
+    t1.eurValue = 1000;
+    t1.eurFee = 5;
+    t1.processed = false;
+
+    const t2 = new TransactionEntity();
+    t2.userId = 1;
+    t2.providerAccountId = accountId;
+    t2.externalId = "TEST-002";
+    t2.timestamp = DateTime.fromISO("2026-02-19T11:00:00.000Z");
+    t2.type = TransactionType.sell;
+    t2.asset = "BTC";
+    t2.quantity = 0.25;
+    t2.eurValue = 500;
+    t2.eurFee = 2;
+    t2.processed = false;
+
+    const t3 = new TransactionEntity();
+    t3.userId = 1;
+    t3.providerAccountId = accountId;
+    t3.externalId = "TEST-003";
+    t3.timestamp = DateTime.fromISO("2026-02-19T12:00:00.000Z");
+    t3.type = TransactionType.buy;
+    t3.asset = "ETH";
+    t3.quantity = 1.0;
+    t3.eurValue = 2000;
+    t3.eurFee = 10;
+    t3.processed = false;
+
+    return [t1, t2, t3];
+  };
 
   describe("shouldSkipOrReplace", () => {
     it("should skip when no transactions to import", async () => {
@@ -95,7 +88,7 @@ describe("ImportDeduplicationService", () => {
 
     it("should skip when data matches exactly", async () => {
       const transactions = createBaseTransactions(1);
-      const repository = dataSource.getRepository(TransactionEntity);
+      const repository = (await getDataSource()).getRepository(TransactionEntity);
 
       await repository.save(transactions);
 
@@ -116,7 +109,7 @@ describe("ImportDeduplicationService", () => {
       existingTransactions[1].eurValue = 600;
       existingTransactions[2].eurValue = 2100;
 
-      const repository = dataSource.getRepository(TransactionEntity);
+      const repository = (await getDataSource()).getRepository(TransactionEntity);
       await repository.save(existingTransactions);
 
       const newTransactions = createBaseTransactions(1);
@@ -150,7 +143,7 @@ describe("ImportDeduplicationService", () => {
         processed: false,
       };
 
-      const repository = dataSource.getRepository(TransactionEntity);
+      const repository = (await getDataSource()).getRepository(TransactionEntity);
       await repository.save([...existingTransactions, extraTransaction]);
 
       const newTransactions = createBaseTransactions(1);
@@ -177,7 +170,7 @@ describe("ImportDeduplicationService", () => {
         externalId: `ACC2-${t.externalId}`,
       }));
 
-      const repository = dataSource.getRepository(TransactionEntity);
+      const repository = (await getDataSource()).getRepository(TransactionEntity);
       await repository.save(account1Transactions);
       await repository.save(account2Transactions);
 
@@ -214,7 +207,7 @@ expect(result.shouldSkip).toBe(true);
         processed: false,
       };
 
-      const repository = dataSource.getRepository(TransactionEntity);
+      const repository = (await getDataSource()).getRepository(TransactionEntity);
       await repository.save([...account1Transactions, outsideRangeTransaction]);
 
       const result = await deduplicationService.shouldSkipOrReplace(
@@ -261,7 +254,7 @@ expect(result.shouldSkip).toBe(true);
         },
       ];
 
-      const repository = dataSource.getRepository(TransactionEntity);
+      const repository = (await getDataSource()).getRepository(TransactionEntity);
       await repository.save(transactions);
 
       const result = await deduplicationService.shouldSkipOrReplace(
@@ -302,7 +295,7 @@ expect(result.shouldSkip).toBe(true);
         },
       ];
 
-      const repository = dataSource.getRepository(TransactionEntity);
+      const repository = (await getDataSource()).getRepository(TransactionEntity);
       await repository.save(transactions);
 
       const result = await deduplicationService.shouldSkipOrReplace(
@@ -343,7 +336,7 @@ expect(result.shouldSkip).toBe(true);
         },
       ];
 
-      const repository = dataSource.getRepository(TransactionEntity);
+      const repository = (await getDataSource()).getRepository(TransactionEntity);
       await repository.save(transactions);
 
       const result = await deduplicationService.shouldSkipOrReplace(

@@ -1,36 +1,21 @@
-import "reflect-metadata";
-import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
-import { DataSource } from "typeorm";
 import { describe, it, expect, afterAll, beforeEach } from "vitest";
+import { getDataSource } from "../../src/database.js";
 import { AccountEntity } from "../../src/modules/accounts/account.entity.js";
 import { AccountsRepository } from "../../src/modules/accounts/accounts.repository.js";
 import { ProviderType } from "@txls/shared";
 import { DateTime } from "luxon";
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
+import { createTestDataSource, destroyTestDataSource } from "../test-helpers.js";
 
 describe("AccountsRepository Integration Tests", () => {
-  let dataSource: DataSource;
   let repository: AccountsRepository;
 
   afterAll(async () => {
-    if (dataSource && dataSource.isInitialized) {
-      await dataSource.destroy();
-    }
+    await destroyTestDataSource();
   });
 
   beforeEach(async () => {
-    const connectionString = process.env.DB_CONNECTION_STRING;
-    dataSource = new DataSource({
-      type: "better-sqlite3",
-      database: connectionString || join(__dirname, "data", "test-accounts.db"),
-      entities: [AccountEntity],
-      synchronize: true,
-      dropSchema: true,
-    });
-
-    await dataSource.initialize();
+    await createTestDataSource();
+    const dataSource = await getDataSource();
     repository = new AccountsRepository(dataSource);
   });
 

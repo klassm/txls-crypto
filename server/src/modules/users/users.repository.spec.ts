@@ -1,30 +1,26 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { getDataSource, resetDataSource } from "../../database.js";
 import { UsersRepository } from "./users.repository.js";
-import { UsersService } from "./users.service.js";
+import { UserEntity } from "./user.entity.js";
+import { DateTime } from "luxon";
 
 describe("UsersRepository", () => {
   let repository: UsersRepository;
-  let dataSource: any;
 
   beforeEach(async () => {
-    const { DataSource } = await import("typeorm");
-    const { UserEntity } = await import("./user.entity.js");
-    
-    dataSource = new DataSource({
-      type: "better-sqlite3",
-      database: ":memory:",
-      entities: [UserEntity],
-      synchronize: true,
-      logging: false,
-    });
-    await dataSource.initialize();
+    process.env.DB_CONNECTION_STRING = ":memory:";
+    resetDataSource();
+    const dataSource = await getDataSource();
     repository = new UsersRepository(dataSource);
   });
 
   afterEach(async () => {
-    if (dataSource.isInitialized) {
-      await dataSource.destroy();
+    const ds = await getDataSource();
+    if (ds?.isInitialized) {
+      await ds.destroy();
     }
+    resetDataSource();
+    delete process.env.DB_CONNECTION_STRING;
   });
 
   describe("count", () => {

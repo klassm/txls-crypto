@@ -1,37 +1,23 @@
-import "reflect-metadata";
-import { join } from "node:path";
-import { DataSource } from "typeorm";
 import { describe, it, expect, afterAll, beforeEach } from "vitest";
+import { getDataSource } from "../../src/database.js";
 import { TransactionEntity } from "../../src/modules/transactions/transaction.entity.js";
 import { AccountEntity } from "../../src/modules/accounts/account.entity.js";
 import { PortfolioSnapshotEntity } from "../../src/modules/portfolio-snapshots/portfolio-snapshot.entity.js";
 import { TransactionType } from "@txls/shared";
 import { TransactionsRepository } from "../../src/modules/transactions/transactions.repository.js";
 import { DateTime } from "luxon";
-
-const __dirname = import.meta.dirname;
+import { createTestDataSource, destroyTestDataSource } from "../test-helpers.js";
 
 describe("TransactionsRepository Integration Tests", () => {
-  let dataSource: DataSource;
   let repository: TransactionsRepository;
 
   afterAll(async () => {
-    if (dataSource && dataSource.isInitialized) {
-      await dataSource.destroy();
-    }
+    await destroyTestDataSource();
   });
 
   beforeEach(async () => {
-    const connectionString = process.env.DB_CONNECTION_STRING;
-    dataSource = new DataSource({
-      type: "better-sqlite3",
-      database: connectionString || join(__dirname, "data", "test-repo.db"),
-      entities: [AccountEntity, TransactionEntity, PortfolioSnapshotEntity],
-      synchronize: true,
-      dropSchema: true,
-    });
-
-    await dataSource.initialize();
+    await createTestDataSource();
+    const dataSource = await getDataSource();
     repository = new TransactionsRepository(dataSource);
   });
 
@@ -707,7 +693,7 @@ describe("TransactionsRepository Integration Tests", () => {
     });
 
     it("should return empty map when no transactions exist", async () => {
-      await dataSource.getRepository(TransactionEntity).clear();
+      await (await getDataSource()).getRepository(TransactionEntity).clear();
 
       const summaries = await repository.getAllAssetSummaries();
 

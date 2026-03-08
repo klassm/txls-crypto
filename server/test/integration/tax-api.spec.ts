@@ -1,11 +1,8 @@
-import "reflect-metadata";
-import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
-import { DataSource } from "typeorm";
 import { describe, it, expect, afterAll, beforeEach, vi } from "vitest";
 import express from "express";
 import request from "supertest";
 import cookieParser from "cookie-parser";
+import { getDataSource } from "../../src/database.js";
 import { AccountEntity } from "../../src/modules/accounts/account.entity.js";
 import { TransactionEntity } from "../../src/modules/transactions/transaction.entity.js";
 import { UserEntity } from "../../src/modules/users/user.entity.js";
@@ -14,30 +11,19 @@ import { generateToken, AUTH_COOKIE_NAME } from "../../src/utils/password.js";
 import { DateTime } from "luxon";
 import { ProviderType } from "@txls/shared";
 import * as database from "../../src/database.js";
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
+import { createTestDataSource, destroyTestDataSource } from "../test-helpers.js";
 
 describe("Tax API Integration Tests", () => {
-  let dataSource: DataSource;
   let app: express.Application;
 
   afterAll(async () => {
     vi.restoreAllMocks();
-    if (dataSource && dataSource.isInitialized) {
-      await dataSource.destroy();
-    }
+    await destroyTestDataSource();
   });
 
   beforeEach(async () => {
-    dataSource = new DataSource({
-      type: "better-sqlite3",
-      database: join(__dirname, "data", "test-tax-api.db"),
-      entities: [UserEntity, AccountEntity, TransactionEntity],
-      synchronize: true,
-      dropSchema: true,
-    });
-
-    await dataSource.initialize();
+    await createTestDataSource();
+    const dataSource = await getDataSource();
 
     vi.spyOn(database, "getDataSource").mockResolvedValue(dataSource);
 
@@ -62,7 +48,7 @@ describe("Tax API Integration Tests", () => {
     account.provider = ProviderType.Bitpanda;
     account.createdAt = DateTime.now();
     account.updatedAt = DateTime.now();
-    return dataSource.getRepository(AccountEntity).save(account);
+    return (await getDataSource()).getRepository(AccountEntity).save(account);
   };
 
   const createTestTransaction = async (
@@ -81,7 +67,7 @@ describe("Tax API Integration Tests", () => {
     tx.eurValue = 1000;
     tx.eurFee = 0;
     tx.processed = false;
-    return dataSource.getRepository(TransactionEntity).save(tx);
+    return (await getDataSource()).getRepository(TransactionEntity).save(tx);
   };
 
   describe("GET /api/tax/years", () => {
@@ -161,7 +147,7 @@ describe("Tax API Integration Tests", () => {
       account2.provider = ProviderType.Bitpanda;
       account2.createdAt = DateTime.now();
       account2.updatedAt = DateTime.now();
-      const savedAccount2 = await dataSource.getRepository(AccountEntity).save(account2);
+      const savedAccount2 = await (await getDataSource()).getRepository(AccountEntity).save(account2);
 
       await createTestTransaction(userId1, account1.id, DateTime.fromISO("2022-06-15T10:00:00Z"));
       await createTestTransaction(userId2, savedAccount2.id, DateTime.fromISO("2020-03-20T10:00:00Z"));

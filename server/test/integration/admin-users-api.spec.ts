@@ -2,25 +2,19 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { createServer } from "http";
 import { parse } from "url";
 import request from "supertest";
-import { DataSource } from "typeorm";
+import { getDataSource } from "../../src/database.js";
 import { UserEntity } from "../../src/modules/users/user.entity.js";
 import { generateToken, verifyToken, AUTH_COOKIE_NAME } from "../../src/utils/password.js";
 import { DateTime } from "luxon";
+import { createTestDataSource, destroyTestDataSource } from "../test-helpers.js";
 
-let dataSource: DataSource;
 let server: any;
 let baseUrl: string;
 
 describe("Admin Users API Integration Tests", () => {
   beforeEach(async () => {
-    dataSource = new DataSource({
-      type: "better-sqlite3",
-      database: ":memory:",
-      entities: [UserEntity],
-      synchronize: true,
-      logging: false,
-    });
-    await dataSource.initialize();
+    await createTestDataSource();
+    const dataSource = await getDataSource();
 
     server = createServer(async (req, res) => {
       const parsedUrl = parse(req.url || "", true);
@@ -42,7 +36,7 @@ describe("Admin Users API Integration Tests", () => {
           return;
         }
 
-        const users = await dataSource.getRepository(UserEntity).find();
+        const users = await (await getDataSource()).getRepository(UserEntity).find();
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(JSON.stringify(users));
       } else if (req.method === "POST" && parsedUrl.pathname === "/api/admin/users") {
@@ -68,7 +62,7 @@ describe("Admin Users API Integration Tests", () => {
           req.on("end", () => resolve(JSON.parse(data)));
         })) as any;
 
-        const existing = await dataSource.getRepository(UserEntity).findOne({
+        const existing = await (await getDataSource()).getRepository(UserEntity).findOne({
           where: { username: body.username },
         });
         if (existing) {
@@ -87,7 +81,7 @@ describe("Admin Users API Integration Tests", () => {
         user.createdAt = DateTime.now();
         user.updatedAt = DateTime.now();
 
-        const saved = await dataSource.getRepository(UserEntity).save(user);
+        const saved = await (await getDataSource()).getRepository(UserEntity).save(user);
         res.writeHead(201, { "Content-Type": "application/json" });
         res.end(JSON.stringify(saved));
       } else {
@@ -109,9 +103,7 @@ describe("Admin Users API Integration Tests", () => {
     if (server) {
       await new Promise((resolve) => server.close(resolve));
     }
-    if (dataSource?.isInitialized) {
-      await dataSource.destroy();
-    }
+    await destroyTestDataSource();
   });
 
   describe("GET /api/admin/users", () => {
@@ -152,7 +144,7 @@ describe("Admin Users API Integration Tests", () => {
       user1.password = "hash1";
       user1.salt = "salt1";
       user1.isAdmin = false;
-      await dataSource.getRepository(UserEntity).save(user1);
+      await (await getDataSource()).getRepository(UserEntity).save(user1);
 
       const response = await request(baseUrl)
         .get("/api/admin/users")
@@ -206,7 +198,7 @@ describe("Admin Users API Integration Tests", () => {
       existing.password = "hash";
       existing.salt = "salt";
       existing.isAdmin = false;
-      await dataSource.getRepository(UserEntity).save(existing);
+      await (await getDataSource()).getRepository(UserEntity).save(existing);
 
       const userData = {
         name: "New User",

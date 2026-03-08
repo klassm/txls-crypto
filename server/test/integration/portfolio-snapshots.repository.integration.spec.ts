@@ -1,34 +1,20 @@
-import "reflect-metadata";
-import { join } from "node:path";
-import { DataSource } from "typeorm";
 import { describe, it, expect, afterAll, beforeEach } from "vitest";
+import { getDataSource } from "../../src/database.js";
 import { PortfolioSnapshotEntity } from "../../src/modules/portfolio-snapshots/portfolio-snapshot.entity.js";
 import { PortfolioSnapshotsRepository } from "../../src/modules/portfolio-snapshots/portfolio-snapshots.repository.js";
 import { DateTime } from "luxon";
-
-const __dirname = import.meta.dirname;
+import { createTestDataSource, destroyTestDataSource } from "../test-helpers.js";
 
 describe("PortfolioSnapshotsRepository Integration Tests", () => {
-	let dataSource: DataSource;
 	let repository: PortfolioSnapshotsRepository;
 
 	afterAll(async () => {
-		if (dataSource && dataSource.isInitialized) {
-			await dataSource.destroy();
-		}
+		await destroyTestDataSource();
 	});
 
 	beforeEach(async () => {
-		const connectionString = process.env.DB_CONNECTION_STRING;
-		dataSource = new DataSource({
-			type: "better-sqlite3",
-			database: connectionString || join(__dirname, "data", "test-snapshot-repo.db"),
-			entities: [PortfolioSnapshotEntity],
-			synchronize: true,
-			dropSchema: true,
-		});
-
-		await dataSource.initialize();
+		await createTestDataSource();
+		const dataSource = await getDataSource();
 		repository = new PortfolioSnapshotsRepository(dataSource);
 	});
 
