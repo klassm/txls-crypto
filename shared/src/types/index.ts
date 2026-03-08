@@ -1,8 +1,8 @@
 import { DateTime } from "luxon";
 
 export enum ProviderType {
-  Bitpanda = "Bitpanda",
-  TradeRepublic = "TradeRepublic",
+	Bitpanda = "bitpanda",
+	TradeRepublic = "traderepublic",
 }
 
 export interface User {

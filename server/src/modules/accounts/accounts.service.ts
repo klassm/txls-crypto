@@ -8,9 +8,9 @@ import { PortfolioSnapshotsService } from "../portfolio-snapshots/portfolio-snap
 import { logger } from "../../common/logger.js";
 import { sources } from "../../sources/registry.js";
 
-const providerMetadata: { [key in ProviderType]: any } = {
-  [ProviderType.Bitpanda]: sources.bitpanda,
-  [ProviderType.TradeRepublic]: sources.tradeRepublic,
+const providerMetadata: Record<ProviderType, any> = {
+	[ProviderType.Bitpanda]: sources[ProviderType.Bitpanda],
+	[ProviderType.TradeRepublic]: sources[ProviderType.TradeRepublic],
 };
 
 export class AccountsService {

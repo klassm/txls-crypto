@@ -8,14 +8,14 @@ import { TransactionsRepository } from "../transactions/transactions.repository.
 import { logger } from "../../common/logger.js";
 import { sources } from "../../sources/registry.js";
 
-const providerConfigs: { [key in ProviderType]: CsvImporter | undefined } = {
-  [ProviderType.Bitpanda]: sources.bitpanda.csvImporter,
-  [ProviderType.TradeRepublic]: sources.tradeRepublic.csvImporter,
+const providerConfigs: Record<ProviderType, CsvImporter | undefined> = {
+	[ProviderType.Bitpanda]: sources[ProviderType.Bitpanda].csvImporter,
+	[ProviderType.TradeRepublic]: sources[ProviderType.TradeRepublic].csvImporter,
 };
 
-const providerMetadata: { [key in ProviderType]: any } = {
-  [ProviderType.Bitpanda]: sources.bitpanda,
-  [ProviderType.TradeRepublic]: sources.tradeRepublic,
+const providerMetadata: Record<ProviderType, any> = {
+	[ProviderType.Bitpanda]: sources[ProviderType.Bitpanda],
+	[ProviderType.TradeRepublic]: sources[ProviderType.TradeRepublic],
 };
 
 export class ProvidersService {
