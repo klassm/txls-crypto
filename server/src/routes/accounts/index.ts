@@ -6,8 +6,8 @@ import { AccountsRepository } from "../../modules/accounts/accounts.repository.j
 import { AccountsService } from "../../modules/accounts/accounts.service.js";
 import { TransactionsRepository } from "../../modules/transactions/transactions.repository.js";
 import { TransactionsService } from "../../modules/transactions/transactions.service.js";
-import { ImportDeduplicationService } from "../../sources/import-deduplication.service.js";
-import { getProviderConfig } from "../../sources/registry.js";
+import { ImportDeduplicationService } from "../../providers/import-deduplication.service.js";
+import { getProviderConfig } from "../../providers/registry.js";
 import { TaxCalculationService } from "../../modules/tax/tax-calculator.service.js";
 import { WisoCsvExportService } from "../../modules/tax/wiso-csv-export.service.js";
 import { PortfolioSnapshotsService } from "../../modules/portfolio-snapshots/portfolio-snapshots.service.js";

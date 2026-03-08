@@ -9,11 +9,11 @@ export interface CsvImporter {
   parseCsv(csvContent: string, accountId: number): CsvImportResult;
 }
 
-export interface ProviderModuleConfig {
-  csvImporter: CsvImporter | undefined;
-  name: string;
-  logoBackgroundColor: string;
-  logoForegroundColor: string;
-  logoPath: string;
-  csvImportMarkdownInstructions: string;
+export interface ProviderConfig {
+	csvImporter: CsvImporter | undefined;
+	name: string;
+	logoBackgroundColor: string;
+	logoForegroundColor: string;
+	logoPath: string;
+	csvImportMarkdownInstructions: string;
 }

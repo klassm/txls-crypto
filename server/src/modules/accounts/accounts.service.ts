@@ -6,11 +6,11 @@ import { AccountsRepository } from "./accounts.repository.js";
 import { TransactionsRepository } from "../transactions/transactions.repository.js";
 import { PortfolioSnapshotsService } from "../portfolio-snapshots/portfolio-snapshots.service.js";
 import { logger } from "../../common/logger.js";
-import { sources } from "../../sources/registry.js";
+import { providerConfigs } from "../../providers/registry.js";
 
 const providerMetadata: Record<ProviderType, any> = {
-	[ProviderType.Bitpanda]: sources[ProviderType.Bitpanda],
-	[ProviderType.TradeRepublic]: sources[ProviderType.TradeRepublic],
+	[ProviderType.Bitpanda]: providerConfigs[ProviderType.Bitpanda],
+	[ProviderType.TradeRepublic]: providerConfigs[ProviderType.TradeRepublic],
 };
 
 export class AccountsService {

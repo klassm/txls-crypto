@@ -1,7 +1,7 @@
-import type { ProviderModuleConfig } from "../types.js";
+import type { ProviderConfig } from "../types.js";
 import { BitpandaImporter } from "./importer.js";
 
-export const bitpandaConfig: ProviderModuleConfig = {
+export const bitpandaConfig: ProviderConfig = {
   csvImporter: new BitpandaImporter(),
   name: "Bitpanda",
   logoBackgroundColor: "#27D17F",

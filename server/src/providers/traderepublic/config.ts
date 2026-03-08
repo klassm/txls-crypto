@@ -1,7 +1,7 @@
-import type { ProviderModuleConfig } from "../types.js";
+import type { ProviderConfig } from "../types.js";
 import { TradeRepublicImporter } from "./importer.js";
 
-export const traderepublicConfig: ProviderModuleConfig = {
+export const traderepublicConfig: ProviderConfig = {
   csvImporter: new TradeRepublicImporter(),
   name: "TradeRepublic",
   logoBackgroundColor: "#ffffff",

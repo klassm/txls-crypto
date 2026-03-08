@@ -1,12 +1,12 @@
 import { Router, Request, Response } from "express";
 import { ProviderType } from "@txls/shared";
-import { sources } from "../../sources/registry.js";
+import { providerConfigs } from "../../providers/registry.js";
 
 const router = Router();
 
 router.get("/config", (_req: Request, res: Response) => {
 	return res.json(
-		Object.entries(sources).map(([key, value]) => ({
+		Object.entries(providerConfigs).map(([key, value]) => ({
 			source: key as ProviderType,
 			name: value.name,
 			logoBackgroundColor: value.logoBackgroundColor,
