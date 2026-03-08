@@ -10,6 +10,7 @@ import { ImportDeduplicationService } from "../../sources/import-deduplication.s
 import { getProviderConfig } from "../../sources/registry.js";
 import { TaxCalculationService } from "../../modules/tax/tax-calculator.service.js";
 import { WisoCsvExportService } from "../../modules/tax/wiso-csv-export.service.js";
+import { PortfolioSnapshotsService } from "../../modules/portfolio-snapshots/portfolio-snapshots.service.js";
 import { TransactionType } from "@txls/shared";
 import { toISOString } from "../../utils/date.js";
 import { DateTime } from "luxon";
@@ -245,6 +246,26 @@ router.post("/:id/transactions/import", upload.single("file"), async (req: Reque
     const transactionsService = new TransactionsService(repository);
 
     const importResult = await transactionsService.importTransactions(accountId, transactions);
+
+    if (importResult.imported > 0 && transactions.length > 0) {
+      const earliestTx = transactions.reduce((earliest, tx) => {
+        const txTime = tx.timestamp instanceof DateTime ? tx.timestamp : DateTime.fromISO(tx.timestamp as unknown as string);
+        const earliestTime = earliest.timestamp instanceof DateTime ? earliest.timestamp : DateTime.fromISO(earliest.timestamp as unknown as string);
+        return txTime < earliestTime ? tx : earliest;
+      });
+
+      const earliestTime = earliestTx.timestamp instanceof DateTime 
+        ? earliestTx.timestamp 
+        : DateTime.fromISO(earliestTx.timestamp as unknown as string);
+
+      const snapshotsService = new PortfolioSnapshotsService(dataSource);
+      await snapshotsService.rebuildFromMonth(
+        userId,
+        accountId,
+        earliestTime.year,
+        earliestTime.month,
+      );
+    }
 
     return res.json({
       imported: importResult.imported,

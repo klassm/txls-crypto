@@ -4,6 +4,7 @@ import { DataSource } from "typeorm";
 import { describe, it, expect, afterAll, beforeEach } from "vitest";
 import { TransactionEntity } from "../../src/modules/transactions/transaction.entity.js";
 import { AccountEntity } from "../../src/modules/accounts/account.entity.js";
+import { PortfolioSnapshotEntity } from "../../src/modules/portfolio-snapshots/portfolio-snapshot.entity.js";
 import { TransactionType } from "@txls/shared";
 import { TransactionsRepository } from "../../src/modules/transactions/transactions.repository.js";
 import { DateTime } from "luxon";
@@ -25,7 +26,7 @@ describe("TransactionsRepository Integration Tests", () => {
     dataSource = new DataSource({
       type: "better-sqlite3",
       database: connectionString || join(__dirname, "data", "test-repo.db"),
-      entities: [AccountEntity, TransactionEntity],
+      entities: [AccountEntity, TransactionEntity, PortfolioSnapshotEntity],
       synchronize: true,
       dropSchema: true,
     });
