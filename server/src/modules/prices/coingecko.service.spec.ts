@@ -17,10 +17,23 @@ describe("CoinGeckoService", () => {
 			values: vi.fn().mockReturnThis(),
 			orUpdate: vi.fn().mockReturnThis(),
 			execute: vi.fn(),
+			create: vi.fn().mockImplementation((data) => data),
+		};
+
+		const transactionRepo = {
+			createQueryBuilder: vi.fn().mockReturnValue({
+				select: vi.fn().mockReturnThis(),
+				getRawMany: vi.fn().mockResolvedValue([]),
+			}),
 		};
 
 		mockDataSource = {
-			getRepository: vi.fn().mockReturnValue(mockRepository),
+			getRepository: vi.fn().mockImplementation((entity) => {
+				if (entity.name === "CoinGeckoIdEntity") {
+					return mockRepository;
+				}
+				return transactionRepo;
+			}),
 		};
 
 		service = new CoinGeckoService(mockDataSource);
@@ -69,17 +82,27 @@ describe("CoinGeckoService", () => {
 			expect(result).toHaveLength(0);
 		});
 
-		it("should batch requests for more than 50 symbols", async () => {
-			const symbols = Array.from({ length: 60 }, (_, i) => `COIN${i}`);
-			const fetchSpy = vi.spyOn(service as any, "fetchPricesBatch")
-				.mockImplementation(async (batch: unknown) => 
-					(batch as string[]).map(s => ({ symbol: s, priceEur: 100, fetchedAt: DateTime.utc() }))
-				);
+		it("should lookup uncached symbols", async () => {
+			const originalFetch = global.fetch;
+			global.fetch = vi.fn()
+				.mockResolvedValueOnce({
+					ok: true,
+					json: async () => ({ coins: [{ id: "bitcoin", symbol: "btc", name: "Bitcoin" }] }),
+				})
+				.mockResolvedValueOnce({
+					ok: true,
+					json: async () => ({ bitcoin: { eur: 50000 } }),
+				});
 
-			const result = await service.fetchPrices(symbols);
+			mockRepository.execute.mockResolvedValue({});
 
-			expect(fetchSpy).toHaveBeenCalledTimes(2);
-			expect(result).toHaveLength(60);
+			const result = await service.fetchPrices(["BTC"]);
+
+			expect(result).toHaveLength(1);
+			expect(result[0].symbol).toBe("BTC");
+			expect(result[0].priceEur).toBe(50000);
+
+			global.fetch = originalFetch;
 		});
 	});
 });

@@ -2,6 +2,7 @@ import pino from "pino";
 import { DateTime } from "luxon";
 import type { DataSource } from "typeorm";
 import { CoinGeckoIdEntity } from "./coingecko-id.entity.js";
+import { TransactionEntity } from "../transactions/transaction.entity.js";
 
 const logger = pino({ level: "info" });
 
@@ -32,7 +33,7 @@ export class CoinGeckoService {
 		if (this.initialized) return;
 
 		await this.loadSymbolMappingFromDb();
-		await this.fetchAndCacheCoinList();
+		await this.cacheSymbolsFromTransactions();
 		this.initialized = true;
 	}
 
@@ -47,93 +48,122 @@ export class CoinGeckoService {
 		logger.info({ count: mappings.length }, "[CoinGecko] Loaded symbol mappings from DB");
 	}
 
-	private async fetchAndCacheCoinList(): Promise<void> {
-		try {
-			await this.enforceRateLimit();
-			const response = await fetch(`${COINGECKO_API_BASE}/coins/list`);
-			
-			if (!response.ok) {
-				logger.warn({ status: response.status }, "[CoinGecko] Failed to fetch coin list");
-				return;
-			}
+	private async cacheSymbolsFromTransactions(): Promise<void> {
+		const repo = this.dataSource.getRepository(TransactionEntity);
+		const results = await repo
+			.createQueryBuilder("transaction")
+			.select("DISTINCT transaction.asset", "asset")
+			.getRawMany();
 
-			const coins = (await response.json()) as CoinGeckoCoin[];
-			this.lastRequestTime = Date.now();
+		const symbols = results.map((r) => r.asset as string).filter((s) => s);
+		const uncachedSymbols = symbols.filter((s) => !this.symbolToIdCache.has(s.toUpperCase()));
 
-			const symbolToBestCoin = this.resolveSymbolConflicts(coins);
+		if (uncachedSymbols.length === 0) {
+			logger.info("[CoinGecko] All transaction symbols already cached");
+			return;
+		}
 
-			await this.persistSymbolMappings(symbolToBestCoin);
+		logger.info({ symbols: uncachedSymbols }, "[CoinGecko] Looking up uncached symbols");
 
-			logger.info({ count: symbolToBestCoin.size }, "[CoinGecko] Cached coin list");
-		} catch (error) {
-			logger.error({ error }, "[CoinGecko] Error fetching coin list");
+		for (const symbol of uncachedSymbols) {
+			await this.lookupAndCacheSymbol(symbol);
 		}
 	}
 
-	private resolveSymbolConflicts(coins: CoinGeckoCoin[]): Map<string, CoinGeckoCoin> {
-		const symbolToCoins = new Map<string, CoinGeckoCoin[]>();
+	private async lookupAndCacheSymbol(symbol: string): Promise<void> {
+		try {
+			await this.enforceRateLimit();
 
-		for (const coin of coins) {
-			const symbol = coin.symbol.toUpperCase();
-			if (!symbolToCoins.has(symbol)) {
-				symbolToCoins.set(symbol, []);
+			const response = await fetch(
+				`${COINGECKO_API_BASE}/search?query=${encodeURIComponent(symbol.toLowerCase())}`
+			);
+
+			if (!response.ok) {
+				logger.warn({ status: response.status, symbol }, "[CoinGecko] Failed to search for symbol");
+				return;
 			}
-			symbolToCoins.get(symbol)!.push(coin);
-		}
 
-		const result = new Map<string, CoinGeckoCoin>();
+			const data = (await response.json()) as { coins: CoinGeckoCoin[] };
+			this.lastRequestTime = Date.now();
+
+			const coins = data.coins || [];
+			const matchingCoin = this.findBestMatch(symbol, coins);
+
+			if (!matchingCoin) {
+				logger.warn({ symbol }, "[CoinGecko] No matching coin found");
+				return;
+			}
+
+			this.symbolToIdCache.set(symbol.toUpperCase(), matchingCoin.id);
+
+			await this.persistSymbolMapping(symbol.toUpperCase(), matchingCoin);
+
+			logger.info({ symbol, coinGeckoId: matchingCoin.id, name: matchingCoin.name }, "[CoinGecko] Cached symbol mapping");
+		} catch (error) {
+			logger.error({ error, symbol }, "[CoinGecko] Error looking up symbol");
+		}
+	}
+
+	private findBestMatch(symbol: string, coins: CoinGeckoCoin[]): CoinGeckoCoin | null {
+		const upperSymbol = symbol.toUpperCase();
+
+		const exactMatch = coins.find(
+			(c) => c.symbol.toUpperCase() === upperSymbol
+		);
+		if (exactMatch) return exactMatch;
+
 		const knownMajorCoins = new Set([
 			"bitcoin", "ethereum", "solana", "ripple", "cardano", "polkadot",
 			"dogecoin", "avalanche-2", "chainlink", "polygon", "litecoin",
 			"uniswap", "stellar", "cosmos", "monero"
 		]);
 
-		for (const [symbol, coinList] of symbolToCoins) {
-			const majorCoin = coinList.find(c => knownMajorCoins.has(c.id));
-			const selectedCoin = majorCoin || coinList[0];
-			result.set(symbol, selectedCoin);
-		}
+		const majorCoin = coins.find(
+			(c) => c.symbol.toUpperCase() === upperSymbol && knownMajorCoins.has(c.id)
+		);
+		if (majorCoin) return majorCoin;
 
-		return result;
+		const symbolMatch = coins.find(
+			(c) => c.symbol.toUpperCase() === upperSymbol
+		);
+		if (symbolMatch) return symbolMatch;
+
+		return null;
 	}
 
-	private async persistSymbolMappings(mappings: Map<string, CoinGeckoCoin>): Promise<void> {
+	private async persistSymbolMapping(symbol: string, coin: CoinGeckoCoin): Promise<void> {
 		const repo = this.dataSource.getRepository(CoinGeckoIdEntity);
-		
-		for (const [symbol, coin] of mappings) {
-			this.symbolToIdCache.set(symbol, coin.id);
-		}
 
-		const entities = Array.from(mappings.entries()).map(([symbol, coin]) => ({
-			symbol,
-			coinGeckoId: coin.id,
-			name: coin.name,
-			isActive: true,
-			createdAt: DateTime.utc(),
-			updatedAt: DateTime.utc(),
-		}));
+		try {
+			const entity = repo.create({
+				symbol,
+				coinGeckoId: coin.id,
+				name: coin.name,
+				isActive: true,
+				createdAt: DateTime.utc(),
+				updatedAt: DateTime.utc(),
+			});
 
-		if (entities.length === 0) return;
-
-		const batchSize = 100;
-		for (let i = 0; i < entities.length; i += batchSize) {
-			const batch = entities.slice(i, i + batchSize);
-			try {
-				await repo
-					.createQueryBuilder()
-					.insert()
-					.into(CoinGeckoIdEntity)
-					.values(batch)
-					.orUpdate(["coingecko_id", "name", "updated_at"], ["symbol"])
-					.execute();
-			} catch (error) {
-				logger.warn({ error, batchIndex: i }, "[CoinGecko] Error persisting batch, continuing...");
-			}
+			await repo
+				.createQueryBuilder()
+				.insert()
+				.into(CoinGeckoIdEntity)
+				.values(entity)
+				.orUpdate(["coingecko_id", "name", "updated_at"], ["symbol"])
+				.execute();
+		} catch (error) {
+			logger.warn({ error, symbol }, "[CoinGecko] Error persisting symbol mapping");
 		}
 	}
 
 	async fetchPrices(symbols: string[]): Promise<CoinPrice[]> {
 		if (symbols.length === 0) return [];
+
+		for (const symbol of symbols) {
+			if (!this.symbolToIdCache.has(symbol.toUpperCase())) {
+				await this.lookupAndCacheSymbol(symbol);
+			}
+		}
 
 		const batchSize = MAX_SYMBOLS_PER_REQUEST;
 		const results: CoinPrice[] = [];
@@ -151,8 +181,16 @@ export class CoinGeckoService {
 		try {
 			await this.enforceRateLimit();
 
-			const symbolsParam = symbols.map(s => s.toLowerCase()).join(",");
-			const url = `${COINGECKO_API_BASE}/simple/price?symbols=${symbolsParam}&vs_currencies=eur`;
+			const coinGeckoIds = symbols
+				.map((s) => this.symbolToIdCache.get(s.toUpperCase()))
+				.filter((id): id is string => !!id);
+
+			if (coinGeckoIds.length === 0) {
+				return [];
+			}
+
+			const idsParam = coinGeckoIds.join(",");
+			const url = `${COINGECKO_API_BASE}/simple/price?ids=${idsParam}&vs_currencies=eur`;
 
 			const response = await fetch(url);
 			if (!response.ok) {
@@ -168,8 +206,9 @@ export class CoinGeckoService {
 
 			for (const symbol of symbols) {
 				const coinGeckoId = this.symbolToIdCache.get(symbol.toUpperCase());
-				const priceData = coinGeckoId ? data[coinGeckoId] : data[symbol.toLowerCase()];
+				if (!coinGeckoId) continue;
 
+				const priceData = data[coinGeckoId];
 				if (priceData?.eur !== undefined) {
 					results.push({
 						symbol: symbol.toUpperCase(),
@@ -190,7 +229,7 @@ export class CoinGeckoService {
 		const elapsed = Date.now() - this.lastRequestTime;
 		if (elapsed < RATE_LIMIT_DELAY_MS) {
 			const waitTime = RATE_LIMIT_DELAY_MS - elapsed;
-			await new Promise(resolve => setTimeout(resolve, waitTime));
+			await new Promise((resolve) => setTimeout(resolve, waitTime));
 		}
 	}
 
