@@ -10,6 +10,39 @@ import { getUserIdFromRequest } from "../../utils/session.js";
 
 const router = Router();
 
+router.get("/years", async (req: Request, res: Response) => {
+  const userId = await getUserIdFromRequest(req);
+  if (!userId) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  const dataSource = await getDataSource();
+  try {
+    const transactionsRepository = new TransactionsRepository(dataSource);
+    const accountsRepository = new AccountsRepository(dataSource);
+
+    const accounts = await accountsRepository.findAll(userId);
+    const currentYear = DateTime.now().year;
+
+    const yearsSet = new Set<number>();
+    yearsSet.add(currentYear);
+
+    for (const account of accounts) {
+      const transactions = await transactionsRepository.findByProviderAccountId(userId, account.id);
+      for (const tx of transactions) {
+        const year = tx.timestamp.year;
+        yearsSet.add(year);
+      }
+    }
+
+    const years = Array.from(yearsSet).sort((a, b) => b - a);
+    return res.json({ years });
+  } catch (error) {
+    console.error("Failed to get tax years:", error);
+    return res.status(500).json({ error: error instanceof Error ? error.message : "Internal error" });
+  }
+});
+
 router.get("/", async (req: Request, res: Response) => {
   const userId = await getUserIdFromRequest(req);
   if (!userId) {

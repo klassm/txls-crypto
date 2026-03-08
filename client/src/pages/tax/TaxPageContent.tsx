@@ -31,7 +31,7 @@ import {
 import { useSearchParams, useNavigate, Link } from "react-router-dom";
 import { green, red, grey } from "@mui/material/colors";
 import { useExportTaxCsv } from "../../hooks/useAccountMutations";
-import { useCombinedTaxCalculations } from "../../hooks/useCombinedTaxCalculations";
+import { useCombinedTaxCalculations, useTaxYears } from "../../hooks/useCombinedTaxCalculations";
 import { PageHeader } from "../../components/common/PageHeader";
 import { PageLayout } from "../../components/common/PageLayout";
 import { DateTime } from "luxon";
@@ -81,10 +81,7 @@ export default function TaxPageContent() {
     navigate(`?${params.toString()}`, { replace: true });
   };
 
-  const yearOptions = Array.from(
-    { length: currentYear - 2019 + 1 },
-    (_, i) => currentYear - i,
-  );
+  const { data: yearOptions = [currentYear] } = useTaxYears();
 
   const exportMutation = useExportTaxCsv(1);
 
