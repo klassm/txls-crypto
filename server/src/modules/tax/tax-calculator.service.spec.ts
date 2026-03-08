@@ -259,7 +259,7 @@ describe("TaxCalculationService", () => {
       expect(btcCalc?.transactions[0].costBasis).toBeCloseTo(2000, 2);
     });
 
-    it("should handle unmatched transfer_out to external wallet as sell", () => {
+    it("should not create taxable event for unmatched transfer_out to external wallet", () => {
       const service = new TaxCalculationService();
       const transactions: Transaction[] = [
         createTransaction(1, "2024-01-01T00:00:00Z", "buy", "BTC", 0.1, 1000, 0),
@@ -268,9 +268,22 @@ describe("TaxCalculationService", () => {
 
       const result = service.calculateTax(transactions);
 
-      const btcCalc = result.get("BTC");
-      expect(btcCalc?.transactions).toHaveLength(1);
-      expect(btcCalc?.totalGain).toBeCloseTo(495, 2);
+      expect(result.size).toBe(0);
+    });
+
+    it("should handle multiple unmatched transfer_outs without creating taxable events", () => {
+      const service = new TaxCalculationService();
+      const transactions: Transaction[] = [
+        createTransaction(1, "2024-01-01T00:00:00Z", "buy", "SOL", 20, 2000, 0),
+        createTransaction(2, "2024-01-02T00:00:00Z", "buy", "ETH", 2, 3000, 0),
+        createTransaction(3, "2024-06-01T00:00:00Z", "transfer_out", "SOL", 19.78, 2436, 5),
+        createTransaction(4, "2024-06-02T00:00:00Z", "transfer_out", "SOL", 18.90, 2432, 5),
+        createTransaction(5, "2024-07-01T00:00:00Z", "transfer_out", "ETH", 1.26, 3913, 5),
+      ];
+
+      const result = service.calculateTax(transactions);
+
+      expect(result.size).toBe(0);
     });
 
     it("should preserve FIFO order when matching transfers", () => {

@@ -232,8 +232,6 @@ export class TaxCalculationService {
           buyQueue.shift();
         }
       }
-    } else {
-      this.processSell(transaction, asset, buyQueues, assetCalculations);
     }
   }
 
