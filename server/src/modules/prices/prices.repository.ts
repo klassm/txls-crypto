@@ -33,6 +33,25 @@ export class PricesRepository {
 			.execute();
 	}
 
+	async savePriceFromTransaction(asset: string, priceEur: number, date: DateTime): Promise<void> {
+		const entity = {
+			asset: asset.toUpperCase(),
+			priceEur,
+			fetchedAt: date,
+			source: "transaction",
+			createdAt: DateTime.utc(),
+		};
+
+		await this.dataSource
+			.getRepository(AssetPriceEntity)
+			.createQueryBuilder()
+			.insert()
+			.into(AssetPriceEntity)
+			.values(entity)
+			.orIgnore()
+			.execute();
+	}
+
 	async getLatestPrice(asset: string): Promise<AssetPriceEntity | null> {
 		return this.qb
 			.where("price.asset = :asset", { asset: asset.toUpperCase() })

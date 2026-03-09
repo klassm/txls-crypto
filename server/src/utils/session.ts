@@ -4,6 +4,7 @@ import { config } from "../config/env.js";
 import { logger } from "../common/logger.js";
 import { getDataSource } from "../database.js";
 import cookie from "cookie";
+import { HassSupervisorError } from "./errors.js";
 
 export { AUTH_COOKIE_NAME, verifyToken, config, logger, getDataSource };
 
@@ -19,7 +20,11 @@ export async function getUserIdFromRequest(req: Request): Promise<number | null>
       return cookieUserId;
     }
     
-    return await getFirstUser();
+    if (hassToken) {
+      return await getHomeAssistantUserIdFromToken(hassToken);
+    }
+    
+    return null;
   }
 
   if (hassToken) {
@@ -27,27 +32,6 @@ export async function getUserIdFromRequest(req: Request): Promise<number | null>
   }
 
   return getUserIdFromCookie(req);
-}
-
-async function getFirstUser(): Promise<number | null> {
-  const { UsersService } = await import("../modules/users/users.service.js");
-  
-  try {
-    const dataSource = await getDataSource();
-    const usersService = new UsersService(undefined, dataSource);
-    
-    const users = await usersService.findAll();
-    if (users.length > 0) {
-      logger.info({ msg: "Auto-login HASS ingress user", userId: users[0].id, username: users[0].username });
-      return users[0].id;
-    }
-    
-    logger.info("No user found for HASS ingress");
-    return null;
-  } catch (error) {
-    logger.error({ msg: "Error getting first user for HASS ingress", error });
-    return null;
-  }
 }
 
 export function getUserIdFromCookie(req: Request): number | null {
@@ -95,21 +79,22 @@ export function getUserIdFromCookieExpress(req: { headers: { cookie?: string } }
 async function getHomeAssistantUserIdFromToken(token: string): Promise<number | null> {
   const { UsersService } = await import("../modules/users/users.service.js");
 
+  const supervisorToken = config.homeAssistant.supervisorToken;
+  logger.info({
+    msg: "getHomeAssistantUserIdFromToken",
+    hasSupervisorToken: !!supervisorToken,
+    tokenLength: token.length,
+  });
+
+  if (!supervisorToken) {
+    logger.warn("No supervisor token available");
+    return null;
+  }
+
+  let response: Response;
   try {
-    const supervisorToken = config.homeAssistant.supervisorToken;
-    logger.info({ 
-      msg: "getHomeAssistantUserIdFromToken",
-      hasSupervisorToken: !!supervisorToken,
-      tokenLength: token.length,
-    });
-
-    if (!supervisorToken) {
-      logger.warn("No supervisor token available");
-      return null;
-    }
-
     logger.info("Calling supervisor/auth...");
-    const response = await fetch("http://supervisor/auth", {
+    response = await fetch("http://supervisor/auth", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -117,50 +102,62 @@ async function getHomeAssistantUserIdFromToken(token: string): Promise<number | 
       },
       body: JSON.stringify({ token }),
     });
-
-    logger.info({ msg: "Supervisor response status", status: response.status });
-
-    if (!response.ok) {
-      logger.warn("Supervisor auth failed");
-      return null;
-    }
-
-    const authData = (await response.json()) as { data?: { user?: { name?: string; is_owner?: boolean } } };
-    logger.debug({ 
-      msg: "Auth data",
-      data: JSON.stringify(authData).substring(0, 200),
-    });
-
-    const userData = authData.data?.user;
-    if (!userData?.name) {
-      logger.warn("No user data in response");
-      return null;
-    }
-
-    logger.info({ msg: "User found", name: userData.name, is_owner: userData.is_owner });
-
-    const dataSource = await getDataSource();
-    const usersService = new UsersService(undefined, dataSource);
-
-    let userEntity = await usersService.findByUsername(userData.name);
-    if (!userEntity) {
-      logger.info({ msg: "Creating new user", name: userData.name });
-      const bcrypt = (await import("bcrypt")).default;
-      const randomPassword = Array(32).fill(0).map(() => Math.random().toString(36)[2]).join("");
-
-      userEntity = await usersService.createUser({
-        name: userData.name,
-        username: userData.name,
-        email: userData.name.includes("@") ? userData.name : `${userData.name}@hass.local`,
-        password: randomPassword,
-        isAdmin: userData.is_owner || false,
-      });
-    }
-
-    logger.info({ msg: "User authenticated", userId: userEntity.id });
-    return userEntity.id;
   } catch (error) {
-    logger.error({ msg: "Home Assistant auth error", error });
+    logger.error({ msg: "Failed to connect to Home Assistant supervisor", error });
+    throw new HassSupervisorError("Unable to connect to Home Assistant supervisor. Please check if Home Assistant is running.");
+  }
+
+  logger.info({ msg: "Supervisor response status", status: response.status });
+
+  if (!response.ok) {
+    logger.warn("Supervisor auth failed");
     return null;
   }
+
+  let authData: { data?: { user?: { name?: string; is_owner?: boolean } } } | undefined;
+  try {
+    authData = await response.json() as { data?: { user?: { name?: string; is_owner?: boolean } } };
+  } catch (error) {
+    logger.error({ msg: "Failed to parse supervisor response", error });
+    throw new HassSupervisorError("Invalid response from Home Assistant supervisor.");
+  }
+  
+  if (!authData) {
+    logger.warn("No auth data in response");
+    return null;
+  }
+  
+  logger.debug({
+    msg: "Auth data",
+    data: JSON.stringify(authData).substring(0, 200),
+  });
+
+  const userData = authData.data?.user;
+  if (!userData?.name) {
+    logger.warn("No user data in response");
+    return null;
+  }
+
+  logger.info({ msg: "User found", name: userData.name, is_owner: userData.is_owner });
+
+  const dataSource = await getDataSource();
+  const usersService = new UsersService(undefined, dataSource);
+
+  let userEntity = await usersService.findByUsername(userData.name);
+  if (!userEntity) {
+    logger.info({ msg: "Creating new user", name: userData.name });
+    const bcrypt = (await import("bcrypt")).default;
+    const randomPassword = Array(32).fill(0).map(() => Math.random().toString(36)[2]).join("");
+
+    userEntity = await usersService.createUser({
+      name: userData.name,
+      username: userData.name,
+      email: userData.name.includes("@") ? userData.name : `${userData.name}@hass.local`,
+      password: randomPassword,
+      isAdmin: userData.is_owner || false,
+    });
+  }
+
+  logger.info({ msg: "User authenticated", userId: userEntity.id });
+  return userEntity.id;
 }

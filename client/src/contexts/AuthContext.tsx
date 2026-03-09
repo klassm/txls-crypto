@@ -13,6 +13,7 @@ interface AuthContextValue {
   isAuthenticated: boolean;
   canOnboard: boolean;
   hassIngress: boolean;
+  authError: string | null;
   login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   onboardingUser: (data: {
@@ -41,7 +42,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     queryFn: async () => {
       const response = await fetch(apiUrl("/api/config"), { credentials: "include" });
       if (!response.ok) {
-        return { user: null, canOnboard: false, hassIngress: false };
+        return { user: null, canOnboard: false, hassIngress: false, authError: null };
       }
       const data = await response.json();
       return data;
@@ -122,6 +123,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     isAuthenticated: !!configData?.user,
     canOnboard: configData?.canOnboard ?? false,
     hassIngress: configData?.hassIngress ?? false,
+    authError: configData?.authError ?? null,
     login: async (username, password) => {
       await loginMutation.mutateAsync({ username, password });
       await refetch();

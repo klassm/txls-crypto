@@ -12,6 +12,7 @@ import { TaxCalculationService } from "../../modules/tax/tax-calculator.service.
 import { WisoCsvExportService } from "../../modules/tax/wiso-csv-export.service.js";
 import { PortfolioSnapshotsService } from "../../modules/portfolio-snapshots/portfolio-snapshots.service.js";
 import { PricesRepository } from "../../modules/prices/prices.repository.js";
+import { PriceBackfillService } from "../../modules/prices/price-backfill.service.js";
 import { TransactionType } from "@txls/shared";
 import { toISOString } from "../../utils/date.js";
 import { DateTime } from "luxon";
@@ -273,6 +274,16 @@ const repository = new TransactionsRepository(dataSource);
 
 		const importResult = await transactionsService.importTransactions(userId, accountId, transactions);
 
+		if (importResult.imported > 0) {
+			const priceBackfillService = new PriceBackfillService(dataSource);
+			const savedEntities = await repository.findByProviderAccountId(userId, accountId);
+			const newlySaved = savedEntities.filter(e => 
+				transactions.some(t => t.externalId === e.externalId)
+			);
+			await priceBackfillService.storePricesFromTransactions(newlySaved);
+			await priceBackfillService.fillTransferPrices(accountId);
+		}
+
     if (importResult.imported > 0 && transactions.length > 0) {
       const earliestTx = transactions.reduce((earliest, tx) => {
         const txTime = tx.timestamp instanceof DateTime ? tx.timestamp : DateTime.fromISO(tx.timestamp as unknown as string);
@@ -342,6 +353,7 @@ router.get("/:id/tax", async (req: Request, res: Response) => {
       quantity: e.quantity,
       eurValue: e.eurValue,
       eurFee: e.eurFee,
+      eurRate: e.eurRate ?? 0,
       processed: e.processed,
     }));
 
@@ -435,6 +447,7 @@ router.get("/:id/tax/export", async (req: Request, res: Response) => {
       quantity: e.quantity,
       eurValue: e.eurValue,
       eurFee: e.eurFee,
+      eurRate: e.eurRate ?? 0,
       processed: e.processed,
     }));
 

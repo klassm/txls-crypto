@@ -8,7 +8,6 @@ import {
   Divider,
   Link as MuiLink,
 } from "@mui/material";
-import { useNavigate } from "react-router-dom";
 import { PageHeader } from "../../components/common/PageHeader";
 import { PageLayout } from "../../components/common/PageLayout";
 
@@ -54,15 +53,11 @@ const docRequirements = [
 ];
 
 export function TaxRulesContent() {
-  const navigate = useNavigate();
-
   return (
     <PageLayout maxWidth="md">
       <Stack spacing={4} sx={{ py: 4 }}>
         <PageHeader
           title="German Crypto Tax Rules"
-          onBack={() => navigate("/tax")}
-          backButtonLabel="Back to Tax Calculations"
         />
 
         <Typography variant="body1" color="text.secondary">

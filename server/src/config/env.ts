@@ -12,6 +12,8 @@ export const config = {
     level: process.env.LOG_LEVEL || "info",
   },
   homeAssistant: {
-    supervisorToken: process.env.SUPERVISOR_TOKEN,
+    get supervisorToken() {
+      return process.env.SUPERVISOR_TOKEN;
+    },
   },
 } as const;

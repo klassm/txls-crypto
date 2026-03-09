@@ -45,6 +45,9 @@ export class TransactionEntity {
   @Column({ name: "eur_fee", type: "decimal", precision: 18, scale: 8 })
   eurFee!: number;
 
+  @Column({ name: "eur_rate", type: "decimal", precision: 18, scale: 8, default: 0 })
+  eurRate!: number;
+
   @Column({ type: "boolean", default: false })
   processed!: boolean;
 

@@ -35,6 +35,7 @@ describe("ImportDeduplicationService", () => {
       quantity: 0.5,
       eurValue: 1000,
       eurFee: 5,
+      eurRate: 2000,
       processed: false,
     };
 
@@ -48,6 +49,7 @@ describe("ImportDeduplicationService", () => {
       quantity: 0.25,
       eurValue: 500,
       eurFee: 2,
+      eurRate: 2000,
       processed: false,
     };
 
@@ -61,6 +63,7 @@ describe("ImportDeduplicationService", () => {
       quantity: 1.0,
       eurValue: 2000,
       eurFee: 10,
+      eurRate: 2000,
       processed: false,
     };
 
@@ -78,6 +81,7 @@ describe("ImportDeduplicationService", () => {
     entity.quantity = tx.quantity;
     entity.eurValue = tx.eurValue;
     entity.eurFee = tx.eurFee;
+    entity.eurRate = tx.eurRate ?? 0;
     entity.processed = tx.processed;
     return entity;
   };
@@ -162,6 +166,7 @@ describe("ImportDeduplicationService", () => {
         quantity: 0.1,
         eurValue: 200,
         eurFee: 1,
+        eurRate: 2000,
         processed: false,
       };
 
@@ -226,6 +231,7 @@ describe("ImportDeduplicationService", () => {
         quantity: 1.0,
         eurValue: 150,
         eurFee: 1,
+        eurRate: 150,
         processed: false,
       };
 
@@ -260,6 +266,7 @@ describe("ImportDeduplicationService", () => {
           quantity: 0.5,
           eurValue: -1000,
           eurFee: 5,
+          eurRate: 2000,
           processed: false,
         },
         {
@@ -272,6 +279,7 @@ describe("ImportDeduplicationService", () => {
           quantity: 1.0,
           eurValue: -2000,
           eurFee: 10,
+          eurRate: 2000,
           processed: false,
         },
       ];
@@ -301,6 +309,7 @@ describe("ImportDeduplicationService", () => {
           quantity: 0.001,
           eurValue: 0,
           eurFee: 0,
+          eurRate: 0,
           processed: false,
         },
         {
@@ -313,6 +322,7 @@ describe("ImportDeduplicationService", () => {
           quantity: 0.05,
           eurValue: 1000,
           eurFee: 5,
+          eurRate: 20000,
           processed: false,
         },
       ];
@@ -342,6 +352,7 @@ describe("ImportDeduplicationService", () => {
           quantity: 0.00000001,
           eurValue: 0.000001,
           eurFee: 0,
+          eurRate: 100,
           processed: false,
         },
         {
@@ -354,6 +365,7 @@ describe("ImportDeduplicationService", () => {
           quantity: 0.00000001,
           eurValue: 0.000001,
           eurFee: 0,
+          eurRate: 100,
           processed: false,
         },
       ];

@@ -9,6 +9,8 @@ import {
   MenuItem,
   Select,
   Typography,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 
 interface PageHeaderProps {
@@ -31,12 +33,17 @@ export function PageHeader({
   backButtonLabel = "Back",
   actions,
 }: PageHeaderProps) {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+
   return (
     <Box
       sx={{
         display: "flex",
+        flexDirection: isMobile ? "column" : "row",
         justifyContent: "space-between",
-        alignItems: "center",
+        alignItems: isMobile ? "stretch" : "center",
+        gap: isMobile ? 2 : 0,
         mb: 3,
       }}
     >
@@ -46,11 +53,11 @@ export function PageHeader({
             {backButtonLabel}
           </Button>
         )}
-        <Typography variant="h4" component="h1">
+        <Typography variant={isMobile ? "h5" : "h4"} component="h1">
           {title}
         </Typography>
       </Box>
-      <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 2, justifyContent: isMobile ? "flex-end" : "flex-start" }}>
         {actions}
         {selectedYear !== undefined && onYearChange && yearOptions && (
           <FormControl sx={{ minWidth: 120 }} size="small">

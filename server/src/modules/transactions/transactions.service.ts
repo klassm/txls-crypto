@@ -174,6 +174,7 @@ async importTransactions(
       quantity: Number(entity.quantity),
       eurValue: Number(entity.eurValue),
       eurFee: Number(entity.eurFee),
+      eurRate: Number(entity.eurRate),
       processed: entity.processed,
     };
   }
@@ -189,6 +190,7 @@ private dtoToEntity(dto: Transaction, userId: number, providerAccountId: number)
 		entity.quantity = dto.quantity;
 		entity.eurValue = dto.eurValue;
 		entity.eurFee = dto.eurFee;
+		entity.eurRate = dto.eurRate ?? 0;
 		entity.processed = dto.processed;
 		return entity;
 	}

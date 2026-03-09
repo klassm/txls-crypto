@@ -1,13 +1,14 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useEffect } from "react";
+import AuthErrorPage from "../pages/AuthErrorPage";
 
-const publicRoutes = ["/login", "/onboard"];
+const publicRoutes = ["/login", "/onboard", "/auth-error"];
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { isLoading, isAuthenticated, canOnboard, hassIngress } = useAuth();
+  const { isLoading, isAuthenticated, canOnboard, hassIngress, authError } = useAuth();
 
   useEffect(() => {
     if (isLoading) {
@@ -32,6 +33,10 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
   if (isLoading) {
     return null;
+  }
+
+  if (authError && hassIngress) {
+    return <AuthErrorPage />;
   }
 
   if (!isAuthenticated) {

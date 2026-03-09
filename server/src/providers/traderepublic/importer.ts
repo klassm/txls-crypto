@@ -202,6 +202,8 @@ const csvContentWithHeader = [lines[headerRowIndex], ...dataLines].join("\n");
       return null;
     }
 
+    const eurRate = quantity > 0 && eurValue > 0 ? eurValue / quantity : 0;
+
     return {
       id: 0,
       providerAccountId: accountId,
@@ -212,6 +214,7 @@ const csvContentWithHeader = [lines[headerRowIndex], ...dataLines].join("\n");
       quantity: Math.abs(quantity),
       eurValue: Math.abs(eurValue),
       eurFee: Math.abs(fees) + Math.abs(taxes),
+      eurRate,
       processed: false,
     };
   }

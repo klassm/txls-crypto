@@ -69,7 +69,6 @@ export default function AccountDetailPage() {
 				<>
 					<PageHeader
 						title={sources.find((s) => s.source === account?.provider)?.name ?? "Account"}
-						onBack={() => navigate("/")}
 						selectedYear={selectedYear}
 						onYearChange={handleYearChange}
 						yearOptions={yearOptions}

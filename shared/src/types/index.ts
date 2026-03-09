@@ -76,6 +76,7 @@ export interface Transaction {
   quantity: number;
   eurValue: number;
   eurFee: number;
+  eurRate: number;
   processed: boolean;
 }
 

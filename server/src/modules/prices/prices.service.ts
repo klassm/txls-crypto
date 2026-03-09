@@ -55,6 +55,16 @@ export class PricesService {
 		return entities.map(e => this.toAssetPrice(e));
 	}
 
+	async savePriceFromTransaction(asset: string, priceEur: number, date: DateTime): Promise<void> {
+		await this.repository.savePriceFromTransaction(asset, priceEur, date);
+	}
+
+	async getPriceForDate(asset: string, date: DateTime): Promise<AssetPrice | null> {
+		const entity = await this.repository.getPriceForDate(asset, date);
+		if (!entity) return null;
+		return this.toAssetPrice(entity);
+	}
+
 	private toAssetPrice(entity: AssetPriceEntity): AssetPrice {
 		return {
 			asset: entity.asset,

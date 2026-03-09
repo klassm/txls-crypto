@@ -80,6 +80,7 @@ router.get("/", async (req: Request, res: Response) => {
       quantity: e.quantity,
       eurValue: e.eurValue,
       eurFee: e.eurFee,
+      eurRate: e.eurRate ?? 0,
       processed: e.processed,
     });
 

@@ -7,6 +7,7 @@ import { onboardingUserSchema } from "../../validation/schemas.js";
 import { config } from "../../config/env.js";
 import { getUserIdFromRequest, getUserIdFromCookie } from "../../utils/session.js";
 import { logger } from "../../common/logger.js";
+import { HassSupervisorError } from "../../utils/errors.js";
 
 const router = Router();
 
@@ -28,50 +29,63 @@ router.get("/", async (req: Request, res: Response) => {
     const existingUsersCount = await usersService.count();
 
     let user = null;
-    const userId = await getUserIdFromRequest(req);
+    let authError = null;
+    
+    try {
+      const userId = await getUserIdFromRequest(req);
 
-    logger.info({ msg: "User ID", userId });
+      logger.info({ msg: "User ID", userId });
 
-    if (userId) {
-      user = await usersService.findById(userId);
-      if (user) {
-        user = {
-          ...user,
-          createdAt: toISOString(user.createdAt) ?? "",
-          updatedAt: toISOString(user.updatedAt) ?? "",
-        };
-        
-        const hasValidCookie = getUserIdFromCookie(req) !== null;
-        if (hassIngress && !hasValidCookie) {
-          logger.info({ msg: "Setting fresh cookie for HASS ingress auto-auth", userId });
-          const token = generateToken({
-            userId: user.id,
-            username: user.username,
-            email: user.email,
-            isAdmin: user.isAdmin,
-          });
-          const forwardedProto = req.headers["x-forwarded-proto"];
-          const isSecure = forwardedProto === "https" || req.secure;
-          res.cookie(AUTH_COOKIE_NAME, token, {
-            httpOnly: true,
-            secure: isSecure,
-            sameSite: isSecure ? "none" : "lax",
-            maxAge: getSessionMaxAge(),
-            path: "/",
-          });
+      if (userId) {
+        user = await usersService.findById(userId);
+        if (user) {
+          user = {
+            ...user,
+            createdAt: toISOString(user.createdAt) ?? "",
+            updatedAt: toISOString(user.updatedAt) ?? "",
+          };
+          
+          const hasValidCookie = getUserIdFromCookie(req) !== null;
+          if (hassIngress && !hasValidCookie) {
+            logger.info({ msg: "Setting fresh cookie for HASS ingress auto-auth", userId });
+            const token = generateToken({
+              userId: user.id,
+              username: user.username,
+              email: user.email,
+              isAdmin: user.isAdmin,
+            });
+            const forwardedProto = req.headers["x-forwarded-proto"];
+            const isSecure = forwardedProto === "https" || req.secure;
+            res.cookie(AUTH_COOKIE_NAME, token, {
+              httpOnly: true,
+              secure: isSecure,
+              sameSite: isSecure ? "none" : "lax",
+              maxAge: getSessionMaxAge(),
+              path: "/",
+            });
+          }
         }
+      }
+    } catch (error) {
+      if (error instanceof HassSupervisorError) {
+        logger.error({ msg: "HASS supervisor error", error: error.message });
+        authError = "home_assistant_unavailable";
+      } else {
+        throw error;
       }
     }
 
     logger.info({ 
       msg: "Returning user", 
-      user: user ? { id: user.id, username: user.username } : null 
+      user: user ? { id: user.id, username: user.username } : null,
+      authError,
     });
 
     return res.json({
       canOnboard: existingUsersCount === 0,
       user,
       hassIngress,
+      authError,
     });
   } catch (error) {
     logger.error({ msg: "Error in /api/config", error });

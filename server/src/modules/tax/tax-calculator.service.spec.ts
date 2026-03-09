@@ -24,6 +24,7 @@ describe("TaxCalculationService", () => {
     quantity,
     eurValue,
     eurFee,
+    eurRate: eurValue > 0 && quantity > 0 ? eurValue / quantity : 0,
   });
 
   describe("calculateTax", () => {

@@ -191,6 +191,7 @@ const csvContentWithHeader = [lines[headerRowIndex], ...dataLines].join("\n");
           quantity: Math.abs(quantity),
           eurValue: Math.abs(eurValue),
           eurFee: Math.abs(eurFee),
+          eurRate: this.parseNumber(row["Asset market price"] ?? "") ?? 0,
           processed: false,
         };
       }
@@ -225,6 +226,7 @@ const csvContentWithHeader = [lines[headerRowIndex], ...dataLines].join("\n");
       quantity: Math.abs(quantity),
       eurValue: Math.abs(eurValue),
       eurFee: Math.abs(eurFee),
+      eurRate: this.parseNumber(row["Asset market price"] ?? "") ?? 0,
       processed: false,
     };
   }

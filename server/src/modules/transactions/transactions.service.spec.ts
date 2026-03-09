@@ -21,6 +21,7 @@ describe("TransactionsService", () => {
     quantity: 0.5,
     eurValue: 1000,
     eurFee: 5,
+    eurRate: 2000,
     processed: false,
     createdAt: DateTime.fromISO("2026-02-19T10:00:00Z"),
     updatedAt: DateTime.fromISO("2026-02-19T10:00:00Z"),
@@ -180,6 +181,7 @@ describe("TransactionsService", () => {
       quantity: 0.5,
       eurValue: 1000,
       eurFee: 5,
+      eurRate: 2000,
       processed: false,
     };
 
