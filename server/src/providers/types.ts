@@ -9,11 +9,21 @@ export interface CsvImporter {
   parseCsv(csvContent: string, accountId: number): CsvImportResult;
 }
 
+export interface ApiSyncResult {
+  transactions: Transaction[];
+}
+
+export interface ApiSyncClient {
+  fetchTransactions(apiKey: string): Promise<ApiSyncResult>;
+  testConnection(apiKey: string): Promise<boolean>;
+}
+
 export interface ProviderConfig {
-	csvImporter: CsvImporter | undefined;
-	name: string;
-	logoBackgroundColor: string;
-	logoForegroundColor: string;
-	logoPath: string;
-	csvImportMarkdownInstructions: string;
+  csvImporter: CsvImporter | undefined;
+  apiClient: ApiSyncClient | undefined;
+  name: string;
+  logoBackgroundColor: string;
+  logoForegroundColor: string;
+  logoPath: string;
+  csvImportMarkdownInstructions: string;
 }

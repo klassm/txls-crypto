@@ -17,6 +17,9 @@ import { TransactionType } from "@txls/shared";
 import { toISOString } from "../../utils/date.js";
 import { DateTime } from "luxon";
 import { getUserIdFromRequest, verifyToken, AUTH_COOKIE_NAME } from "../../utils/session.js";
+import { ApiSyncService } from "../../modules/api-sync/api-sync.service.js";
+import { encrypt } from "../../modules/api-sync/encryption.service.js";
+import { z } from "zod";
 
 const upload = multer({ storage: multer.memoryStorage() });
 const router = Router();
@@ -231,6 +234,10 @@ router.post("/:id/transactions/import", upload.single("file"), async (req: Reque
 
     if (!account) {
       return res.status(404).json({ message: "Account not found" });
+    }
+
+    if (account.apiEnabled) {
+      return res.status(400).json({ message: "CSV import is disabled when API sync is enabled" });
     }
 
     const csvImporter = getProviderConfig(account.provider).csvImporter;
@@ -472,7 +479,7 @@ router.get("/:id/tax/export", async (req: Request, res: Response) => {
   }
 });
 
-router.get("/:id/portfolio-history", async (req: Request, res: Response) => {
+	router.get("/:id/portfolio-history", async (req: Request, res: Response) => {
 	const userId = await getUserIdFromRequest(req);
 	if (!userId) {
 		return res.status(401).json({ error: "Unauthorized" });
@@ -502,6 +509,169 @@ router.get("/:id/portfolio-history", async (req: Request, res: Response) => {
 		console.error("Portfolio history failed:", error);
 		return res.status(500).json({ error: error instanceof Error ? error.message : "Internal error" });
 	}
+});
+
+const apiSettingsSchema = z.object({
+  apiEnabled: z.boolean(),
+  apiKey: z.string().min(1).optional(),
+});
+
+router.get("/:id/api-settings", async (req: Request, res: Response) => {
+  const userId = await getUserIdFromRequest(req);
+  if (!userId) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  const dataSource = await getDataSource();
+  try {
+    const accountId = Number.parseInt(req.params.id as string, 10);
+
+    if (isNaN(accountId)) {
+      return res.status(400).json({ error: "Invalid account ID" });
+    }
+
+    const accountsRepository = new AccountsRepository(dataSource);
+    const account = await accountsRepository.findById(userId, accountId);
+
+    if (!account) {
+      return res.status(404).json({ error: "Account not found" });
+    }
+
+    const providerConfig = getProviderConfig(account.provider);
+
+    return res.json({
+      apiEnabled: account.apiEnabled,
+      hasApiKey: !!account.apiKeyEncrypted,
+      lastSyncAt: account.lastSyncAt ? toISOString(account.lastSyncAt) : null,
+      syncError: account.syncError,
+      supportsApiSync: !!providerConfig.apiClient,
+    });
+  } catch (error) {
+    console.error("Get API settings failed:", error);
+    return res.status(500).json({ error: error instanceof Error ? error.message : "Internal error" });
+  }
+});
+
+router.patch("/:id/api-settings", async (req: Request, res: Response) => {
+  const userId = await getUserIdFromRequest(req);
+  if (!userId) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  const dataSource = await getDataSource();
+  try {
+    const accountId = Number.parseInt(req.params.id as string, 10);
+
+    if (isNaN(accountId)) {
+      return res.status(400).json({ error: "Invalid account ID" });
+    }
+
+    const validationResult = apiSettingsSchema.safeParse(req.body);
+    if (!validationResult.success) {
+      return res.status(400).json({ error: validationResult.error.errors[0].message });
+    }
+
+    const { apiEnabled, apiKey } = validationResult.data;
+
+    const accountsRepository = new AccountsRepository(dataSource);
+    const account = await accountsRepository.findById(userId, accountId);
+
+    if (!account) {
+      return res.status(404).json({ error: "Account not found" });
+    }
+
+    const providerConfig = getProviderConfig(account.provider);
+    if (!providerConfig.apiClient) {
+      return res.status(400).json({ error: "Provider does not support API sync" });
+    }
+
+    if (apiEnabled && apiKey) {
+      const syncService = new ApiSyncService(dataSource);
+      const validation = await syncService.validateApiKey(account.provider, apiKey);
+
+      if (!validation.valid) {
+        return res.status(400).json({ error: validation.error || "Invalid API key" });
+      }
+
+      account.apiKeyEncrypted = encrypt(apiKey);
+    }
+
+    account.apiEnabled = apiEnabled;
+
+    if (!apiEnabled) {
+      account.apiKeyEncrypted = null;
+    }
+
+    account.syncError = null;
+    await accountsRepository.save(account);
+
+    return res.json({
+      apiEnabled: account.apiEnabled,
+      hasApiKey: !!account.apiKeyEncrypted,
+      lastSyncAt: account.lastSyncAt ? toISOString(account.lastSyncAt) : null,
+      syncError: null,
+    });
+  } catch (error) {
+    console.error("Update API settings failed:", error);
+    return res.status(500).json({ error: error instanceof Error ? error.message : "Internal error" });
+  }
+});
+
+router.post("/:id/sync", async (req: Request, res: Response) => {
+  const userId = await getUserIdFromRequest(req);
+  if (!userId) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  const dataSource = await getDataSource();
+  try {
+    const accountId = Number.parseInt(req.params.id as string, 10);
+
+    if (isNaN(accountId)) {
+      return res.status(400).json({ error: "Invalid account ID" });
+    }
+
+    const syncService = new ApiSyncService(dataSource);
+    const result = await syncService.syncAccount(accountId, userId);
+
+    return res.json(result);
+  } catch (error) {
+    console.error("Manual sync failed:", error);
+    return res.status(500).json({ error: error instanceof Error ? error.message : "Internal error" });
+  }
+});
+
+router.get("/:id/sync-status", async (req: Request, res: Response) => {
+  const userId = await getUserIdFromRequest(req);
+  if (!userId) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  const dataSource = await getDataSource();
+  try {
+    const accountId = Number.parseInt(req.params.id as string, 10);
+
+    if (isNaN(accountId)) {
+      return res.status(400).json({ error: "Invalid account ID" });
+    }
+
+    const syncService = new ApiSyncService(dataSource);
+    const accountsRepository = new AccountsRepository(dataSource);
+    const account = await accountsRepository.findById(userId, accountId);
+
+    if (!account) {
+      return res.status(404).json({ error: "Account not found" });
+    }
+
+    return res.json({
+      status: syncService.isSyncing(accountId) ? "syncing" : "idle",
+      lastSyncAt: account.lastSyncAt ? toISOString(account.lastSyncAt) : null,
+      syncError: account.syncError,
+    });
+  } catch (error) {
+    console.error("Get sync status failed:", error);
+    return res.status(500).json({ error: error instanceof Error ? error.message : "Internal error" });
+  }
 });
 
 export default router;

@@ -16,4 +16,11 @@ export const config = {
       return process.env.SUPERVISOR_TOKEN;
     },
   },
+  apiSync: {
+    enabled: process.env.API_SYNC_ENABLED !== "false",
+    interval: process.env.API_SYNC_INTERVAL || "0 3 * * *",
+    get encryptionKey() {
+      return process.env.ENCRYPTION_KEY || null;
+    },
+  },
 } as const;

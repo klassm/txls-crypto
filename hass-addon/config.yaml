@@ -24,10 +24,16 @@ options:
   jwt_secret: ""
   db_connection_string: "/data/txls.db"
   log_level: "info"
+  api_sync_enabled: true
+  api_sync_interval: "0 3 * * *"
+  encryption_key: ""
 schema:
   jwt_secret: str
   db_connection_string: str
   log_level: list(info|debug|warn|error)
+  api_sync_enabled: bool
+  api_sync_interval: str
+  encryption_key: str?
 environment:
   HOSTNAME: "0.0.0.0"
   NODE_ENV: "production"

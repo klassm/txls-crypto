@@ -147,6 +147,175 @@ describe("session", () => {
         expect(result).toBeNull();
       });
 
+      it("should use x-remote-user-id header when present", async () => {
+        const mockUserEntity = { id: 789, username: "hassuser123", name: "hassuser123", email: "hassuser123@hass.local", password: "hash", salt: "", isAdmin: false };
+        
+        const mockFindByUsername = vi.fn().mockResolvedValue(mockUserEntity);
+        const mockCreateUser = vi.fn();
+        
+        vi.doMock("../modules/users/users.service.js", () => ({
+          UsersService: vi.fn().mockImplementation(() => ({
+            findByUsername: mockFindByUsername,
+            createUser: mockCreateUser,
+          })),
+        }));
+
+        const mockDataSource = {};
+        (getDataSource as any).mockResolvedValue(mockDataSource);
+
+        const { UsersService } = await import("../modules/users/users.service.js");
+        const usersService = new UsersService(undefined, mockDataSource as any);
+        (usersService.findByUsername as any) = mockFindByUsername;
+        (usersService.createUser as any) = mockCreateUser;
+
+        const req = {
+          headers: {
+            "x-ingress-path": "/api/hassio_ingress/test",
+            "x-remote-user-id": "hassuser123",
+          },
+        } as any;
+
+        const result = await getUserIdFromRequest(req);
+        expect(result).toBe(789);
+        expect(mockFindByUsername).toHaveBeenCalledWith("hassuser123");
+      });
+
+      it("should use x-remote-user-name header when present", async () => {
+        const mockUserEntity = { id: 890, username: "remoteuser", name: "remoteuser", email: "remoteuser@hass.local", password: "hash", salt: "", isAdmin: false };
+        
+        const mockFindByUsername = vi.fn().mockResolvedValue(mockUserEntity);
+        const mockCreateUser = vi.fn();
+        
+        vi.doMock("../modules/users/users.service.js", () => ({
+          UsersService: vi.fn().mockImplementation(() => ({
+            findByUsername: mockFindByUsername,
+            createUser: mockCreateUser,
+          })),
+        }));
+
+        const mockDataSource = {};
+        (getDataSource as any).mockResolvedValue(mockDataSource);
+
+        const { UsersService } = await import("../modules/users/users.service.js");
+        const usersService = new UsersService(undefined, mockDataSource as any);
+        (usersService.findByUsername as any) = mockFindByUsername;
+        (usersService.createUser as any) = mockCreateUser;
+
+        const req = {
+          headers: {
+            "x-ingress-path": "/api/hassio_ingress/test",
+            "x-remote-user-name": "remoteuser",
+          },
+        } as any;
+
+        const result = await getUserIdFromRequest(req);
+        expect(result).toBe(890);
+        expect(mockFindByUsername).toHaveBeenCalledWith("remoteuser");
+      });
+
+      it("should prefer x-remote-user-name over x-remote-user-id", async () => {
+        const mockUserEntity = { id: 999, username: "preferreduser", name: "preferreduser", email: "preferreduser@hass.local", password: "hash", salt: "", isAdmin: false };
+        
+        const mockFindByUsername = vi.fn().mockResolvedValue(mockUserEntity);
+        const mockCreateUser = vi.fn();
+        
+        vi.doMock("../modules/users/users.service.js", () => ({
+          UsersService: vi.fn().mockImplementation(() => ({
+            findByUsername: mockFindByUsername,
+            createUser: mockCreateUser,
+          })),
+        }));
+
+        const mockDataSource = {};
+        (getDataSource as any).mockResolvedValue(mockDataSource);
+
+        const { UsersService } = await import("../modules/users/users.service.js");
+        const usersService = new UsersService(undefined, mockDataSource as any);
+        (usersService.findByUsername as any) = mockFindByUsername;
+        (usersService.createUser as any) = mockCreateUser;
+
+        const req = {
+          headers: {
+            "x-ingress-path": "/api/hassio_ingress/test",
+            "x-remote-user-id": "hassuser",
+            "x-remote-user-name": "preferreduser",
+          },
+        } as any;
+
+        const result = await getUserIdFromRequest(req);
+        expect(result).toBe(999);
+        expect(mockFindByUsername).toHaveBeenCalledWith("preferreduser");
+      });
+
+      it("should use x-remote-user-display-name as fallback", async () => {
+        const mockUserEntity = { id: 111, username: "Display Name", name: "Display Name", email: "display.name@hass.local", password: "hash", salt: "", isAdmin: false };
+        
+        const mockFindByUsername = vi.fn().mockResolvedValue(mockUserEntity);
+        const mockCreateUser = vi.fn();
+        
+        vi.doMock("../modules/users/users.service.js", () => ({
+          UsersService: vi.fn().mockImplementation(() => ({
+            findByUsername: mockFindByUsername,
+            createUser: mockCreateUser,
+          })),
+        }));
+
+        const mockDataSource = {};
+        (getDataSource as any).mockResolvedValue(mockDataSource);
+
+        const { UsersService } = await import("../modules/users/users.service.js");
+        const usersService = new UsersService(undefined, mockDataSource as any);
+        (usersService.findByUsername as any) = mockFindByUsername;
+        (usersService.createUser as any) = mockCreateUser;
+
+        const req = {
+          headers: {
+            "x-ingress-path": "/api/hassio_ingress/test",
+            "x-remote-user-display-name": "Display Name",
+          },
+        } as any;
+
+        const result = await getUserIdFromRequest(req);
+        expect(result).toBe(111);
+        expect(mockFindByUsername).toHaveBeenCalledWith("Display Name");
+      });
+
+      it("should create user from HASS header if not exists", async () => {
+        const mockUserEntity = { id: 222, username: "newhassuser", name: "newhassuser", email: "newhassuser@hass.local", password: "hash", salt: "", isAdmin: false };
+        
+        const mockFindByUsername = vi.fn().mockResolvedValue(null);
+        const mockCreateUser = vi.fn().mockResolvedValue(mockUserEntity);
+        
+        vi.doMock("../modules/users/users.service.js", () => ({
+          UsersService: vi.fn().mockImplementation(() => ({
+            findByUsername: mockFindByUsername,
+            createUser: mockCreateUser,
+          })),
+        }));
+
+        const mockDataSource = {};
+        (getDataSource as any).mockResolvedValue(mockDataSource);
+
+        const { UsersService } = await import("../modules/users/users.service.js");
+        const usersService = new UsersService(undefined, mockDataSource as any);
+        (usersService.findByUsername as any) = mockFindByUsername;
+        (usersService.createUser as any) = mockCreateUser;
+
+        const req = {
+          headers: {
+            "x-ingress-path": "/api/hassio_ingress/test",
+            "x-remote-user-id": "newhassuser",
+          },
+        } as any;
+
+        const result = await getUserIdFromRequest(req);
+        expect(result).toBe(222);
+        expect(mockCreateUser).toHaveBeenCalledWith(expect.objectContaining({
+          username: "newhassuser",
+          isAdmin: false,
+        }));
+      });
+
       it("should throw HassSupervisorError when supervisor is unreachable", async () => {
         mockFetch.mockRejectedValueOnce(new Error("Network error"));
 

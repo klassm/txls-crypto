@@ -146,3 +146,18 @@ export type Account = Provider & { provider: ProviderType };
 export type CreateAccountDto = CreateProviderDto;
 export type UpdateAccountDto = UpdateProviderDto;
 export type AccountTransactionsDocument = ProviderTransactionsDocument;
+
+export interface ApiSettings {
+  apiEnabled: boolean;
+  hasApiKey: boolean;
+  lastSyncAt: string | null;
+  syncError: string | null;
+  supportsApiSync: boolean;
+}
+
+export type SyncStatus = "idle" | "syncing" | "error";
+
+export interface UpdateApiSettingsDto {
+  apiEnabled: boolean;
+  apiKey?: string;
+}

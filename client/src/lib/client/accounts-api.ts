@@ -6,6 +6,9 @@ import type {
   TaxTransaction,
   UpdateAccountDto,
   YearStats,
+  ApiSettings,
+  UpdateApiSettingsDto,
+  SyncStatus,
 } from "@txls/shared";
 import { apiUrl } from "../api-base";
 
@@ -115,4 +118,21 @@ export const accountsApi = {
     fetchJson<void>(`/api/accounts/${id}`, {
       method: 'DELETE',
     }),
+
+  getApiSettings: (id: number) =>
+    fetchJson<ApiSettings>(`/api/accounts/${id}/api-settings`),
+
+  updateApiSettings: (id: number, data: UpdateApiSettingsDto) =>
+    fetchJson<ApiSettings>(`/api/accounts/${id}/api-settings`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  triggerSync: (id: number) =>
+    fetchJson<{ accountId: number; success: boolean; imported: number; error?: string }>(`/api/accounts/${id}/sync`, {
+      method: 'POST',
+    }),
+
+  getSyncStatus: (id: number) =>
+    fetchJson<{ status: SyncStatus; lastSyncAt: string | null; syncError: string | null }>(`/api/accounts/${id}/sync-status`),
 }

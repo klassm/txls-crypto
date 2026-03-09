@@ -12,12 +12,19 @@ export async function getUserIdFromRequest(req: Request): Promise<number | null>
   const authorization = req.headers.authorization || "";
   const hassToken = authorization.replace("Bearer ", "");
   const ingressUser = req.headers["x-ingress-path"] as string | undefined;
+  const remoteUserId = req.headers["x-remote-user-id"] as string | undefined;
+  const remoteUserName = req.headers["x-remote-user-name"] as string | undefined;
+  const remoteUserDisplayName = req.headers["x-remote-user-display-name"] as string | undefined;
   const isHomeAssistantIngress = !!ingressUser && !!config.homeAssistant.supervisorToken;
 
   if (isHomeAssistantIngress) {
     const cookieUserId = getUserIdFromCookie(req);
     if (cookieUserId) {
       return cookieUserId;
+    }
+    
+    if (remoteUserName || remoteUserId || remoteUserDisplayName) {
+      return await getHomeAssistantUserIdFromHeaders(remoteUserName, remoteUserId, remoteUserDisplayName);
     }
     
     if (hassToken) {
@@ -32,6 +39,44 @@ export async function getUserIdFromRequest(req: Request): Promise<number | null>
   }
 
   return getUserIdFromCookie(req);
+}
+
+async function getHomeAssistantUserIdFromHeaders(
+  remoteUserName: string | undefined, 
+  remoteUserId: string | undefined,
+  remoteUserDisplayName: string | undefined
+): Promise<number | null> {
+  const { UsersService } = await import("../modules/users/users.service.js");
+  
+  const username = remoteUserName || remoteUserId || remoteUserDisplayName;
+  
+  if (!username) {
+    logger.warn("No username from HASS headers");
+    return null;
+  }
+  
+  logger.info({ msg: "Getting user from HASS headers", remoteUserId, remoteUserName, remoteUserDisplayName, username });
+  
+  const dataSource = await getDataSource();
+  const usersService = new UsersService(undefined, dataSource);
+  
+  let userEntity = await usersService.findByUsername(username);
+  if (!userEntity) {
+    logger.info({ msg: "Creating new user from HASS headers", username });
+    const bcrypt = (await import("bcrypt")).default;
+    const randomPassword = Array(32).fill(0).map(() => Math.random().toString(36)[2]).join("");
+
+    userEntity = await usersService.createUser({
+      name: username,
+      username: username,
+      email: username.includes("@") ? username : `${username}@hass.local`,
+      password: randomPassword,
+      isAdmin: false,
+    });
+  }
+
+  logger.info({ msg: "User authenticated from headers", userId: userEntity.id });
+  return userEntity.id;
 }
 
 export function getUserIdFromCookie(req: Request): number | null {

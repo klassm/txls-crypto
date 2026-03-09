@@ -15,12 +15,20 @@ router.get("/", async (req: Request, res: Response) => {
   const ingressPath = req.headers["x-ingress-path"] as string | undefined;
   const authorization = req.headers.authorization;
   const hassIngress = !!ingressPath && !!config.homeAssistant.supervisorToken;
+  
+  const remoteUserId = req.headers["x-remote-user-id"] as string | undefined;
+  const remoteUserName = req.headers["x-remote-user-name"] as string | undefined;
+  const remoteUserDisplayName = req.headers["x-remote-user-display-name"] as string | undefined;
 
   logger.info({
     msg: "GET /api/config",
     hassIngress,
     hasAuthorization: !!authorization,
     hasSupervisorToken: !!config.homeAssistant.supervisorToken,
+    remoteUserId,
+    remoteUserName,
+    remoteUserDisplayName,
+    ingressPath,
   });
 
   try {

@@ -3,6 +3,7 @@ import { TradeRepublicImporter } from "./importer.js";
 
 export const traderepublicConfig: ProviderConfig = {
   csvImporter: new TradeRepublicImporter(),
+  apiClient: undefined,
   name: "TradeRepublic",
   logoBackgroundColor: "#ffffff",
   logoForegroundColor: "#000000",

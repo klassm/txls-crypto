@@ -1,8 +1,10 @@
 import type { ProviderConfig } from "../types.js";
 import { BitpandaImporter } from "./importer.js";
+import { BitpandaApiClient } from "./api-client.js";
 
 export const bitpandaConfig: ProviderConfig = {
   csvImporter: new BitpandaImporter(),
+  apiClient: new BitpandaApiClient(),
   name: "Bitpanda",
   logoBackgroundColor: "#27D17F",
   logoForegroundColor: "#ffffff",

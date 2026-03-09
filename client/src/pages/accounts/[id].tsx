@@ -8,9 +8,10 @@ import { AccountStatsCards } from "../../components/account-detail/AccountStatsC
 import { AssetSummary } from "../../components/account-detail/AssetSummary";
 import { EmptyState } from "../../components/account-detail/EmptyState";
 import { ImportCsvDialog } from "../../components/account-detail/ImportCsvDialog";
+import { ApiSyncSettings } from "../../components/account-detail/ApiSyncSettings";
 import { TransactionsTable } from "../../components/account-detail/TransactionsTable";
 import { PortfolioValueChart } from "../../components/charts/PortfolioValueChart";
-import { useAccount, usePortfolioHistory, useSources } from "../../hooks";
+import { useAccount, usePortfolioHistory, useSources, useApiSettings } from "../../hooks";
 import { useImportCsv } from "../../hooks/useAccountMutations";
 import { useAccountTransactions } from "../../hooks";
 import { PageLayout } from "../../components/common/PageLayout";
@@ -22,6 +23,7 @@ export default function AccountDetailPage() {
 
 	const { data: account, isLoading: isAccountLoading } = useAccount(Number(id));
 	const { data: sources = [] } = useSources();
+	const { data: apiSettings } = useApiSettings(Number(id));
 
 	const queryYear = searchParams.get("year");
 	const currentYear = new Date().getFullYear();
@@ -59,6 +61,9 @@ export default function AccountDetailPage() {
 	};
 	const yearOptions = transactionsData?.availableYears ?? [currentYear];
 
+	const isApiSyncEnabled = apiSettings?.apiEnabled ?? false;
+	const csvImportAllowed = !isApiSyncEnabled && (account?.csvImportAllowed || false);
+
 	return (
 		<PageLayout>
 			{isAccountLoading ? (
@@ -74,6 +79,11 @@ export default function AccountDetailPage() {
 						yearOptions={yearOptions}
 					/>
 					<Box>
+						<ApiSyncSettings 
+							accountId={Number(id)} 
+							onSettingsChange={() => location.reload()}
+						/>
+
 						{portfolioHistory && portfolioHistory.length > 0 && (
 							<Box sx={{ mb: 3 }}>
 								<PortfolioValueChart
@@ -97,7 +107,7 @@ export default function AccountDetailPage() {
 						) : transactions.length === 0 ? (
 							<EmptyState
 								onImport={() => setImportDialogOpen(true)}
-								csvImportAllowed={account?.csvImportAllowed || false}
+								csvImportAllowed={csvImportAllowed}
 							/>
 						) : (
 							<Box>
@@ -107,7 +117,7 @@ export default function AccountDetailPage() {
 								<TransactionsTable
 									transactions={transactions}
 									onImport={() => setImportDialogOpen(true)}
-									csvImportAllowed={account?.csvImportAllowed || false}
+									csvImportAllowed={csvImportAllowed}
 								/>
 							</Box>
 						)}

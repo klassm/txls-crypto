@@ -3,6 +3,7 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
+import { createServer } from "node:http";
 import { config } from "./config/env.js";
 
 import accountsRouter from "./routes/accounts/index.js";
@@ -16,11 +17,14 @@ import pricesRouter from "./routes/prices/index.js";
 import portfolioRouter from "./routes/portfolio/index.js";
 import { getDataSource } from "./database.js";
 import { PriceFetcherService } from "./modules/prices/index.js";
+import { ApiSyncScheduler } from "./api-sync-scheduler.js";
+import { setupWebSocket } from "./websocket.js";
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 let priceFetcher: PriceFetcherService | null = null;
+let apiSyncScheduler: ApiSyncScheduler | null = null;
 
 async function startServer() {
 	console.log("[Server] Starting...");
@@ -29,6 +33,9 @@ async function startServer() {
 	
 	priceFetcher = new PriceFetcherService(dataSource);
 	await priceFetcher.start();
+	
+	apiSyncScheduler = new ApiSyncScheduler(dataSource);
+	await apiSyncScheduler.start();
 	
 	app.set("trust proxy", true);
 	app.use(helmet());
@@ -55,7 +62,10 @@ async function startServer() {
 		res.status(500).json({ error: "Internal server error" });
 	});
 
-	app.listen(PORT, () => {
+	const httpServer = createServer(app);
+	setupWebSocket(httpServer);
+
+	httpServer.listen(PORT, () => {
 		console.log(`Server running on port ${PORT}`);
 	});
 }
@@ -65,6 +75,9 @@ process.on("SIGTERM", () => {
 	if (priceFetcher) {
 		priceFetcher.stop();
 	}
+	if (apiSyncScheduler) {
+		apiSyncScheduler.stop();
+	}
 	process.exit(0);
 });
 
@@ -72,6 +85,9 @@ process.on("SIGINT", () => {
 	console.log("[Server] Received SIGINT, shutting down...");
 	if (priceFetcher) {
 		priceFetcher.stop();
+	}
+	if (apiSyncScheduler) {
+		apiSyncScheduler.stop();
 	}
 	process.exit(0);
 });

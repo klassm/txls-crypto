@@ -18,6 +18,35 @@ export class AccountEntity {
   })
   provider!: ProviderType;
 
+  @Column({
+    type: "boolean",
+    name: "api_enabled",
+    default: false,
+  })
+  apiEnabled!: boolean;
+
+  @Column({
+    type: "text",
+    name: "api_key_encrypted",
+    nullable: true,
+  })
+  apiKeyEncrypted!: string | null;
+
+  @Column({
+    type: "bigint",
+    name: "last_sync_at",
+    nullable: true,
+    transformer: typeOrmDateTimeTransformer,
+  })
+  lastSyncAt!: DateTime | null;
+
+  @Column({
+    type: "text",
+    name: "sync_error",
+    nullable: true,
+  })
+  syncError!: string | null;
+
   @CreateDateColumn({
     name: "created_at",
     type: "bigint",

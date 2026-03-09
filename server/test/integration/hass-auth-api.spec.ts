@@ -200,5 +200,71 @@ describe("HASS Auth API Integration Tests", () => {
       expect(response.body.user.username).toBe("regularuser");
       expect(response.body.user.isAdmin).toBe(false);
     });
+
+    it("should create user from X-Remote-User-Id header", async () => {
+      const response = await request(app)
+        .get("/api/config")
+        .set("X-Ingress-Path", "/api/hassio_ingress/test")
+        .set("X-Remote-User-Id", "hassuser456");
+
+      expect(response.status).toBe(200);
+      expect(response.body.user).not.toBeNull();
+      expect(response.body.user.username).toBe("hassuser456");
+      expect(response.body.user.isAdmin).toBe(false);
+    });
+
+    it("should create user from X-Remote-User-Name header", async () => {
+      const response = await request(app)
+        .get("/api/config")
+        .set("X-Ingress-Path", "/api/hassio_ingress/test")
+        .set("X-Remote-User-Name", "remoteuser789");
+
+      expect(response.status).toBe(200);
+      expect(response.body.user).not.toBeNull();
+      expect(response.body.user.username).toBe("remoteuser789");
+      expect(response.body.user.isAdmin).toBe(false);
+    });
+
+    it("should create user from X-Remote-User-Display-Name header", async () => {
+      const response = await request(app)
+        .get("/api/config")
+        .set("X-Ingress-Path", "/api/hassio_ingress/test")
+        .set("X-Remote-User-Display-Name", "Display Name User");
+
+      expect(response.status).toBe(200);
+      expect(response.body.user).not.toBeNull();
+      expect(response.body.user.username).toBe("Display Name User");
+      expect(response.body.user.isAdmin).toBe(false);
+    });
+
+    it("should prefer X-Remote-User-Name over X-Remote-User-Id", async () => {
+      const response = await request(app)
+        .get("/api/config")
+        .set("X-Ingress-Path", "/api/hassio_ingress/test")
+        .set("X-Remote-User-Id", "hassuser")
+        .set("X-Remote-User-Name", "preferreduser");
+
+      expect(response.status).toBe(200);
+      expect(response.body.user).not.toBeNull();
+      expect(response.body.user.username).toBe("preferreduser");
+    });
+
+    it("should return existing user when same HASS header used twice", async () => {
+      const response1 = await request(app)
+        .get("/api/config")
+        .set("X-Ingress-Path", "/api/hassio_ingress/test")
+        .set("X-Remote-User-Id", "existinghassuser");
+
+      expect(response1.status).toBe(200);
+      const userId1 = response1.body.user.id;
+
+      const response2 = await request(app)
+        .get("/api/config")
+        .set("X-Ingress-Path", "/api/hassio_ingress/test")
+        .set("X-Remote-User-Id", "existinghassuser");
+
+      expect(response2.status).toBe(200);
+      expect(response2.body.user.id).toBe(userId1);
+    });
   });
 });
