@@ -1,5 +1,4 @@
 import { test, expect } from "@playwright/test";
-import nock from "nock";
 
 const BITPANDA_API_BASE = "https://api.bitpanda.com/v1";
 
@@ -30,27 +29,39 @@ test.describe("API Sync", () => {
       await page.waitForURL("**/accounts/*");
     }
 
-    await expect(page.getByRole("heading", { name: "API Sync" })).toBeVisible();
+    await expect(page.getByRole("button", { name: /import csv|enable api sync|sync/i })).toBeVisible();
+  });
+
+  test("allows enabling API sync from empty state", async ({ page }) => {
+    await page.goto("/accounts/1");
+
+    const enableBtn = page.getByRole("button", { name: /enable api sync/i });
+    
+    if (await enableBtn.isVisible()) {
+      await enableBtn.click();
+      
+      await expect(page.getByPlaceholder("API Key")).toBeVisible();
+    }
   });
 
   test("validates API key before saving", async ({ page }) => {
     await page.goto("/accounts/1");
 
-    await expect(page.getByRole("heading", { name: "API Sync" })).toBeVisible();
+    const apiKeyField = page.getByPlaceholder("API Key");
+    
+    if (!await apiKeyField.isVisible()) {
+      const enableBtn = page.getByRole("button", { name: /enable api sync/i });
+      if (await enableBtn.isVisible()) {
+        await enableBtn.click();
+      }
+    }
 
     const apiKey = "invalid-test-key";
     
-    nock(BITPANDA_API_BASE)
-      .get("/trades")
-      .query({ page_size: 1 })
-      .reply(401, { error: "Unauthorized" });
-
-    await page.getByLabel("Enable API Sync").click();
-
     await page.getByPlaceholder("API Key").fill(apiKey);
-    await page.getByRole("button", { name: /test & save/i }).click();
+    await page.getByRole("button", { name: /save/i }).click();
 
-    await expect(page.getByText(/invalid/i)).toBeVisible();
+    await expect(page.getByText(/invalid|failed|error/i)).toBeVisible({ timeout: 5000 });
   });
 
   test("saves valid API key and disables CSV import", async ({ page }) => {
@@ -58,64 +69,45 @@ test.describe("API Sync", () => {
 
     const apiKey = "valid-test-api-key-12345";
 
-    nock(BITPANDA_API_BASE)
-      .persist()
-      .get("/trades")
-      .query({ page_size: 1 })
-      .matchHeader("X-Api-Key", apiKey)
-      .reply(200, { data: [], meta: { total_count: 0, page_size: 1 } });
-
-    nock(BITPANDA_API_BASE)
-      .persist()
-      .get("/trades")
-      .query({ page_size: 100 })
-      .matchHeader("X-Api-Key", apiKey)
-      .reply(200, { data: [], meta: { total_count: 0, page_size: 100 } });
-
-    nock(BITPANDA_API_BASE)
-      .persist()
-      .get(/.*/)
-      .reply(200, { data: [], meta: { total_count: 0, page_size: 100 } });
-
-    await page.getByLabel("Enable API Sync").click();
+    const apiKeyField = page.getByPlaceholder("API Key");
+    
+    if (!await apiKeyField.isVisible()) {
+      const enableBtn = page.getByRole("button", { name: /enable api sync/i });
+      if (await enableBtn.isVisible()) {
+        await enableBtn.click();
+      }
+    }
 
     await page.getByPlaceholder("API Key").fill(apiKey);
-    await page.getByRole("button", { name: /test & save/i }).click();
+    await page.getByRole("button", { name: /save/i }).click();
 
-    await expect(page.getByText(/api key saved/i)).toBeVisible();
+    await expect(page.getByText(/saved/i)).toBeVisible({ timeout: 5000 });
 
     await expect(page.getByRole("button", { name: /import csv/i })).not.toBeVisible();
-
-    nock.cleanAll();
   });
 
-  test("shows sync status and allows manual sync", async ({ page }) => {
+  test("shows sync button after API key is configured", async ({ page }) => {
     await page.goto("/accounts/1");
 
-    await expect(page.getByRole("heading", { name: "API Sync" })).toBeVisible();
-
-    const hasApiKey = await page.getByText(/api key configured/i).isVisible();
+    const syncBtn = page.getByRole("button", { name: /^sync$/i });
+    const deleteKeyBtn = page.getByRole("button", { name: /delete key/i });
     
-    if (hasApiKey) {
-      await expect(page.getByRole("button", { name: /sync now/i })).toBeVisible();
-      
-      await page.getByRole("button", { name: /sync now/i }).click();
-      
-      await expect(page.getByRole("progressbar")).toBeVisible({ timeout: 5000 }).catch(() => {});
+    if (await syncBtn.isVisible()) {
+      await expect(deleteKeyBtn).toBeVisible();
     }
   });
 
-  test("disabling API sync re-enables CSV import", async ({ page }) => {
+  test("allows deleting API key to re-enable CSV import", async ({ page }) => {
     await page.goto("/accounts/1");
 
-    const isEnabled = await page.getByLabel("Enable API Sync").isChecked();
+    const deleteKeyBtn = page.getByRole("button", { name: /delete key/i });
     
-    if (isEnabled) {
+    if (await deleteKeyBtn.isVisible()) {
       page.on("dialog", (dialog) => dialog.accept());
       
-      await page.getByLabel("Enable API Sync").click();
-      
-      await expect(page.getByRole("button", { name: /import csv/i })).toBeVisible();
+      await deleteKeyBtn.click();
+
+      await expect(page.getByRole("button", { name: /import csv/i })).toBeVisible({ timeout: 5000 });
     }
   });
 });

@@ -8,7 +8,6 @@ import { AccountStatsCards } from "../../components/account-detail/AccountStatsC
 import { AssetSummary } from "../../components/account-detail/AssetSummary";
 import { EmptyState } from "../../components/account-detail/EmptyState";
 import { ImportCsvDialog } from "../../components/account-detail/ImportCsvDialog";
-import { ApiSyncSettings } from "../../components/account-detail/ApiSyncSettings";
 import { TransactionsTable } from "../../components/account-detail/TransactionsTable";
 import { PortfolioValueChart } from "../../components/charts/PortfolioValueChart";
 import { useAccount, usePortfolioHistory, useSources, useApiSettings } from "../../hooks";
@@ -23,7 +22,7 @@ export default function AccountDetailPage() {
 
 	const { data: account, isLoading: isAccountLoading } = useAccount(Number(id));
 	const { data: sources = [] } = useSources();
-	const { data: apiSettings } = useApiSettings(Number(id));
+	const { data: apiSettings, refetch: refetchApiSettings } = useApiSettings(Number(id));
 
 	const queryYear = searchParams.get("year");
 	const currentYear = new Date().getFullYear();
@@ -37,7 +36,7 @@ export default function AccountDetailPage() {
 		navigate(`?${params.toString()}`, { replace: true });
 	};
 
-	const { data: transactionsData, isLoading: isTransactionsLoading } = useAccountTransactions(Number(id), selectedYear);
+	const { data: transactionsData, isLoading: isTransactionsLoading, refetch: refetchTransactions } = useAccountTransactions(Number(id), selectedYear);
 
 	const { data: portfolioHistory } = usePortfolioHistory(Number(id), 90);
 
@@ -51,6 +50,11 @@ export default function AccountDetailPage() {
 		importMutation.mutate(file);
 	};
 
+	const handleSyncComplete = () => {
+		refetchApiSettings();
+		refetchTransactions();
+	};
+
 	const transactions = transactionsData?.transactions || [];
 	const stats = transactionsData?.stats ?? {
 		year: currentYear,
@@ -62,6 +66,7 @@ export default function AccountDetailPage() {
 	const yearOptions = transactionsData?.availableYears ?? [currentYear];
 
 	const isApiSyncEnabled = apiSettings?.apiEnabled ?? false;
+	const hasApiKey = apiSettings?.hasApiKey ?? false;
 	const csvImportAllowed = !isApiSyncEnabled && (account?.csvImportAllowed || false);
 
 	return (
@@ -79,11 +84,6 @@ export default function AccountDetailPage() {
 						yearOptions={yearOptions}
 					/>
 					<Box>
-						<ApiSyncSettings 
-							accountId={Number(id)} 
-							onSettingsChange={() => location.reload()}
-						/>
-
 						{portfolioHistory && portfolioHistory.length > 0 && (
 							<Box sx={{ mb: 3 }}>
 								<PortfolioValueChart
@@ -108,6 +108,10 @@ export default function AccountDetailPage() {
 							<EmptyState
 								onImport={() => setImportDialogOpen(true)}
 								csvImportAllowed={csvImportAllowed}
+								apiSyncEnabled={isApiSyncEnabled}
+								hasApiKey={hasApiKey}
+								accountId={Number(id)}
+								onSyncComplete={handleSyncComplete}
 							/>
 						) : (
 							<Box>
@@ -118,6 +122,9 @@ export default function AccountDetailPage() {
 									transactions={transactions}
 									onImport={() => setImportDialogOpen(true)}
 									csvImportAllowed={csvImportAllowed}
+									apiSettings={apiSettings}
+									accountId={Number(id)}
+									onSyncComplete={handleSyncComplete}
 								/>
 							</Box>
 						)}
