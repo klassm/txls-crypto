@@ -154,6 +154,8 @@ export class PortfolioSnapshotsRepository {
 	}
 
 	async saveMany(data: PortfolioSnapshotData[]): Promise<PortfolioSnapshotEntity[]> {
+		if (data.length === 0) return [];
+
 		const entities = data.map((d) => {
 			const entity = new PortfolioSnapshotEntity();
 			entity.userId = d.userId;
@@ -167,7 +169,18 @@ export class PortfolioSnapshotsRepository {
 			return entity;
 		});
 
-		return this.dataSource.getRepository(PortfolioSnapshotEntity).save(entities);
+		await this.dataSource
+			.getRepository(PortfolioSnapshotEntity)
+			.createQueryBuilder()
+			.insert()
+			.values(entities)
+			.orUpdate(
+				["amount", "eur_invested", "buy_count", "sell_count"],
+				["user_id", "provider_account_id", "asset", "date"]
+			)
+			.execute();
+
+		return entities;
 	}
 
 	async deleteByAccount(userId: number, providerAccountId: number): Promise<void> {

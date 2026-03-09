@@ -69,61 +69,7 @@ router.get("/portfolio-history", async (req: Request, res: Response) => {
 		}
 
 		const snapshotsService = new PortfolioSnapshotsService(dataSource);
-		const pricesRepository = new PricesRepository(dataSource);
-
-		const endDate = DateTime.utc().startOf("day");
-		const startDate = endDate.minus({ days });
-
-		const snapshots = await snapshotsService.getPortfolioHistory(
-			userId,
-			undefined,
-			startDate,
-			endDate
-		);
-
-		const snapshotsByDate = new Map<string, Map<string, { amount: number; eurValue: number | null }>>();
-
-		for (const snapshot of snapshots) {
-			const dateKey = snapshot.date.toISODate() || "";
-			if (!snapshotsByDate.has(dateKey)) {
-				snapshotsByDate.set(dateKey, new Map());
-			}
-
-			const existing = snapshotsByDate.get(dateKey)!.get(snapshot.asset);
-			const newAmount = (existing?.amount || 0) + Number(snapshot.amount);
-
-			const pricesForDate = await pricesRepository.getPriceForDate(snapshot.asset, snapshot.date);
-			const eurValue = pricesForDate ? newAmount * Number(pricesForDate.priceEur) : null;
-
-			snapshotsByDate.get(dateKey)!.set(snapshot.asset, {
-				amount: newAmount,
-				eurValue,
-			});
-		}
-
-		const result: Array<{
-			date: string;
-			totalEurValue: number | null;
-			assets: Record<string, { amount: number; eurValue: number | null }>;
-		}> = [];
-
-		for (const [date, assets] of snapshotsByDate) {
-			let totalEurValue: number | null = 0;
-			const assetsObj: Record<string, { amount: number; eurValue: number | null }> = {};
-
-			for (const [asset, data] of assets) {
-				assetsObj[asset] = data;
-				if (data.eurValue !== null) {
-					totalEurValue = (totalEurValue || 0) + data.eurValue;
-				} else {
-					totalEurValue = null;
-				}
-			}
-
-			result.push({ date, totalEurValue, assets: assetsObj });
-		}
-
-		result.sort((a, b) => a.date.localeCompare(b.date));
+		const result = await snapshotsService.getPortfolioHistoryWithPrices(userId, undefined, { days });
 
 		return res.json(result);
 	} catch (error) {
@@ -535,63 +481,8 @@ router.get("/:id/portfolio-history", async (req: Request, res: Response) => {
 		}
 
 		const snapshotsService = new PortfolioSnapshotsService(dataSource);
-		const pricesRepository = new PricesRepository(dataSource);
 
-		const endDate = DateTime.utc().startOf("day");
-		const startDate = endDate.minus({ days });
-
-		const snapshots = await snapshotsService.getPortfolioHistory(
-			userId,
-			accountId,
-			startDate,
-			endDate
-		);
-
-		const snapshotsByDate = new Map<string, Map<string, { amount: number; eurValue: number | null }>>();
-
-		const allAssets = new Set<string>();
-		for (const snapshot of snapshots) {
-			allAssets.add(snapshot.asset);
-		}
-
-		for (const snapshot of snapshots) {
-			const dateKey = snapshot.date.toISODate() || "";
-			if (!snapshotsByDate.has(dateKey)) {
-				snapshotsByDate.set(dateKey, new Map());
-			}
-
-			const pricesForDate = await pricesRepository.getPriceForDate(snapshot.asset, snapshot.date);
-			const eurValue = pricesForDate ? Number(snapshot.amount) * Number(pricesForDate.priceEur) : null;
-
-			snapshotsByDate.get(dateKey)!.set(snapshot.asset, {
-				amount: Number(snapshot.amount),
-				eurValue,
-			});
-		}
-
-		const result: Array<{
-			date: string;
-			totalEurValue: number | null;
-			assets: Record<string, { amount: number; eurValue: number | null }>;
-		}> = [];
-
-		for (const [date, assets] of snapshotsByDate) {
-			let totalEurValue: number | null = 0;
-			const assetsObj: Record<string, { amount: number; eurValue: number | null }> = {};
-
-			for (const [asset, data] of assets) {
-				assetsObj[asset] = data;
-				if (data.eurValue !== null) {
-					totalEurValue = (totalEurValue || 0) + data.eurValue;
-				} else {
-					totalEurValue = null;
-				}
-			}
-
-			result.push({ date, totalEurValue, assets: assetsObj });
-		}
-
-		result.sort((a, b) => a.date.localeCompare(b.date));
+		const result = await snapshotsService.getPortfolioHistoryWithPrices(userId, accountId, { days });
 
 		return res.json(result);
 	} catch (error) {

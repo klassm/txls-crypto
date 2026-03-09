@@ -13,6 +13,7 @@ import taxRouter from "./routes/tax/index.js";
 import sourcesRouter from "./routes/sources/index.js";
 import configRouter from "./routes/config/index.js";
 import pricesRouter from "./routes/prices/index.js";
+import portfolioRouter from "./routes/portfolio/index.js";
 import { getDataSource } from "./database.js";
 import { PriceFetcherService } from "./modules/prices/index.js";
 
@@ -47,6 +48,7 @@ async function startServer() {
 	app.use("/api/sources", sourcesRouter);
 	app.use("/api/config", configRouter);
 	app.use("/api/prices", pricesRouter);
+	app.use("/api/portfolio", portfolioRouter);
 
 	app.use((err: Error, req: express.Request, res: express.Response, _next: express.NextFunction) => {
 		console.error("Unhandled error:", err);

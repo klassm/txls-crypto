@@ -3,6 +3,8 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { SnackbarProvider } from "./contexts/SnackbarContext";
 import { AuthGuard } from "./components/AuthGuard";
 import HomePage from "./pages/HomePage";
+import PortfolioPage from "./pages/PortfolioPage";
+import AccountsPage from "./pages/AccountsPage";
 import LoginPage from "./pages/LoginPage";
 import OnboardPage from "./pages/OnboardPage";
 import AccountDetailPage from "./pages/accounts/[id]";
@@ -22,6 +24,22 @@ export default function App() {
             element={
               <AuthGuard>
                 <HomePage />
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/portfolio"
+            element={
+              <AuthGuard>
+                <PortfolioPage />
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/accounts"
+            element={
+              <AuthGuard>
+                <AccountsPage />
               </AuthGuard>
             }
           />

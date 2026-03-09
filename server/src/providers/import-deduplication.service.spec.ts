@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { getDataSource, resetDataSource } from "../database.js";
 import { ImportDeduplicationService } from "./import-deduplication.service.js";
 import { TransactionEntity } from "../modules/transactions/transaction.entity.js";
-import { TransactionType } from "@txls/shared";
+import { TransactionType, type Transaction } from "@txls/shared";
 import { DateTime } from "luxon";
 
 describe("ImportDeduplicationService", () => {
@@ -24,44 +24,66 @@ describe("ImportDeduplicationService", () => {
     delete process.env.DB_CONNECTION_STRING;
   });
 
-  const createBaseTransactions = (accountId: number): TransactionEntity[] => {
-    const t1 = new TransactionEntity();
-    t1.userId = 1;
-    t1.providerAccountId = accountId;
-    t1.externalId = "TEST-001";
-    t1.timestamp = DateTime.fromISO("2026-02-19T10:00:00.000Z");
-    t1.type = TransactionType.buy;
-    t1.asset = "BTC";
-    t1.quantity = 0.5;
-    t1.eurValue = 1000;
-    t1.eurFee = 5;
-    t1.processed = false;
+  const createBaseTransactions = (accountId: number): Transaction[] => {
+    const t1: Transaction = {
+      id: 0,
+      providerAccountId: accountId,
+      externalId: "TEST-001",
+      timestamp: DateTime.fromISO("2026-02-19T10:00:00.000Z"),
+      type: TransactionType.buy,
+      asset: "BTC",
+      quantity: 0.5,
+      eurValue: 1000,
+      eurFee: 5,
+      processed: false,
+    };
 
-    const t2 = new TransactionEntity();
-    t2.userId = 1;
-    t2.providerAccountId = accountId;
-    t2.externalId = "TEST-002";
-    t2.timestamp = DateTime.fromISO("2026-02-19T11:00:00.000Z");
-    t2.type = TransactionType.sell;
-    t2.asset = "BTC";
-    t2.quantity = 0.25;
-    t2.eurValue = 500;
-    t2.eurFee = 2;
-    t2.processed = false;
+    const t2: Transaction = {
+      id: 0,
+      providerAccountId: accountId,
+      externalId: "TEST-002",
+      timestamp: DateTime.fromISO("2026-02-19T11:00:00.000Z"),
+      type: TransactionType.sell,
+      asset: "BTC",
+      quantity: 0.25,
+      eurValue: 500,
+      eurFee: 2,
+      processed: false,
+    };
 
-    const t3 = new TransactionEntity();
-    t3.userId = 1;
-    t3.providerAccountId = accountId;
-    t3.externalId = "TEST-003";
-    t3.timestamp = DateTime.fromISO("2026-02-19T12:00:00.000Z");
-    t3.type = TransactionType.buy;
-    t3.asset = "ETH";
-    t3.quantity = 1.0;
-    t3.eurValue = 2000;
-    t3.eurFee = 10;
-    t3.processed = false;
+    const t3: Transaction = {
+      id: 0,
+      providerAccountId: accountId,
+      externalId: "TEST-003",
+      timestamp: DateTime.fromISO("2026-02-19T12:00:00.000Z"),
+      type: TransactionType.buy,
+      asset: "ETH",
+      quantity: 1.0,
+      eurValue: 2000,
+      eurFee: 10,
+      processed: false,
+    };
 
     return [t1, t2, t3];
+  };
+
+  const toEntity = (tx: Transaction): TransactionEntity => {
+    const entity = new TransactionEntity();
+    entity.userId = 1;
+    entity.providerAccountId = tx.providerAccountId;
+    entity.externalId = tx.externalId;
+    entity.timestamp = tx.timestamp;
+    entity.type = tx.type;
+    entity.asset = tx.asset;
+    entity.quantity = tx.quantity;
+    entity.eurValue = tx.eurValue;
+    entity.eurFee = tx.eurFee;
+    entity.processed = tx.processed;
+    return entity;
+  };
+
+  const toEntities = (transactions: Transaction[]): TransactionEntity[] => {
+    return transactions.map(toEntity);
   };
 
   describe("shouldSkipOrReplace", () => {
@@ -90,7 +112,7 @@ describe("ImportDeduplicationService", () => {
       const transactions = createBaseTransactions(1);
       const repository = (await getDataSource()).getRepository(TransactionEntity);
 
-      await repository.save(transactions);
+      await repository.save(toEntities(transactions));
 
       const result = await deduplicationService.shouldSkipOrReplace(
         1,
@@ -110,7 +132,7 @@ describe("ImportDeduplicationService", () => {
       existingTransactions[2].eurValue = 2100;
 
       const repository = (await getDataSource()).getRepository(TransactionEntity);
-      await repository.save(existingTransactions);
+      await repository.save(toEntities(existingTransactions));
 
       const newTransactions = createBaseTransactions(1);
 
@@ -130,8 +152,8 @@ describe("ImportDeduplicationService", () => {
 
     it("should replace when count differs but sum matches", async () => {
       const existingTransactions = createBaseTransactions(1);
-      const extraTransaction: any = {
-        userId: 1,
+      const extraTransaction: Transaction = {
+        id: 0,
         providerAccountId: 1,
         externalId: "TEST-004",
         timestamp: DateTime.fromISO("2026-02-19T10:30:00.000Z"),
@@ -144,7 +166,7 @@ describe("ImportDeduplicationService", () => {
       };
 
       const repository = (await getDataSource()).getRepository(TransactionEntity);
-      await repository.save([...existingTransactions, extraTransaction]);
+      await repository.save(toEntities([...existingTransactions, extraTransaction]));
 
       const newTransactions = createBaseTransactions(1);
 
@@ -164,22 +186,22 @@ describe("ImportDeduplicationService", () => {
 
     it("should respect accountId isolation", async () => {
       const account1Transactions = createBaseTransactions(1);
-      const account2Transactions = createBaseTransactions(2).map((t, i) => ({
+      const account2Transactions = createBaseTransactions(2).map((t) => ({
         ...t,
         providerAccountId: 2,
         externalId: `ACC2-${t.externalId}`,
       }));
 
       const repository = (await getDataSource()).getRepository(TransactionEntity);
-      await repository.save(account1Transactions);
-      await repository.save(account2Transactions);
+      await repository.save(toEntities(account1Transactions));
+      await repository.save(toEntities(account2Transactions));
 
       const result = await deduplicationService.shouldSkipOrReplace(
         1,
         account1Transactions,
       );
 
-expect(result.shouldSkip).toBe(true);
+      expect(result.shouldSkip).toBe(true);
 
       const account1Remaining = await repository.count({
         where: { providerAccountId: 1 },
@@ -194,8 +216,8 @@ expect(result.shouldSkip).toBe(true);
 
     it("should only remove transactions in the import range", async () => {
       const account1Transactions = createBaseTransactions(1);
-      const outsideRangeTransaction: any = {
-        userId: 1,
+      const outsideRangeTransaction: Transaction = {
+        id: 0,
         providerAccountId: 1,
         externalId: "TEST-OUTSIDE",
         timestamp: DateTime.fromISO("2026-02-18T10:00:00.000Z"),
@@ -208,14 +230,14 @@ expect(result.shouldSkip).toBe(true);
       };
 
       const repository = (await getDataSource()).getRepository(TransactionEntity);
-      await repository.save([...account1Transactions, outsideRangeTransaction]);
+      await repository.save(toEntities([...account1Transactions, outsideRangeTransaction]));
 
       const result = await deduplicationService.shouldSkipOrReplace(
         1,
         account1Transactions,
       );
 
-expect(result.shouldSkip).toBe(true);
+      expect(result.shouldSkip).toBe(true);
 
       const remaining = await repository.count({ where: { providerAccountId: 1 } });
       expect(remaining).toBe(4);
@@ -227,9 +249,9 @@ expect(result.shouldSkip).toBe(true);
     });
 
     it("should handle transactions with negative values (sells)", async () => {
-      const transactions: any[] = [
+      const transactions: Transaction[] = [
         {
-          userId: 1,
+          id: 0,
           providerAccountId: 1,
           externalId: "SELL-001",
           timestamp: DateTime.fromISO("2026-02-19T10:00:00.000Z"),
@@ -241,7 +263,7 @@ expect(result.shouldSkip).toBe(true);
           processed: false,
         },
         {
-          userId: 1,
+          id: 0,
           providerAccountId: 1,
           externalId: "SELL-002",
           timestamp: DateTime.fromISO("2026-02-19T11:00:00.000Z"),
@@ -255,7 +277,7 @@ expect(result.shouldSkip).toBe(true);
       ];
 
       const repository = (await getDataSource()).getRepository(TransactionEntity);
-      await repository.save(transactions);
+      await repository.save(toEntities(transactions));
 
       const result = await deduplicationService.shouldSkipOrReplace(
         1,
@@ -268,9 +290,9 @@ expect(result.shouldSkip).toBe(true);
     });
 
     it("should handle reward transactions (zero eurValue)", async () => {
-      const transactions: any[] = [
+      const transactions: Transaction[] = [
         {
-          userId: 1,
+          id: 0,
           providerAccountId: 1,
           externalId: "REWARD-001",
           timestamp: DateTime.fromISO("2026-02-19T10:00:00.000Z"),
@@ -282,7 +304,7 @@ expect(result.shouldSkip).toBe(true);
           processed: false,
         },
         {
-          userId: 1,
+          id: 0,
           providerAccountId: 1,
           externalId: "BUY-001",
           timestamp: DateTime.fromISO("2026-02-19T11:00:00.000Z"),
@@ -296,7 +318,7 @@ expect(result.shouldSkip).toBe(true);
       ];
 
       const repository = (await getDataSource()).getRepository(TransactionEntity);
-      await repository.save(transactions);
+      await repository.save(toEntities(transactions));
 
       const result = await deduplicationService.shouldSkipOrReplace(
         1,
@@ -309,9 +331,9 @@ expect(result.shouldSkip).toBe(true);
     });
 
     it("should handle decimal precision correctly", async () => {
-      const transactions: any[] = [
+      const transactions: Transaction[] = [
         {
-          userId: 1,
+          id: 0,
           providerAccountId: 1,
           externalId: "DECIMAL-001",
           timestamp: DateTime.fromISO("2026-02-19T10:00:00.000Z"),
@@ -323,7 +345,7 @@ expect(result.shouldSkip).toBe(true);
           processed: false,
         },
         {
-          userId: 1,
+          id: 0,
           providerAccountId: 1,
           externalId: "DECIMAL-002",
           timestamp: DateTime.fromISO("2026-02-19T11:00:00.000Z"),
@@ -337,7 +359,7 @@ expect(result.shouldSkip).toBe(true);
       ];
 
       const repository = (await getDataSource()).getRepository(TransactionEntity);
-      await repository.save(transactions);
+      await repository.save(toEntities(transactions));
 
       const result = await deduplicationService.shouldSkipOrReplace(
         1,

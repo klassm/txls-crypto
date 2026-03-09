@@ -45,8 +45,12 @@ test.describe('Accounts', () => {
       // HASS ingress auto-login: already on home page
     }
     
-    await page.waitForURL(/(\/$|hass-test-session\/?$)/, { timeout: 20000 })
+    await page.waitForURL(/\/|\/portfolio|\/accounts|hass-test-session\/?$/, { timeout: 20000 })
     await page.waitForLoadState('networkidle')
+    
+    // Navigate to accounts page
+    await page.getByRole('button', { name: 'Accounts' }).click()
+    await expect(page.getByRole('heading', { name: 'Accounts' })).toBeVisible()
   })
 
   test('create and delete account', async ({ page }) => {
@@ -55,16 +59,18 @@ test.describe('Accounts', () => {
     
     for (let i = 0; i < deleteCount; i++) {
       await deleteAccount(page)
-      await page.waitForTimeout(300)
+      await page.waitForTimeout(500)
     }
     
     await page.waitForLoadState('networkidle')
+    await page.waitForTimeout(500)
     
     const addAccountCard = page.locator('.MuiCard-root').filter({ has: page.locator('text=Add Account') })
     await expect(addAccountCard).toBeVisible({ timeout: 10000 })
     await addAccountCard.click()
+    await page.waitForTimeout(300)
 
-    await expect(page.getByRole('dialog')).toBeVisible()
+    await expect(page.getByRole('dialog')).toBeVisible({ timeout: 10000 })
     await expect(page.getByText('Add New Account')).toBeVisible()
 
     await page.getByRole('combobox').click()

@@ -3,7 +3,6 @@
 import { Box, Typography } from "@mui/material";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { ProviderType } from "@txls/shared";
 import { PageHeader } from "../../components/common/PageHeader";
 import { AccountStatsCards } from "../../components/account-detail/AccountStatsCards";
 import { AssetSummary } from "../../components/account-detail/AssetSummary";
@@ -11,7 +10,7 @@ import { EmptyState } from "../../components/account-detail/EmptyState";
 import { ImportCsvDialog } from "../../components/account-detail/ImportCsvDialog";
 import { TransactionsTable } from "../../components/account-detail/TransactionsTable";
 import { PortfolioValueChart } from "../../components/charts/PortfolioValueChart";
-import { useAccount, usePortfolioHistory } from "../../hooks";
+import { useAccount, usePortfolioHistory, useSources } from "../../hooks";
 import { useImportCsv } from "../../hooks/useAccountMutations";
 import { useAccountTransactions } from "../../hooks";
 import { PageLayout } from "../../components/common/PageLayout";
@@ -22,6 +21,7 @@ export default function AccountDetailPage() {
 	const [searchParams] = useSearchParams();
 
 	const { data: account, isLoading: isAccountLoading } = useAccount(Number(id));
+	const { data: sources = [] } = useSources();
 
 	const queryYear = searchParams.get("year");
 	const currentYear = new Date().getFullYear();
@@ -68,7 +68,7 @@ export default function AccountDetailPage() {
 			) : (
 				<>
 					<PageHeader
-						title={account?.name ?? ProviderType.TradeRepublic}
+						title={sources.find((s) => s.source === account?.provider)?.name ?? "Account"}
 						onBack={() => navigate("/")}
 						selectedYear={selectedYear}
 						onYearChange={handleYearChange}

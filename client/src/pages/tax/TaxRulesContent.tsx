@@ -2,7 +2,6 @@
 
 import {
   Box,
-  Container,
   Typography,
   Stack,
   Paper,
@@ -11,6 +10,7 @@ import {
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { PageHeader } from "../../components/common/PageHeader";
+import { PageLayout } from "../../components/common/PageLayout";
 
 const rules = [
   {
@@ -57,8 +57,8 @@ export function TaxRulesContent() {
   const navigate = useNavigate();
 
   return (
-    <Container maxWidth="md" sx={{ py: 4 }}>
-      <Stack spacing={4}>
+    <PageLayout maxWidth="md">
+      <Stack spacing={4} sx={{ py: 4 }}>
         <PageHeader
           title="German Crypto Tax Rules"
           onBack={() => navigate("/tax")}
@@ -133,6 +133,6 @@ export function TaxRulesContent() {
           This information is for educational purposes only. Always verify tax calculations with official sources or a tax professional.
         </Typography>
       </Stack>
-    </Container>
+    </PageLayout>
   );
 }

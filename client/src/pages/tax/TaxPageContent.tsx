@@ -96,7 +96,6 @@ export default function TaxPageContent() {
       <Stack spacing={3}>
         <PageHeader
           title="Tax Calculations"
-          onBack={() => navigate("/")}
           selectedYear={selectedYear}
           onYearChange={handleYearChange}
           yearOptions={yearOptions}

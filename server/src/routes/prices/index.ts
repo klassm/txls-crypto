@@ -49,8 +49,8 @@ router.get("/:asset/history", async (req: Request, res: Response) => {
 	const dataSource = await getDataSource();
 	const repository = new PricesRepository(dataSource);
 
-	const endDate = DateTime.utc().startOf("day");
-	const startDate = endDate.minus({ days });
+	const endDate = DateTime.utc().endOf("day");
+	const startDate = endDate.minus({ days }).startOf("day");
 
 	const history = await repository.getPriceHistory(asset, startDate, endDate);
 

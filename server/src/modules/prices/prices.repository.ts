@@ -183,21 +183,79 @@ export class PricesRepository {
 		startDate: DateTime,
 		endDate: DateTime
 	): Promise<{ date: DateTime; priceEur: number }[]> {
-		const results = await this.dataSource.query(`
-			SELECT DATE(fetched_at / 86400000) as day_num, 
-				   MAX(fetched_at) as fetched_at,
-				   price_eur
-			FROM asset_prices
-			WHERE asset = ? 
-			AND fetched_at >= ? 
-			AND fetched_at <= ?
-			GROUP BY day_num
-			ORDER BY fetched_at ASC
-		`, [asset.toUpperCase(), startDate.toMillis(), endDate.toMillis()]);
+		const start = startDate.toMillis();
+		const end = endDate.toMillis();
+		
+		const results = await this.qb
+			.where("price.asset = :asset", { asset: asset.toUpperCase() })
+			.andWhere("price.fetchedAt >= :start", { start })
+			.andWhere("price.fetchedAt <= :end", { end })
+			.orderBy("price.fetchedAt", "ASC")
+			.getMany();
 
-		return results.map((row: any) => ({
-			date: DateTime.fromMillis(Number(row.fetched_at)).startOf("day"),
-			priceEur: Number(row.price_eur),
-		}));
+		const byDay = new Map<string, { date: DateTime; priceEur: number }>();
+		for (const result of results) {
+			const dayKey = result.fetchedAt.startOf("day").toISODate() || "";
+			if (!byDay.has(dayKey)) {
+				byDay.set(dayKey, {
+					date: result.fetchedAt.startOf("day"),
+					priceEur: Number(result.priceEur),
+				});
+			}
+		}
+
+		return Array.from(byDay.values());
+	}
+
+	async getPriceHistoryBatch(
+		assets: string[],
+		startDate: DateTime,
+		endDate: DateTime
+	): Promise<Map<string, { date: DateTime; priceEur: number }[]>> {
+		if (assets.length === 0) return new Map();
+
+		const start = startDate.toMillis();
+		const end = endDate.toMillis();
+		const normalizedAssets = assets.map(a => a.toUpperCase());
+
+		const results = await this.dataSource.query(`
+			SELECT p1.asset, p1.price_eur, p1.fetched_at
+			FROM asset_prices p1
+			INNER JOIN (
+				SELECT asset, DATE(fetched_at / 1000, 'unixepoch') as day, MAX(fetched_at) as max_fetched
+				FROM asset_prices
+				WHERE asset IN (${normalizedAssets.map(() => "?").join(",")})
+				AND fetched_at >= ? AND fetched_at <= ?
+				GROUP BY asset, day
+			) p2 ON p1.asset = p2.asset AND p1.fetched_at = p2.max_fetched
+			ORDER BY p1.fetched_at ASC
+		`, [...normalizedAssets, start, end]);
+
+		const byAsset = new Map<string, Map<string, { date: DateTime; priceEur: number }>>();
+		
+		for (const asset of normalizedAssets) {
+			byAsset.set(asset, new Map());
+		}
+
+		for (const row of results) {
+			const asset = row.asset;
+			const date = DateTime.fromMillis(Number(row.fetched_at)).startOf("day");
+			const dayKey = date.toISODate() || "";
+			
+			const assetMap = byAsset.get(asset);
+			if (assetMap && !assetMap.has(dayKey)) {
+				assetMap.set(dayKey, {
+					date,
+					priceEur: Number(row.price_eur),
+				});
+			}
+		}
+
+		const result = new Map<string, { date: DateTime; priceEur: number }[]>();
+		for (const [asset, dayMap] of byAsset) {
+			result.set(asset, Array.from(dayMap.values()));
+		}
+
+		return result;
 	}
 }

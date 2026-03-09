@@ -17,16 +17,9 @@ router.get("/", async (req: Request, res: Response) => {
 
   logger.info({
     msg: "GET /api/config",
-    ingressPath,
     hassIngress,
     hasAuthorization: !!authorization,
     hasSupervisorToken: !!config.homeAssistant.supervisorToken,
-    allHeaders: Object.keys(req.headers).reduce((acc, key) => {
-      if (key.startsWith('x-') || key === 'authorization' || key === 'cookie') {
-        acc[key] = req.headers[key];
-      }
-      return acc;
-    }, {} as Record<string, unknown>),
   });
 
   try {

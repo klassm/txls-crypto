@@ -25,34 +25,28 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
 	return response.json();
 }
 
-export interface PriceHistoryPoint {
-	date: string;
-	priceEur: number;
-}
-
-export interface LatestPrice {
-	priceEur: number;
-	fetchedAt: string;
-}
-
 export interface PortfolioHistoryPoint {
 	date: string;
 	totalEurValue: number | null;
 	assets: Record<string, { amount: number; eurValue: number | null }>;
 }
 
-export const pricesApi = {
-	getLatest: () =>
-		fetchJson<Record<string, LatestPrice>>("/api/prices/latest"),
+export interface AssetPriceHistoryPoint {
+	date: string;
+	priceEur: number;
+}
 
-	getHistory: (asset: string, days = 30) =>
-		fetchJson<PriceHistoryPoint[]>(`/api/prices/${asset}/history?days=${days}`),
+export interface AssetOverview {
+	asset: string;
+	amount: number;
+	eurValue: number | null;
+	priceHistory: AssetPriceHistoryPoint[];
+}
 
-	getLatestForAsset: (asset: string) =>
-		fetchJson<{ asset: string; priceEur: number; fetchedAt: string }>(
-			`/api/prices/${asset}/latest`
-		),
-};
+export interface PortfolioOverview {
+	portfolioHistory: PortfolioHistoryPoint[];
+	assets: AssetOverview[];
+}
 
 export const portfolioApi = {
 	getAccountHistory: (accountId: number, days = 30) =>
@@ -64,4 +58,7 @@ export const portfolioApi = {
 		fetchJson<PortfolioHistoryPoint[]>(
 			`/api/accounts/portfolio-history?days=${days}`
 		),
+
+	getOverview: (days = 30) =>
+		fetchJson<PortfolioOverview>(`/api/portfolio/overview?days=${days}`),
 };

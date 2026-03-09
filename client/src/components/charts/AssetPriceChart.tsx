@@ -10,10 +10,10 @@ import {
 	Tooltip,
 	ResponsiveContainer,
 } from "recharts";
-import type { PriceHistoryPoint } from "../../lib/client/prices-api";
+import type { AssetPriceHistoryPoint } from "../../lib/client/prices-api";
 
 interface AssetPriceChartProps {
-	data: PriceHistoryPoint[];
+	data: AssetPriceHistoryPoint[];
 	asset: string;
 	height?: number;
 }
