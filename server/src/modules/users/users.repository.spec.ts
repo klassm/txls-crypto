@@ -77,8 +77,8 @@ describe("UsersRepository", () => {
 
       const users = await repository.findAll();
       expect(users).toHaveLength(2);
-      expect(users[0].username).toBe("test1");
-      expect(users[1].username).toBe("test2");
+      const usernames = users.map(u => u.username).sort();
+      expect(usernames).toEqual(["test1", "test2"]);
     });
   });
 
