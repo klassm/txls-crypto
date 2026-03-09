@@ -166,7 +166,10 @@ test.describe('Onboarding', () => {
     await ensureUserExists(page)
     
     const config = await page.evaluate(async () => {
-      const response = await fetch('/api/config', { credentials: 'include' })
+      const path = window.location.pathname
+      const ingressMatch = path.match(/^(\/api\/hassio_ingress\/[^/]+)/)
+      const base = ingressMatch ? ingressMatch[1] : ''
+      const response = await fetch(base + '/api/config', { credentials: 'include' })
       return response.json()
     })
     
