@@ -1,6 +1,6 @@
 'use client'
 
-import { CloudUpload, Sync, Check } from '@mui/icons-material'
+import { CloudUpload, Sync, Check as CheckIcon } from '@mui/icons-material'
 import { Button, Typography, Box, TextField, CircularProgress, Alert } from '@mui/material'
 import { useState } from 'react'
 import { StyledEmptyBox } from './EmptyState.styles'

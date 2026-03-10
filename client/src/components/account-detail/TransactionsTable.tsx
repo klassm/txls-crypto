@@ -1,5 +1,5 @@
 import { CloudUpload, Sync, Delete, Check } from "@mui/icons-material";
-import { Box, Button, Chip, TextField, CircularProgress, Typography, Alert, Divider } from "@mui/material";
+import { Box, Button, Chip, TextField, CircularProgress, Typography, Alert } from "@mui/material";
 import { type MRT_ColumnDef, MaterialReactTable } from "material-react-table";
 import type { Transaction, ApiSettings } from "@txls/shared";
 import { TransactionType } from "@txls/shared";
