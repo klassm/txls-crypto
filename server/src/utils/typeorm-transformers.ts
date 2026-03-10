@@ -11,9 +11,12 @@ export const typeOrmDateTimeTransformer: ValueTransformer = {
     }
     return undefined;
   },
-  from(value: number | Date): DateTime | undefined {
+  from(value: number | string | Date): DateTime | undefined {
     if (typeof value === "number") {
       return DateTime.fromMillis(value);
+    }
+    if (typeof value === "string") {
+      return DateTime.fromMillis(parseInt(value, 10));
     }
     if (value instanceof Date) {
       return DateTime.fromJSDate(value);

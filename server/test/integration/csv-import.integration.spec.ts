@@ -7,6 +7,8 @@ import { TransactionsService } from "../../src/modules/transactions/transactions
 import { TransactionType } from "@txls/shared";
 import { DateTime } from "luxon";
 import { TransactionEntity } from "../../src/modules/transactions/transaction.entity.js";
+import { getProviderConfig } from "../../src/providers/registry.js";
+import { ProviderType } from "@txls/shared";
 
 const dbConnectionString = process.env.DB_CONNECTION_STRING;
 
@@ -168,5 +170,63 @@ describe.each(testConfigs)("$displayName CSV Import Integration", ({ name, displ
     const saved = await repository.save(entity);
 
     expect(saved.timestamp.toMillis()).toBe(testTimestamp.toMillis());
+  });
+
+  it("should import Bitpanda CSV with 2025 timestamps", async () => {
+    const ds = await getDataSource();
+    const csvContent = `Transaction ID,Timestamp,Transaction Type,In/Out,Amount Fiat,Fiat,Amount Asset,Asset,Asset market price,Asset market price currency,Asset class,Product ID,Fee,Fee asset,Fee percent,Spread,Spread Currency,Tax Fiat
+T2025-001,2025-01-05 09:30:22,buy,outgoing,1000,EUR,0.01,BTC,100000,EUR,Cryptocurrency,BTC,5.00,EUR,0.5,0.5,EUR,0
+T2025-002,2025-06-15 14:30:00,buy,outgoing,500,EUR,2.5,ETH,200,EUR,Cryptocurrency,ETH,2.50,EUR,0.5,0.5,EUR,0
+T2026-001,2026-01-10 10:00:00,sell,incoming,2000,EUR,0.02,BTC,100000,EUR,Cryptocurrency,BTC,10.00,EUR,0.5,0.5,EUR,0`;
+
+    const csvImporter = getProviderConfig(ProviderType.Bitpanda).csvImporter!;
+    const parseResult = csvImporter.parseCsv(csvContent, providerAccountId);
+
+    const repository = new TransactionsRepository(ds);
+    const service = new TransactionsService(repository);
+
+    const result = await service.importTransactions(userId, providerAccountId, parseResult.transactions);
+
+    expect(result.imported).toBe(3);
+    expect(result.errors).toHaveLength(0);
+
+    const saved = await repository.findByProviderAccountId(userId, providerAccountId);
+    expect(saved).toHaveLength(3);
+    
+    const sorted = [...saved].sort((a, b) => a.timestamp.toMillis() - b.timestamp.toMillis());
+    expect(sorted[0].timestamp.year).toBe(2025);
+    expect(sorted[1].timestamp.year).toBe(2025);
+    expect(sorted[2].timestamp.year).toBe(2026);
+  });
+
+  it("should import TradeRepublic CSV with 2025 timestamps", async () => {
+    const ds = await getDataSource();
+    const csvContent = `Date;Type;Value;Note;ISIN;Shares;Fees;Taxes;ISIN2;Shares2
+2025-01-05T09:30:22;Buy;-1000.00;;XF000BTC0017;0.010376;0.00;0.00;;
+2025-02-17T17:51:55;Buy;-15000.00;;XF000SOL0012;69.275105;0.00;0.00;;
+2026-01-02T07:45:03;Buy;-2500.00;;XF000SOL0012;1.798273;0.00;0.00;;`;
+
+    const csvImporter = getProviderConfig(ProviderType.TradeRepublic).csvImporter;
+    if (!csvImporter) {
+      return;
+    }
+    
+    const parseResult = csvImporter.parseCsv(csvContent, providerAccountId);
+
+    const repository = new TransactionsRepository(ds);
+    const service = new TransactionsService(repository);
+
+    const result = await service.importTransactions(userId, providerAccountId, parseResult.transactions);
+
+    expect(result.imported).toBe(3);
+    expect(result.errors).toHaveLength(0);
+
+    const saved = await repository.findByProviderAccountId(userId, providerAccountId);
+    expect(saved).toHaveLength(3);
+    
+    const sorted = [...saved].sort((a, b) => a.timestamp.toMillis() - b.timestamp.toMillis());
+    expect(sorted[0].timestamp.year).toBe(2025);
+    expect(sorted[1].timestamp.year).toBe(2025);
+    expect(sorted[2].timestamp.year).toBe(2026);
   });
 });
