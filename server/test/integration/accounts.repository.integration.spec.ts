@@ -2,7 +2,12 @@ import { describe, it, expect, afterAll, beforeEach } from "vitest";
 import { getDataSource } from "../../src/database.js";
 import { AccountEntity } from "../../src/modules/accounts/account.entity.js";
 import { AccountsRepository } from "../../src/modules/accounts/accounts.repository.js";
-import { ProviderType } from "@txls/shared";
+import { AccountsService } from "../../src/modules/accounts/accounts.service.js";
+import { TransactionsRepository } from "../../src/modules/transactions/transactions.repository.js";
+import { TransactionEntity } from "../../src/modules/transactions/transaction.entity.js";
+import { PortfolioSnapshotsRepository } from "../../src/modules/portfolio-snapshots/portfolio-snapshots.repository.js";
+import { PortfolioSnapshotsService } from "../../src/modules/portfolio-snapshots/portfolio-snapshots.service.js";
+import { ProviderType, TransactionType } from "@txls/shared";
 import { DateTime } from "luxon";
 import { createTestDataSource, destroyTestDataSource } from "../test-helpers.js";
 
@@ -138,6 +143,56 @@ describe("AccountsRepository Integration Tests", () => {
 
     it("should not throw when deleting non-existent account", async () => {
       await expect(repository.delete(999)).resolves.not.toThrow();
+    });
+
+    it("should delete associated transactions and portfolio snapshots when deleting an account", async () => {
+      const dataSource = await getDataSource();
+      const transactionsRepository = new TransactionsRepository(dataSource);
+      const snapshotsRepository = new PortfolioSnapshotsRepository(dataSource);
+      const snapshotsService = new PortfolioSnapshotsService(dataSource, snapshotsRepository);
+      const service = new AccountsService(repository, dataSource, transactionsRepository, snapshotsService);
+
+      const account = new AccountEntity();
+      account.userId = 1;
+      account.provider = ProviderType.Bitpanda;
+      account.createdAt = DateTime.now();
+      account.updatedAt = DateTime.now();
+      const savedAccount = await repository.save(account);
+
+      const transaction = new TransactionEntity();
+      transaction.userId = 1;
+      transaction.providerAccountId = savedAccount.id;
+      transaction.externalId = "test-tx-1";
+      transaction.timestamp = DateTime.now();
+      transaction.type = TransactionType.buy;
+      transaction.asset = "BTC";
+      transaction.quantity = 1;
+      transaction.eurValue = 50000;
+      transaction.eurFee = 10;
+      transaction.eurRate = 50000;
+      await transactionsRepository.save(transaction);
+
+      const snapshot = await snapshotsRepository.save({
+        userId: 1,
+        providerAccountId: savedAccount.id,
+        asset: "BTC",
+        date: DateTime.now(),
+        amount: 1,
+        eurInvested: 50000,
+        buyCount: 1,
+        sellCount: 0,
+      });
+
+      await service.delete(1, savedAccount.id);
+
+      const deletedAccount = await repository.findById(1, savedAccount.id);
+      expect(deletedAccount).toBeNull();
+
+      const remainingTransactions = await transactionsRepository.findByProviderAccountId(1, savedAccount.id);
+      expect(remainingTransactions).toHaveLength(0);
+
+      const remainingSnapshots = await snapshotsRepository.findLatestByAccount(1, savedAccount.id);
+      expect(remainingSnapshots).toHaveLength(0);
     });
   });
 

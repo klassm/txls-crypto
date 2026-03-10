@@ -156,10 +156,10 @@ export default function AccountDetailPage() {
 								onConfigureApiKey={() => setApiSyncDialogOpen(true)}
 							/>
 						) : (
-							<Box>
-								<AssetSummary
-									stats={stats?.assetStats ?? []}
-								/>
+						<Box>
+							<AssetSummary
+								stats={account?.assets ?? []}
+							/>
 								<TransactionsTable
 									transactions={transactions}
 									onImport={() => setImportDialogOpen(true)}

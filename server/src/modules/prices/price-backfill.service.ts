@@ -17,6 +17,7 @@ export class PriceBackfillService {
 		for (const tx of transactions) {
 			if (!tx.eurRate || tx.eurRate <= 0) continue;
 			if (tx.type === TransactionType.transfer_in || tx.type === TransactionType.transfer_out) continue;
+			if (tx.type === TransactionType.reward) continue;
 
 			const date = tx.timestamp.startOf("day");
 			const key = `${tx.asset}-${date.toISODate()}`;

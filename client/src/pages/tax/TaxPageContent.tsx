@@ -15,6 +15,7 @@ import {
   Card,
   CardContent,
   Chip,
+  Grid,
   Paper,
   Stack,
   Table,
@@ -47,7 +48,7 @@ interface MetricCardProps {
 
 function MetricCard({ label, tooltip, value, valueColor, icon }: MetricCardProps) {
   return (
-    <Card sx={{ flex: 1, minWidth: 300 }}>
+    <Card>
       <CardContent>
         <Stack spacing={2}>
           <Stack direction="row" alignItems="center" spacing={1}>
@@ -118,88 +119,96 @@ export default function TaxPageContent() {
 
       {data && (
         <>
-          <Stack direction="row" spacing={2}>
-            <MetricCard
-              label="Taxable Gains"
-              tooltip={
-                <Box sx={{ p: 1, maxWidth: 400 }}>
-                  <Typography variant="body2" fontWeight="bold" gutterBottom>
-                    Taxable Gains Explanation
-                  </Typography>
-                  <Typography variant="body2" sx={{ mb: 1 }}>
-                    Total gains from cryptocurrency sales that are subject to taxation after applying:
-                  </Typography>
-                  <Box sx={{ pl: 1.5 }}>
-                    <Typography variant="body2">• Long-term holding exemption (held &gt;1 year)</Typography>
-                    <Typography variant="body2">• €1,000 Freigrenze exemption for small gains</Typography>
-                    <Typography variant="body2">• Loss carryover from previous years</Typography>
+          <Grid container spacing={2}>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+              <MetricCard
+                label="Taxable Gains"
+                tooltip={
+                  <Box sx={{ p: 1, maxWidth: 400 }}>
+                    <Typography variant="body2" fontWeight="bold" gutterBottom>
+                      Taxable Gains Explanation
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      Total gains from cryptocurrency sales that are subject to taxation after applying:
+                    </Typography>
+                    <Box sx={{ pl: 1.5 }}>
+                      <Typography variant="body2">• Long-term holding exemption (held &gt;1 year)</Typography>
+                      <Typography variant="body2">• €1,000 Freigrenze exemption for small gains</Typography>
+                      <Typography variant="body2">• Loss carryover from previous years</Typography>
+                    </Box>
+                    <Typography variant="caption" display="block" color="text.secondary" sx={{ mt: 1 }}>
+                      Only short-term gains (≤365 days) above €1,000 total are taxable.
+                    </Typography>
                   </Box>
-                  <Typography variant="caption" display="block" color="text.secondary" sx={{ mt: 1 }}>
-                    Only short-term gains (≤365 days) above €1,000 total are taxable.
-                  </Typography>
-                </Box>
-              }
-              value={`+€${data.totalGain.toFixed(2)}`}
-              valueColor={green[500]}
-              icon={<TrendingUp sx={{ color: grey[600] }} />}
-            />
-            <MetricCard
-              label="Taxable Losses"
-              tooltip={
-                <Box sx={{ p: 1, maxWidth: 400 }}>
-                  <Typography variant="body2" fontWeight="bold" gutterBottom>
-                    Taxable Losses Explanation
-                  </Typography>
-                  <Typography variant="body2" sx={{ mb: 1 }}>
-                    Total losses from cryptocurrency sales that can be used to:
-                  </Typography>
-                  <Box sx={{ pl: 1.5 }}>
-                    <Typography variant="body2">• Offset current year&apos;s taxable gains</Typography>
-                    <Typography variant="body2">• Carry forward to future years (if not fully used)</Typography>
+                }
+                value={`+€${data.totalGain.toFixed(2)}`}
+                valueColor={green[500]}
+                icon={<TrendingUp sx={{ color: grey[600] }} />}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+              <MetricCard
+                label="Taxable Losses"
+                tooltip={
+                  <Box sx={{ p: 1, maxWidth: 400 }}>
+                    <Typography variant="body2" fontWeight="bold" gutterBottom>
+                      Taxable Losses Explanation
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      Total losses from cryptocurrency sales that can be used to:
+                    </Typography>
+                    <Box sx={{ pl: 1.5 }}>
+                      <Typography variant="body2">• Offset current year&apos;s taxable gains</Typography>
+                      <Typography variant="body2">• Carry forward to future years (if not fully used)</Typography>
+                    </Box>
+                    <Typography variant="caption" display="block" color="text.secondary" sx={{ mt: 1 }}>
+                      German tax law allows unlimited loss carryforward to offset future gains.
+                    </Typography>
                   </Box>
-                  <Typography variant="caption" display="block" color="text.secondary" sx={{ mt: 1 }}>
-                    German tax law allows unlimited loss carryforward to offset future gains.
+                }
+                value={`-€${data.totalLoss.toFixed(2)}`}
+                valueColor={red[500]}
+                icon={<TrendingDown sx={{ color: grey[600] }} />}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+              <MetricCard
+                label="Net Taxable"
+                tooltip={
+                  <Typography variant="caption" sx={{ maxWidth: 300 }}>
+                    Taxable gains minus taxable losses (after applying all exemptions and loss carryover)
                   </Typography>
-                </Box>
-              }
-              value={`-€${data.totalLoss.toFixed(2)}`}
-              valueColor={red[500]}
-              icon={<TrendingDown sx={{ color: grey[600] }} />}
-            />
-            <MetricCard
-              label="Net Taxable"
-              tooltip={
-                <Typography variant="caption" sx={{ maxWidth: 300 }}>
-                  Taxable gains minus taxable losses (after applying all exemptions and loss carryover)
-                </Typography>
-              }
-              value={`€${(data.totalGain - data.totalLoss).toFixed(2)}`}
-              valueColor={data.totalGain - data.totalLoss >= 0 ? green[500] : red[500]}
-              icon={<Info sx={{ color: grey[600] }} />}
-            />
-            <MetricCard
-              label="Staking Rewards"
-              tooltip={
-                <Box sx={{ p: 1, maxWidth: 400 }}>
-                  <Typography variant="body2" fontWeight="bold" gutterBottom>
-                    Staking Rewards
-                  </Typography>
-                  <Typography variant="body2" sx={{ mb: 1 }}>
-                    Sum of all staking reward transactions received during this tax year.
-                  </Typography>
-                  <Typography variant="body2" sx={{ mb: 0.5 }}>
-                    Taxable if total &gt; €256 (Freigrenze - all-or-nothing threshold)
-                  </Typography>
-                  <Typography variant="caption" display="block" color="text.secondary" sx={{ mt: 1 }}>
-                    Falls under § 22 EStG as "sonstige Leistungen" (other services)
-                  </Typography>
-                </Box>
-              }
-              value={`€${data.totalStakingRewards.toFixed(2)}`}
-              valueColor={data.stakingRewardsExempt > 0 ? green[500] : red[500]}
-              icon={<AccountBalance sx={{ color: grey[600] }} />}
-            />
-          </Stack>
+                }
+                value={`€${(data.totalGain - data.totalLoss).toFixed(2)}`}
+                valueColor={data.totalGain - data.totalLoss >= 0 ? green[500] : red[500]}
+                icon={<Info sx={{ color: grey[600] }} />}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+              <MetricCard
+                label="Staking Rewards"
+                tooltip={
+                  <Box sx={{ p: 1, maxWidth: 400 }}>
+                    <Typography variant="body2" fontWeight="bold" gutterBottom>
+                      Staking Rewards
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      Sum of all staking reward transactions received during this tax year.
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 0.5 }}>
+                      Taxable if total &gt; €256 (Freigrenze - all-or-nothing threshold)
+                    </Typography>
+                    <Typography variant="caption" display="block" color="text.secondary" sx={{ mt: 1 }}>
+                      Falls under § 22 EStG as "sonstige Leistungen" (other services)
+                    </Typography>
+                  </Box>
+                }
+                value={`€${data.totalStakingRewards.toFixed(2)}`}
+                valueColor={data.stakingRewardsExempt > 0 ? green[500] : red[500]}
+                icon={<AccountBalance sx={{ color: grey[600] }} />}
+              />
+            </Grid>
+          </Grid>
 
           <Alert severity="info" sx={{ display: data.lossCarryover && data.lossCarryover.remaining > 0 ? "flex" : "none" }}>
             <Stack spacing={1}>

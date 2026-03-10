@@ -65,6 +65,18 @@ async findByProviderAccountId(userId: number, providerAccountId: number): Promis
     await this.qb.where("transaction.id = :id", { id }).delete();
   }
 
+  async deleteByProviderAccountId(userId: number, providerAccountId: number): Promise<void> {
+    await this.dataSource
+      .getRepository(TransactionEntity)
+      .createQueryBuilder()
+      .delete()
+      .where("user_id = :userId AND provider_account_id = :providerAccountId", {
+        userId,
+        providerAccountId,
+      })
+      .execute();
+  }
+
   async countByProviderAccountId(userId: number, providerAccountId: number): Promise<number> {
     return this.qb
       .where("transaction.userId = :userId AND transaction.providerAccountId = :providerAccountId", { userId, providerAccountId })

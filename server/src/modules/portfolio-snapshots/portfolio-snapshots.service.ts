@@ -118,7 +118,7 @@ export class PortfolioSnapshotsService {
 			providerAccountId,
 		});
 
-		await this.repository.deleteByAccount(userId, providerAccountId);
+		await this.deleteByAccount(userId, providerAccountId);
 
 		const earliestTransaction = await this.findEarliestTransaction(userId, providerAccountId);
 		if (!earliestTransaction) {
@@ -126,6 +126,10 @@ export class PortfolioSnapshotsService {
 		}
 
 		await this.rebuildFromDate(userId, providerAccountId, earliestTransaction);
+	}
+
+	async deleteByAccount(userId: number, providerAccountId: number): Promise<void> {
+		await this.repository.deleteByAccount(userId, providerAccountId);
 	}
 
 	async buildDailySnapshotsForAllAccounts(): Promise<void> {
