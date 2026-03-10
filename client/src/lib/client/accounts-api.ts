@@ -128,8 +128,8 @@ export const accountsApi = {
       body: JSON.stringify(data),
     }),
 
-  triggerSync: (id: number) =>
-    fetchJson<{ accountId: number; success: boolean; imported: number; error?: string }>(`/api/accounts/${id}/sync`, {
+  triggerSync: (id: number, fullSync = false) =>
+    fetchJson<{ accountId: number; success: boolean; imported: number; error?: string }>(`/api/accounts/${id}/sync?full=${fullSync}`, {
       method: 'POST',
     }),
 

@@ -11,10 +11,11 @@ export interface CsvImporter {
 
 export interface ApiSyncResult {
   transactions: Transaction[];
+  wasIncremental: boolean;
 }
 
 export interface ApiSyncClient {
-  fetchTransactions(apiKey: string): Promise<ApiSyncResult>;
+  fetchTransactions(apiKey: string, knownExternalIds?: Set<string>): Promise<ApiSyncResult>;
   testConnection(apiKey: string): Promise<boolean>;
 }
 
@@ -26,4 +27,5 @@ export interface ProviderConfig {
   logoForegroundColor: string;
   logoPath: string;
   csvImportMarkdownInstructions: string;
+  apiSyncMarkdownInstructions: string;
 }

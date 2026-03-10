@@ -172,6 +172,7 @@ entity.provider = data.provider || entity.provider || ProviderType.Bitpanda;
       logoForegroundColor: metadata.logoForegroundColor,
       logoPath: metadata.logoPath,
       csvImportMarkdownInstructions: metadata.csvImportMarkdownInstructions,
+      apiSyncMarkdownInstructions: metadata.apiSyncMarkdownInstructions,
       csvImportAllowed: true,
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,

@@ -218,6 +218,7 @@ export class ProvidersService {
 			logoForegroundColor: metadata?.logoForegroundColor || "#000000",
 			logoPath: metadata?.logoPath || "",
 			csvImportMarkdownInstructions: metadata?.csvImportMarkdownInstructions || "",
+			apiSyncMarkdownInstructions: metadata?.apiSyncMarkdownInstructions || "",
 			csvImportAllowed: csvImporters[entity.provider as ProviderType] !== undefined,
 			createdAt: entity.createdAt,
 			updatedAt: entity.updatedAt,

@@ -7,6 +7,11 @@ import { logger } from "../../common/logger.js";
 const BITPANDA_API_BASE = "https://api.bitpanda.com/v1";
 const DEFAULT_PAGE_SIZE = 100;
 
+interface FetchResult {
+  transactions: Transaction[];
+  stoppedEarly: boolean;
+}
+
 interface BitpandaTrade {
   id: string;
   type: "trade";
@@ -132,31 +137,38 @@ export class BitpandaApiClient implements ApiSyncClient {
     }
   }
 
-  async fetchTransactions(apiKey: string): Promise<ApiSyncResult> {
+  async fetchTransactions(apiKey: string, knownExternalIds?: Set<string>): Promise<ApiSyncResult> {
     const allTransactions: Transaction[] = [];
+    let wasIncremental = false;
 
-    const trades = await this.fetchAllTrades(apiKey);
-    allTransactions.push(...trades);
+    const tradesResult = await this.fetchAllTrades(apiKey, knownExternalIds);
+    allTransactions.push(...tradesResult.transactions);
+    if (tradesResult.stoppedEarly) wasIncremental = true;
 
-    const crypto = await this.fetchAllCryptoTransactions(apiKey);
-    allTransactions.push(...crypto);
+    const cryptoResult = await this.fetchAllCryptoTransactions(apiKey, knownExternalIds);
+    allTransactions.push(...cryptoResult.transactions);
+    if (cryptoResult.stoppedEarly) wasIncremental = true;
 
-    const fiat = await this.fetchAllFiatTransactions(apiKey);
-    allTransactions.push(...fiat);
+    const fiatResult = await this.fetchAllFiatTransactions(apiKey, knownExternalIds);
+    allTransactions.push(...fiatResult.transactions);
+    if (fiatResult.stoppedEarly) wasIncremental = true;
 
-    const commodity = await this.fetchAllCommodityTransactions(apiKey);
-    allTransactions.push(...commodity);
+    const commodityResult = await this.fetchAllCommodityTransactions(apiKey, knownExternalIds);
+    allTransactions.push(...commodityResult.transactions);
+    if (commodityResult.stoppedEarly) wasIncremental = true;
 
     allTransactions.sort((a, b) => b.timestamp.toMillis() - a.timestamp.toMillis());
 
     return {
       transactions: allTransactions,
+      wasIncremental,
     };
   }
 
-  private async fetchAllTrades(apiKey: string): Promise<Transaction[]> {
+  private async fetchAllTrades(apiKey: string, knownExternalIds?: Set<string>): Promise<FetchResult> {
     const transactions: Transaction[] = [];
     let cursor: string | undefined;
+    let stoppedEarly = false;
 
     do {
       let url = `/trades?page_size=${DEFAULT_PAGE_SIZE}`;
@@ -176,24 +188,37 @@ export class BitpandaApiClient implements ApiSyncClient {
           continue;
         }
 
+        if (knownExternalIds && knownExternalIds.has(trade.id)) {
+          logger.debug({ id: trade.id }, "[BitpandaApiClient] Found known trade, stopping early");
+          stoppedEarly = true;
+          break;
+        }
+
         const tx = this.mapTradeToTransaction(trade);
         if (tx) {
           transactions.push(tx);
         }
       }
 
+      if (stoppedEarly) {
+        break;
+      }
+
       cursor = data.meta.next_cursor;
     } while (cursor);
 
-    return transactions;
+    return { transactions, stoppedEarly };
   }
 
-  private async fetchAllCryptoTransactions(apiKey: string): Promise<Transaction[]> {
+  private async fetchAllCryptoTransactions(apiKey: string, knownExternalIds?: Set<string>): Promise<FetchResult> {
     const transactions: Transaction[] = [];
+    let stoppedEarly = false;
 
     const txTypes = ["deposit", "withdrawal", "transfer"];
 
     for (const txType of txTypes) {
+      if (stoppedEarly) break;
+      
       let cursor: string | undefined;
 
       do {
@@ -215,25 +240,36 @@ export class BitpandaApiClient implements ApiSyncClient {
             continue;
           }
 
+          if (knownExternalIds && knownExternalIds.has(tx.id)) {
+            logger.debug({ id: tx.id }, "[BitpandaApiClient] Found known crypto transaction, stopping early");
+            stoppedEarly = true;
+            break;
+          }
+
           const mapped = this.mapCryptoTransactionToTransaction(tx);
           if (mapped) {
             transactions.push(mapped);
           }
         }
 
+        if (stoppedEarly) break;
+
         cursor = data.meta.next_cursor;
       } while (cursor);
     }
 
-    return transactions;
+    return { transactions, stoppedEarly };
   }
 
-  private async fetchAllFiatTransactions(apiKey: string): Promise<Transaction[]> {
+  private async fetchAllFiatTransactions(apiKey: string, knownExternalIds?: Set<string>): Promise<FetchResult> {
     const transactions: Transaction[] = [];
+    let stoppedEarly = false;
 
     const txTypes = ["deposit", "withdrawal", "transfer"];
 
     for (const txType of txTypes) {
+      if (stoppedEarly) break;
+      
       let cursor: string | undefined;
 
       do {
@@ -255,22 +291,31 @@ export class BitpandaApiClient implements ApiSyncClient {
             continue;
           }
 
+          if (knownExternalIds && knownExternalIds.has(tx.id)) {
+            logger.debug({ id: tx.id }, "[BitpandaApiClient] Found known fiat transaction, stopping early");
+            stoppedEarly = true;
+            break;
+          }
+
           const mapped = this.mapFiatTransactionToTransaction(tx);
           if (mapped) {
             transactions.push(mapped);
           }
         }
 
+        if (stoppedEarly) break;
+
         cursor = data.meta.next_cursor;
       } while (cursor);
     }
 
-    return transactions;
+    return { transactions, stoppedEarly };
   }
 
-  private async fetchAllCommodityTransactions(apiKey: string): Promise<Transaction[]> {
+  private async fetchAllCommodityTransactions(apiKey: string, knownExternalIds?: Set<string>): Promise<FetchResult> {
     const transactions: Transaction[] = [];
     let cursor: string | undefined;
+    let stoppedEarly = false;
 
     do {
       let url = `/assets/transactions/commodity?page_size=${DEFAULT_PAGE_SIZE}`;
@@ -291,16 +336,24 @@ export class BitpandaApiClient implements ApiSyncClient {
           continue;
         }
 
+        if (knownExternalIds && knownExternalIds.has(tx.id)) {
+          logger.debug({ id: tx.id }, "[BitpandaApiClient] Found known commodity transaction, stopping early");
+          stoppedEarly = true;
+          break;
+        }
+
         const mapped = this.mapCommodityTransactionToTransaction(tx);
         if (mapped) {
           transactions.push(mapped);
         }
       }
 
+      if (stoppedEarly) break;
+
       cursor = data.meta.next_cursor;
     } while (cursor);
 
-    return transactions;
+    return { transactions, stoppedEarly };
   }
 
   private mapTradeToTransaction(trade: BitpandaTrade): Transaction | null {

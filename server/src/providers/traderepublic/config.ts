@@ -39,7 +39,8 @@ You can import your TradeRepublic transactions using the [pytr](https://github.c
 
 4. This will generate an \`account_transactions.csv\` file in your current directory.
 
-## Import
-
-Upload the \`account_transactions.csv\` file to import your TradeRepublic transactions.`,
+ ## Import
+ 
+ Upload the \`account_transactions.csv\` file to import your TradeRepublic transactions.`,
+  apiSyncMarkdownInstructions: "",
 };

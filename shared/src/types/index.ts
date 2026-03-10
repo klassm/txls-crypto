@@ -37,6 +37,7 @@ export interface Provider {
   logoForegroundColor: string;
   logoPath: string;
   csvImportMarkdownInstructions: string;
+  apiSyncMarkdownInstructions: string;
   csvImportAllowed: boolean;
   createdAt: DateTime;
   updatedAt: DateTime;

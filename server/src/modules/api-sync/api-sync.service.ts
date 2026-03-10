@@ -9,6 +9,7 @@ import { PortfolioSnapshotsService } from "../portfolio-snapshots/portfolio-snap
 import { PriceBackfillService } from "../prices/price-backfill.service.js";
 import { TransactionEntity } from "../transactions/transaction.entity.js";
 import { getProviderConfig } from "../../providers/registry.js";
+import type { ApiSyncClient } from "../../providers/types.js";
 import { decrypt } from "./encryption.service.js";
 import { logger } from "../../common/logger.js";
 import { broadcastSyncEvent } from "../../websocket.js";
@@ -48,7 +49,7 @@ export class ApiSyncService {
     return results;
   }
 
-  async syncAccount(accountId: number, userId: number): Promise<SyncResult> {
+  async syncAccount(accountId: number, userId: number, fullSync = false): Promise<SyncResult> {
     if (this.syncingAccounts.has(accountId)) {
       logger.warn({ accountId }, "[ApiSyncService] Account already syncing, skipping");
       return { accountId, success: false, imported: 0, error: "Already syncing" };
@@ -74,48 +75,13 @@ export class ApiSyncService {
 
       const apiKey = decrypt(account.apiKeyEncrypted);
 
-      logger.info({ accountId, provider: account.provider }, "[ApiSyncService] Starting sync");
+      logger.info({ accountId, provider: account.provider, fullSync }, "[ApiSyncService] Starting sync");
 
-      const result = await providerConfig.apiClient.fetchTransactions(apiKey);
-
-      if (result.transactions.length === 0) {
-        logger.info({ accountId }, "[ApiSyncService] No transactions to import");
-        await this.updateSyncSuccess(account);
-        broadcastSyncEvent(userId, accountId, "sync-complete", { imported: 0 });
-        return { accountId, success: true, imported: 0 };
+      if (fullSync) {
+        return await this.performFullSync(account, apiKey, providerConfig.apiClient);
+      } else {
+        return await this.performIncrementalSync(account, apiKey, providerConfig.apiClient);
       }
-
-      const earliestTimestamp = this.getEarliestTimestamp(result.transactions);
-      await this.deleteAllTransactions(accountId);
-
-      const importResult = await this.transactionsService.importTransactions(
-        userId,
-        accountId,
-        result.transactions
-      );
-
-      const savedTransactions = await this.getSavedTransactions(accountId, result.transactions);
-
-      if (savedTransactions.length > 0) {
-        await this.priceBackfillService.storePricesFromTransactions(savedTransactions);
-        await this.priceBackfillService.fillTransferPrices(accountId);
-        await this.portfolioService.rebuildFromDate(
-          userId,
-          accountId,
-          earliestTimestamp.startOf("day")
-        );
-      }
-
-      await this.updateSyncSuccess(account);
-
-      logger.info(
-        { accountId, imported: importResult.imported, errors: importResult.errors.length },
-        "[ApiSyncService] Sync completed"
-      );
-
-      broadcastSyncEvent(userId, accountId, "sync-complete", { imported: importResult.imported });
-
-      return { accountId, success: true, imported: importResult.imported };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       logger.error({ accountId, error: errorMessage }, "[ApiSyncService] Sync failed");
@@ -127,6 +93,104 @@ export class ApiSyncService {
     } finally {
       this.syncingAccounts.delete(accountId);
     }
+  }
+
+  private async performIncrementalSync(
+    account: AccountEntity,
+    apiKey: string,
+    apiClient: ApiSyncClient
+  ): Promise<SyncResult> {
+    const { accountId, userId } = { accountId: account.id, userId: account.userId };
+
+    const knownExternalIds = await this.transactionsRepo.getExternalIdsByAccountId(accountId);
+    const result = await apiClient.fetchTransactions(apiKey, knownExternalIds);
+
+    if (result.transactions.length === 0) {
+      logger.info({ accountId }, "[ApiSyncService] No new transactions to import");
+      await this.updateSyncSuccess(account);
+      broadcastSyncEvent(userId, accountId, "sync-complete", { imported: 0 });
+      return { accountId, success: true, imported: 0 };
+    }
+
+    const earliestTimestamp = this.getEarliestTimestamp(result.transactions);
+
+    const importResult = await this.transactionsService.importTransactions(
+      userId,
+      accountId,
+      result.transactions
+    );
+
+    const savedTransactions = await this.getSavedTransactions(accountId, result.transactions);
+
+    if (savedTransactions.length > 0) {
+      await this.priceBackfillService.storePricesFromTransactions(savedTransactions);
+      await this.priceBackfillService.fillTransferPrices(accountId);
+      await this.portfolioService.rebuildFromDate(
+        userId,
+        accountId,
+        earliestTimestamp.startOf("day")
+      );
+    }
+
+    await this.updateSyncSuccess(account);
+
+    logger.info(
+      { accountId, imported: importResult.imported, errors: importResult.errors.length, wasIncremental: result.wasIncremental },
+      "[ApiSyncService] Incremental sync completed"
+    );
+
+    broadcastSyncEvent(userId, accountId, "sync-complete", { imported: importResult.imported });
+
+    return { accountId, success: true, imported: importResult.imported };
+  }
+
+  private async performFullSync(
+    account: AccountEntity,
+    apiKey: string,
+    apiClient: ApiSyncClient
+  ): Promise<SyncResult> {
+    const { accountId, userId } = { accountId: account.id, userId: account.userId };
+
+    const result = await apiClient.fetchTransactions(apiKey);
+
+    if (result.transactions.length === 0) {
+      logger.info({ accountId }, "[ApiSyncService] No transactions to import");
+      await this.updateSyncSuccess(account);
+      broadcastSyncEvent(userId, accountId, "sync-complete", { imported: 0 });
+      return { accountId, success: true, imported: 0 };
+    }
+
+    const earliestTimestamp = this.getEarliestTimestamp(result.transactions);
+    await this.deleteAllTransactions(accountId);
+
+    const importResult = await this.transactionsService.importTransactions(
+      userId,
+      accountId,
+      result.transactions
+    );
+
+    const savedTransactions = await this.getSavedTransactions(accountId, result.transactions);
+
+    if (savedTransactions.length > 0) {
+      await this.priceBackfillService.storePricesFromTransactions(savedTransactions);
+      await this.priceBackfillService.fillTransferPrices(accountId);
+      await this.portfolioService.rebuildFromDate(
+        userId,
+        accountId,
+        earliestTimestamp.startOf("day")
+      );
+    }
+
+    await this.updateSyncSuccess(account);
+
+    logger.info(
+      { accountId, imported: importResult.imported, errors: importResult.errors.length },
+      "[ApiSyncService] Full sync completed"
+    );
+
+    broadcastSyncEvent(userId, accountId, "sync-complete", { imported: importResult.imported });
+
+    return { accountId, success: true, imported: importResult.imported };
   }
 
   async validateApiKey(

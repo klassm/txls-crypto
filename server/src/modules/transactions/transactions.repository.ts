@@ -224,6 +224,15 @@ async getStatsByProviderAccountIdAndYear(
       .getMany();
   }
 
+  async getExternalIdsByAccountId(accountId: number): Promise<Set<string>> {
+    const rows = await this.qb
+      .select("transaction.externalId")
+      .where("transaction.providerAccountId = :accountId", { accountId })
+      .getRawMany();
+
+    return new Set(rows.map((row) => row.external_id));
+  }
+
   async getAvailableYears(userId: number, providerAccountId: number): Promise<number[]> {
     const rows = await this.qb
       .select("transaction.timestamp AS timestamp")

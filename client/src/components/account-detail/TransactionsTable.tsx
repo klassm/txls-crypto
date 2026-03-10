@@ -1,5 +1,5 @@
-import { CloudUpload, Sync, Delete, Check } from "@mui/icons-material";
-import { Box, Button, Chip, TextField, CircularProgress, Typography, Alert } from "@mui/material";
+import { CloudUpload, Sync, Delete, Check, ArrowDropDown } from "@mui/icons-material";
+import { Box, Button, Chip, TextField, CircularProgress, Typography, Alert, Menu, MenuItem, ButtonGroup } from "@mui/material";
 import { type MRT_ColumnDef, MaterialReactTable } from "material-react-table";
 import type { Transaction, ApiSettings } from "@txls/shared";
 import { TransactionType } from "@txls/shared";
@@ -31,6 +31,7 @@ export function TransactionsTable({
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [syncMenuAnchor, setSyncMenuAnchor] = useState<null | HTMLElement>(null);
 
   const handleSaveApiKey = async () => {
     if (!apiKey.trim()) {
@@ -56,12 +57,13 @@ export function TransactionsTable({
     }
   };
 
-  const handleSync = async () => {
+  const handleSync = async (fullSync = false) => {
     setIsSyncing(true);
     setError(null);
+    setSyncMenuAnchor(null);
 
     try {
-      const result = await accountsApi.triggerSync(accountId);
+      const result = await accountsApi.triggerSync(accountId, fullSync);
       if (result.success) {
         setSuccess(`Synced ${result.imported} transactions`);
         onSyncComplete?.();
@@ -222,14 +224,34 @@ export function TransactionsTable({
               </Box>
             ) : apiSettings.apiEnabled && apiSettings.hasApiKey ? (
               <Box sx={{ display: "inline-flex", gap: 1, alignItems: "center" }}>
-                <Button
-                  variant="outlined"
-                  onClick={handleSync}
-                  disabled={isSyncing}
-                  startIcon={isSyncing ? <CircularProgress size={20} /> : <Sync />}
+                <ButtonGroup variant="outlined">
+                  <Button
+                    onClick={() => handleSync(false)}
+                    disabled={isSyncing}
+                    startIcon={isSyncing ? <CircularProgress size={20} /> : <Sync />}
+                  >
+                    Sync
+                  </Button>
+                  <Button
+                    size="small"
+                    onClick={(e) => setSyncMenuAnchor(e.currentTarget)}
+                    disabled={isSyncing}
+                  >
+                    <ArrowDropDown />
+                  </Button>
+                </ButtonGroup>
+                <Menu
+                  anchorEl={syncMenuAnchor}
+                  open={Boolean(syncMenuAnchor)}
+                  onClose={() => setSyncMenuAnchor(null)}
                 >
-                  Sync
-                </Button>
+                  <MenuItem onClick={() => handleSync(false)}>
+                    Incremental Sync
+                  </MenuItem>
+                  <MenuItem onClick={() => handleSync(true)}>
+                    Full Sync (reimport all)
+                  </MenuItem>
+                </Menu>
                 <Button
                   variant="outlined"
                   color="error"

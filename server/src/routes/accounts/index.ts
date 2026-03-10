@@ -631,8 +631,9 @@ router.post("/:id/sync", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Invalid account ID" });
     }
 
+    const fullSync = req.query.full === "true";
     const syncService = new ApiSyncService(dataSource);
-    const result = await syncService.syncAccount(accountId, userId);
+    const result = await syncService.syncAccount(accountId, userId, fullSync);
 
     return res.json(result);
   } catch (error) {

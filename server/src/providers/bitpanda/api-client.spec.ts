@@ -482,5 +482,160 @@ describe("BitpandaApiClient", () => {
       expect(result.transactions[0].externalId).toBe("trade-2");
       expect(result.transactions[1].externalId).toBe("trade-1");
     });
+
+    describe("incremental sync", () => {
+      it("should stop early when known ID is found in trades", async () => {
+        nock(BITPANDA_API_BASE)
+          .get("/trades")
+          .query({ page_size: 100 })
+          .reply(200, {
+            data: [
+              {
+                id: "trade-new",
+                type: "trade",
+                attributes: {
+                  status: "finished",
+                  type: "buy",
+                  cryptocoin_symbol: "BTC",
+                  amount_fiat: "100",
+                  amount_cryptocoin: "0.01",
+                  fiat_to_eur_rate: "1.0",
+                  time: { date_iso8601: "2024-01-20T10:00:00+01:00" },
+                  price: "10000",
+                  is_swap: false,
+                },
+              },
+              {
+                id: "trade-known",
+                type: "trade",
+                attributes: {
+                  status: "finished",
+                  type: "buy",
+                  cryptocoin_symbol: "ETH",
+                  amount_fiat: "50",
+                  amount_cryptocoin: "0.5",
+                  fiat_to_eur_rate: "1.0",
+                  time: { date_iso8601: "2024-01-15T10:00:00+01:00" },
+                  price: "2000",
+                  is_swap: false,
+                },
+              },
+            ],
+            meta: { total_count: 10, page_size: 100, next_cursor: "more-data" },
+          });
+
+        mockAllNonTradeEndpoints();
+
+        const knownIds = new Set(["trade-known"]);
+        const result = await client.fetchTransactions(API_KEY, knownIds);
+
+        expect(result.transactions).toHaveLength(1);
+        expect(result.transactions[0].externalId).toBe("trade-new");
+        expect(result.wasIncremental).toBe(true);
+      });
+
+      it("should fetch all when no known IDs provided", async () => {
+        nock(BITPANDA_API_BASE)
+          .get("/trades")
+          .query({ page_size: 100 })
+          .reply(200, {
+            data: [
+              {
+                id: "trade-1",
+                type: "trade",
+                attributes: {
+                  status: "finished",
+                  type: "buy",
+                  cryptocoin_symbol: "BTC",
+                  amount_fiat: "100",
+                  amount_cryptocoin: "0.01",
+                  fiat_to_eur_rate: "1.0",
+                  time: { date_iso8601: "2024-01-20T10:00:00+01:00" },
+                  price: "10000",
+                  is_swap: false,
+                },
+              },
+            ],
+            meta: { total_count: 1, page_size: 100 },
+          });
+
+        mockAllNonTradeEndpoints();
+
+        const result = await client.fetchTransactions(API_KEY);
+
+        expect(result.transactions).toHaveLength(1);
+        expect(result.wasIncremental).toBe(false);
+      });
+
+      it("should stop early in crypto transactions", async () => {
+        nock(BITPANDA_API_BASE)
+          .get("/trades")
+          .query({ page_size: 100 })
+          .reply(200, { data: [], meta: { total_count: 0, page_size: 100 } });
+
+        nock(BITPANDA_API_BASE)
+          .get("/wallets/transactions")
+          .query({ type: "deposit", page_size: 100 })
+          .reply(200, {
+            data: [
+              {
+                id: "crypto-new",
+                type: "transaction",
+                attributes: {
+                  amount: "0.5",
+                  time: { date_iso8601: "2024-01-20T10:00:00+01:00" },
+                  in_or_out: "incoming",
+                  type: "deposit",
+                  status: "finished",
+                  amount_eur: "20000",
+                  cryptocoin_symbol: "BTC",
+                  fee: "0",
+                },
+              },
+              {
+                id: "crypto-known",
+                type: "transaction",
+                attributes: {
+                  amount: "0.3",
+                  time: { date_iso8601: "2024-01-15T10:00:00+01:00" },
+                  in_or_out: "incoming",
+                  type: "deposit",
+                  status: "finished",
+                  amount_eur: "12000",
+                  cryptocoin_symbol: "BTC",
+                  fee: "0",
+                },
+              },
+            ],
+            meta: { total_count: 5, page_size: 100 },
+          });
+
+        for (const txType of ["withdrawal", "transfer"]) {
+          nock(BITPANDA_API_BASE)
+            .get("/wallets/transactions")
+            .query({ type: txType, page_size: 100 })
+            .reply(200, { data: [], meta: { total_count: 0, page_size: 100 } });
+        }
+
+        for (const txType of ["deposit", "withdrawal", "transfer"]) {
+          nock(BITPANDA_API_BASE)
+            .get("/fiatwallets/transactions")
+            .query({ type: txType, page_size: 100 })
+            .reply(200, { data: [], meta: { total_count: 0, page_size: 100 } });
+        }
+
+        nock(BITPANDA_API_BASE)
+          .get("/assets/transactions/commodity")
+          .query({ page_size: 100 })
+          .reply(200, { data: [], meta: { total_count: 0, page_size: 100 } });
+
+        const knownIds = new Set(["crypto-known"]);
+        const result = await client.fetchTransactions(API_KEY, knownIds);
+
+        expect(result.transactions).toHaveLength(1);
+        expect(result.transactions[0].externalId).toBe("crypto-new");
+        expect(result.wasIncremental).toBe(true);
+      });
+    });
   });
 });

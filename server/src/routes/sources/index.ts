@@ -13,6 +13,7 @@ router.get("/config", (_req: Request, res: Response) => {
 			logoForegroundColor: value.logoForegroundColor,
 			logoPath: value.logoPath,
 			csvImportMarkdownInstructions: value.csvImportMarkdownInstructions,
+			apiSyncMarkdownInstructions: value.apiSyncMarkdownInstructions,
 			csvImportAllowed: value.csvImporter !== undefined,
 		})),
 	);

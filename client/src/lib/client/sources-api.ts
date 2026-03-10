@@ -7,6 +7,7 @@ export interface SourceConfig {
   logoForegroundColor: string;
   logoPath: string;
   csvImportMarkdownInstructions: string;
+  apiSyncMarkdownInstructions: string;
   csvImportAllowed: boolean;
 }
 
