@@ -1,7 +1,7 @@
 'use client'
 
-import { CloudUpload, Sync, Check as CheckIcon, ArrowDropDown } from '@mui/icons-material'
-import { Button, Typography, Box, TextField, CircularProgress, Alert, Menu, MenuItem, ButtonGroup } from '@mui/material'
+import { CloudUpload, Sync, Key, ArrowDropDown } from '@mui/icons-material'
+import { Button, Typography, Box, CircularProgress, Alert, Menu, MenuItem, ButtonGroup } from '@mui/material'
 import { useState } from 'react'
 import { StyledEmptyBox } from './EmptyState.styles'
 import { accountsApi } from '../../lib/client/accounts-api'
@@ -9,43 +9,28 @@ import { accountsApi } from '../../lib/client/accounts-api'
 interface EmptyStateProps {
   onImport: () => void
   csvImportAllowed: boolean
-  apiSyncEnabled: boolean
-  hasApiKey: boolean
+  apiSettings?: {
+    apiEnabled: boolean
+    hasApiKey: boolean
+    supportsApiSync: boolean
+  }
   accountId: number
   onSyncComplete?: () => void
+  onConfigureApiKey: () => void
 }
 
-export function EmptyState({ onImport, csvImportAllowed, apiSyncEnabled, hasApiKey, accountId, onSyncComplete }: EmptyStateProps) {
-  const [apiKey, setApiKey] = useState("")
-  const [isSaving, setIsSaving] = useState(false)
+export function EmptyState({ 
+  onImport, 
+  csvImportAllowed, 
+  apiSettings, 
+  accountId, 
+  onSyncComplete,
+  onConfigureApiKey 
+}: EmptyStateProps) {
   const [isSyncing, setIsSyncing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [syncMenuAnchor, setSyncMenuAnchor] = useState<null | HTMLElement>(null)
-
-  const handleSaveApiKey = async () => {
-    if (!apiKey.trim()) {
-      setError("Please enter an API key")
-      return
-    }
-
-    setIsSaving(true)
-    setError(null)
-
-    try {
-      await accountsApi.updateApiSettings(accountId, {
-        apiEnabled: true,
-        apiKey: apiKey.trim(),
-      })
-      setApiKey("")
-      setSuccess("API key saved")
-      onSyncComplete?.()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save API key")
-    } finally {
-      setIsSaving(false)
-    }
-  }
 
   const handleSync = async (fullSync = false) => {
     setIsSyncing(true)
@@ -67,38 +52,10 @@ export function EmptyState({ onImport, csvImportAllowed, apiSyncEnabled, hasApiK
     }
   }
 
-  if (apiSyncEnabled) {
-    if (!hasApiKey) {
-      return (
-        <StyledEmptyBox>
-          <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
-            No transactions found. Enter your Bitpanda API key to sync.
-          </Typography>
-          {error && <Alert severity="error" sx={{ mb: 2, width: "100%" }} onClose={() => setError(null)}>{error}</Alert>}
-          {success && <Alert severity="success" sx={{ mb: 2, width: "100%" }} onClose={() => setSuccess(null)}>{success}</Alert>}
-          <Box sx={{ display: "flex", gap: 1, width: "100%", maxWidth: 400 }}>
-            <TextField
-              type="password"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              placeholder="API Key"
-              size="small"
-              fullWidth
-              disabled={isSaving}
-            />
-            <Button
-              variant="contained"
-              onClick={handleSaveApiKey}
-              disabled={isSaving || !apiKey.trim()}
-              startIcon={isSaving ? <CircularProgress size={20} /> : <CheckIcon />}
-            >
-              Save
-            </Button>
-          </Box>
-        </StyledEmptyBox>
-      )
-    }
+  const supportsApiSync = apiSettings?.supportsApiSync ?? false
+  const hasApiKey = apiSettings?.hasApiKey ?? false
 
+  if (supportsApiSync && hasApiKey) {
     return (
       <StyledEmptyBox>
         <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
@@ -106,22 +63,31 @@ export function EmptyState({ onImport, csvImportAllowed, apiSyncEnabled, hasApiK
         </Typography>
         {error && <Alert severity="error" sx={{ mb: 2, width: "100%" }} onClose={() => setError(null)}>{error}</Alert>}
         {success && <Alert severity="success" sx={{ mb: 2, width: "100%" }} onClose={() => setSuccess(null)}>{success}</Alert>}
-        <ButtonGroup variant="contained">
+        <Box sx={{ display: "flex", gap: 1 }}>
+          <ButtonGroup variant="contained">
+            <Button
+              onClick={() => handleSync(false)}
+              disabled={isSyncing}
+              startIcon={isSyncing ? <CircularProgress size={20} /> : <Sync />}
+            >
+              Sync Now
+            </Button>
+            <Button
+              size="small"
+              onClick={(e) => setSyncMenuAnchor(e.currentTarget)}
+              disabled={isSyncing}
+            >
+              <ArrowDropDown />
+            </Button>
+          </ButtonGroup>
           <Button
-            onClick={() => handleSync(false)}
-            disabled={isSyncing}
-            startIcon={isSyncing ? <CircularProgress size={20} /> : <Sync />}
+            variant="outlined"
+            onClick={onConfigureApiKey}
+            startIcon={<Key />}
           >
-            Sync Now
+            Settings
           </Button>
-          <Button
-            size="small"
-            onClick={(e) => setSyncMenuAnchor(e.currentTarget)}
-            disabled={isSyncing}
-          >
-            <ArrowDropDown />
-          </Button>
-        </ButtonGroup>
+        </Box>
         <Menu
           anchorEl={syncMenuAnchor}
           open={Boolean(syncMenuAnchor)}
@@ -134,6 +100,28 @@ export function EmptyState({ onImport, csvImportAllowed, apiSyncEnabled, hasApiK
             Full Sync (reimport all)
           </MenuItem>
         </Menu>
+      </StyledEmptyBox>
+    )
+  }
+
+  if (supportsApiSync && !hasApiKey) {
+    return (
+      <StyledEmptyBox>
+        <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
+          No transactions found. Configure API sync to import from Bitpanda.
+        </Typography>
+        {error && <Alert severity="error" sx={{ mb: 2, width: "100%" }} onClose={() => setError(null)}>{error}</Alert>}
+        {success && <Alert severity="success" sx={{ mb: 2, width: "100%" }} onClose={() => setSuccess(null)}>{success}</Alert>}
+        <Box sx={{ display: "flex", gap: 1 }}>
+          <Button variant="contained" onClick={onConfigureApiKey} startIcon={<Key />}>
+            Configure API Sync
+          </Button>
+          {csvImportAllowed && (
+            <Button variant="outlined" onClick={onImport} startIcon={<CloudUpload />}>
+              Import CSV
+            </Button>
+          )}
+        </Box>
       </StyledEmptyBox>
     )
   }

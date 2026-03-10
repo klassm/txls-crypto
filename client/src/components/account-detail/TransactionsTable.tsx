@@ -1,5 +1,5 @@
-import { CloudUpload, Sync, Delete, Check, ArrowDropDown } from "@mui/icons-material";
-import { Box, Button, Chip, TextField, CircularProgress, Typography, Alert, Menu, MenuItem, ButtonGroup } from "@mui/material";
+import { CloudUpload, Sync, Key, ArrowDropDown } from "@mui/icons-material";
+import { Box, Button, Chip, CircularProgress, Typography, Alert, Menu, MenuItem, ButtonGroup } from "@mui/material";
 import { type MRT_ColumnDef, MaterialReactTable } from "material-react-table";
 import type { Transaction, ApiSettings } from "@txls/shared";
 import { TransactionType } from "@txls/shared";
@@ -15,6 +15,7 @@ interface TransactionsTableProps {
   apiSettings?: ApiSettings;
   accountId: number;
   onSyncComplete?: () => void;
+  onConfigureApiKey: () => void;
 }
 
 export function TransactionsTable({
@@ -24,38 +25,12 @@ export function TransactionsTable({
   apiSettings,
   accountId,
   onSyncComplete,
+  onConfigureApiKey,
 }: TransactionsTableProps) {
-  const [apiKey, setApiKey] = useState("");
-  const [isSaving, setIsSaving] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [syncMenuAnchor, setSyncMenuAnchor] = useState<null | HTMLElement>(null);
-
-  const handleSaveApiKey = async () => {
-    if (!apiKey.trim()) {
-      setError("Please enter an API key");
-      return;
-    }
-
-    setIsSaving(true);
-    setError(null);
-
-    try {
-      await accountsApi.updateApiSettings(accountId, {
-        apiEnabled: true,
-        apiKey: apiKey.trim(),
-      });
-      setApiKey("");
-      setSuccess("API key saved");
-      onSyncComplete?.();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save API key");
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
   const handleSync = async (fullSync = false) => {
     setIsSyncing(true);
@@ -74,25 +49,6 @@ export function TransactionsTable({
       setError(err instanceof Error ? err.message : "Failed to sync");
     } finally {
       setIsSyncing(false);
-    }
-  };
-
-  const handleDeleteApiKey = async () => {
-    if (!confirm("Delete API key? You can re-add it later.")) return;
-    
-    setIsDeleting(true);
-    setError(null);
-
-    try {
-      await accountsApi.updateApiSettings(accountId, {
-        apiEnabled: false,
-      });
-      setSuccess("API sync disabled");
-      onSyncComplete?.();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete API key");
-    } finally {
-      setIsDeleting(false);
     }
   };
 
@@ -164,6 +120,9 @@ export function TransactionsTable({
     },
   ];
 
+  const supportsApiSync = apiSettings?.supportsApiSync ?? false;
+  const hasApiKey = apiSettings?.hasApiKey ?? false;
+
   return (
     <Box>
       <StyledSectionTitle variant="h5">Transactions</StyledSectionTitle>
@@ -200,30 +159,10 @@ export function TransactionsTable({
           </Button>
         )}
         
-        {apiSettings?.supportsApiSync && (
-          <>
-            {apiSettings.apiEnabled && !apiSettings.hasApiKey ? (
-              <Box sx={{ display: "inline-flex", gap: 1, alignItems: "center" }}>
-                <TextField
-                  type="password"
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  placeholder="API Key"
-                  size="small"
-                  disabled={isSaving}
-                  sx={{ width: 200 }}
-                />
-                <Button
-                  variant="outlined"
-                  onClick={handleSaveApiKey}
-                  disabled={isSaving || !apiKey.trim()}
-                  startIcon={isSaving ? <CircularProgress size={20} /> : <Check />}
-                >
-                  Save
-                </Button>
-              </Box>
-            ) : apiSettings.apiEnabled && apiSettings.hasApiKey ? (
-              <Box sx={{ display: "inline-flex", gap: 1, alignItems: "center" }}>
+        {supportsApiSync && (
+          <Box sx={{ display: "inline-flex", gap: 1, alignItems: "center" }}>
+            {hasApiKey ? (
+              <>
                 <ButtonGroup variant="outlined">
                   <Button
                     onClick={() => handleSync(false)}
@@ -254,32 +193,27 @@ export function TransactionsTable({
                 </Menu>
                 <Button
                   variant="outlined"
-                  color="error"
-                  onClick={handleDeleteApiKey}
-                  disabled={isDeleting}
-                  startIcon={isDeleting ? <CircularProgress size={20} /> : <Delete />}
+                  onClick={onConfigureApiKey}
+                  startIcon={<Key />}
                 >
-                  Delete Key
+                  Settings
                 </Button>
-                {apiSettings.lastSyncAt && (
+                {apiSettings?.lastSyncAt && (
                   <Typography variant="caption" color="text.secondary">
                     Last: {new Date(apiSettings.lastSyncAt).toLocaleString()}
                   </Typography>
                 )}
-              </Box>
+              </>
             ) : (
               <Button
                 variant="outlined"
-                onClick={() => {
-                  accountsApi.updateApiSettings(accountId, { apiEnabled: true })
-                    .then(() => onSyncComplete?.())
-                    .catch((err) => setError(err.message));
-                }}
+                onClick={onConfigureApiKey}
+                startIcon={<Key />}
               >
-                Enable API Sync
+                Configure API Sync
               </Button>
             )}
-          </>
+          </Box>
         )}
       </StyledBox>
     </Box>

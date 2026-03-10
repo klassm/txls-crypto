@@ -8,12 +8,14 @@ import { AccountStatsCards } from "../../components/account-detail/AccountStatsC
 import { AssetSummary } from "../../components/account-detail/AssetSummary";
 import { EmptyState } from "../../components/account-detail/EmptyState";
 import { ImportCsvDialog } from "../../components/account-detail/ImportCsvDialog";
+import { ApiSyncDialog } from "../../components/account-detail/ApiSyncDialog";
 import { TransactionsTable } from "../../components/account-detail/TransactionsTable";
 import { PortfolioValueChart } from "../../components/charts/PortfolioValueChart";
 import { useAccount, usePortfolioHistory, useSources, useApiSettings } from "../../hooks";
 import { useImportCsv } from "../../hooks/useAccountMutations";
 import { useAccountTransactions } from "../../hooks";
 import { PageLayout } from "../../components/common/PageLayout";
+import { accountsApi } from "../../lib/client/accounts-api";
 
 export default function AccountDetailPage() {
 	const { id } = useParams<{ id: string }>();
@@ -29,6 +31,10 @@ export default function AccountDetailPage() {
 	const selectedYear = queryYear ? Number.parseInt(queryYear, 10) : currentYear;
 
 	const [importDialogOpen, setImportDialogOpen] = useState(false);
+	const [apiSyncDialogOpen, setApiSyncDialogOpen] = useState(false);
+	const [apiSyncError, setApiSyncError] = useState<string | null>(null);
+	const [isSavingApiKey, setIsSavingApiKey] = useState(false);
+	const [isDeletingApiKey, setIsDeletingApiKey] = useState(false);
 
 	const handleYearChange = (year: number) => {
 		const params = new URLSearchParams(searchParams.toString());
@@ -55,6 +61,39 @@ export default function AccountDetailPage() {
 		refetchTransactions();
 	};
 
+	const handleSaveApiKey = async (apiKey: string) => {
+		setIsSavingApiKey(true);
+		setApiSyncError(null);
+		try {
+			await accountsApi.updateApiSettings(Number(id), {
+				apiEnabled: true,
+				apiKey,
+			});
+			setApiSyncDialogOpen(false);
+			handleSyncComplete();
+		} catch (err) {
+			setApiSyncError(err instanceof Error ? err.message : "Failed to save API key");
+		} finally {
+			setIsSavingApiKey(false);
+		}
+	};
+
+	const handleDeleteApiKey = async () => {
+		setIsDeletingApiKey(true);
+		setApiSyncError(null);
+		try {
+			await accountsApi.updateApiSettings(Number(id), {
+				apiEnabled: false,
+			});
+			setApiSyncDialogOpen(false);
+			handleSyncComplete();
+		} catch (err) {
+			setApiSyncError(err instanceof Error ? err.message : "Failed to delete API key");
+		} finally {
+			setIsDeletingApiKey(false);
+		}
+	};
+
 	const transactions = transactionsData?.transactions || [];
 	const stats = transactionsData?.stats ?? {
 		year: currentYear,
@@ -69,6 +108,9 @@ export default function AccountDetailPage() {
 	const hasApiKey = apiSettings?.hasApiKey ?? false;
 	const csvImportAllowed = !isApiSyncEnabled && (account?.csvImportAllowed || false);
 
+	const currentSource = sources.find((s) => s.source === account?.provider);
+	const apiSyncInstructions = currentSource?.apiSyncMarkdownInstructions ?? "";
+
 	return (
 		<PageLayout>
 			{isAccountLoading ? (
@@ -78,7 +120,7 @@ export default function AccountDetailPage() {
 			) : (
 				<>
 					<PageHeader
-						title={sources.find((s) => s.source === account?.provider)?.name ?? "Account"}
+						title={currentSource?.name ?? "Account"}
 						selectedYear={selectedYear}
 						onYearChange={handleYearChange}
 						yearOptions={yearOptions}
@@ -108,10 +150,10 @@ export default function AccountDetailPage() {
 							<EmptyState
 								onImport={() => setImportDialogOpen(true)}
 								csvImportAllowed={csvImportAllowed}
-								apiSyncEnabled={isApiSyncEnabled}
-								hasApiKey={hasApiKey}
+								apiSettings={apiSettings}
 								accountId={Number(id)}
 								onSyncComplete={handleSyncComplete}
+								onConfigureApiKey={() => setApiSyncDialogOpen(true)}
 							/>
 						) : (
 							<Box>
@@ -125,6 +167,7 @@ export default function AccountDetailPage() {
 									apiSettings={apiSettings}
 									accountId={Number(id)}
 									onSyncComplete={handleSyncComplete}
+									onConfigureApiKey={() => setApiSyncDialogOpen(true)}
 								/>
 							</Box>
 						)}
@@ -134,6 +177,20 @@ export default function AccountDetailPage() {
 						onClose={() => setImportDialogOpen(false)}
 						onImport={handleImport}
 						isImporting={importMutation.isPending}
+					/>
+					<ApiSyncDialog
+						open={apiSyncDialogOpen}
+						onClose={() => {
+							setApiSyncDialogOpen(false);
+							setApiSyncError(null);
+						}}
+						onSave={handleSaveApiKey}
+						onDelete={handleDeleteApiKey}
+						isSaving={isSavingApiKey}
+						isDeleting={isDeletingApiKey}
+						error={apiSyncError}
+						instructions={apiSyncInstructions}
+						hasExistingKey={hasApiKey}
 					/>
 				</>
 			)}
