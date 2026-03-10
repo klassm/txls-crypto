@@ -229,4 +229,59 @@ T2026-001,2026-01-10 10:00:00,sell,incoming,2000,EUR,0.02,BTC,100000,EUR,Cryptoc
     expect(sorted[1].timestamp.year).toBe(2025);
     expect(sorted[2].timestamp.year).toBe(2026);
   });
+
+  it("should get available years from transactions (handles string timestamps from PostgreSQL/MySQL)", async () => {
+    const ds = await getDataSource();
+    const repository = new TransactionsRepository(ds);
+
+    const transactions = [
+      Object.assign(new TransactionEntity(), {
+        userId,
+        providerAccountId,
+        externalId: "YEAR-2025-1",
+        timestamp: DateTime.fromISO("2025-03-15T10:00:00Z"),
+        type: TransactionType.buy,
+        asset: "BTC",
+        quantity: 0.1,
+        eurValue: 5000,
+        eurFee: 10,
+        processed: false,
+      }),
+      Object.assign(new TransactionEntity(), {
+        userId,
+        providerAccountId,
+        externalId: "YEAR-2026-1",
+        timestamp: DateTime.fromISO("2026-01-10T14:00:00Z"),
+        type: TransactionType.buy,
+        asset: "ETH",
+        quantity: 1.0,
+        eurValue: 3000,
+        eurFee: 5,
+        processed: false,
+      }),
+      Object.assign(new TransactionEntity(), {
+        userId,
+        providerAccountId,
+        externalId: "YEAR-2024-1",
+        timestamp: DateTime.fromISO("2024-06-20T09:00:00Z"),
+        type: TransactionType.sell,
+        asset: "SOL",
+        quantity: 10,
+        eurValue: 1000,
+        eurFee: 2,
+        processed: false,
+      }),
+    ];
+
+    await repository.saveMany(transactions);
+
+    const years = await repository.getAvailableYears(userId, providerAccountId);
+
+    expect(years).toHaveLength(3);
+    expect(years).toContain(2024);
+    expect(years).toContain(2025);
+    expect(years).toContain(2026);
+    expect(years[0]).toBe(2026);
+    expect(years[2]).toBe(2024);
+  });
 });

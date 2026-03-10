@@ -237,18 +237,12 @@ export class PricesRepository {
 		const end = endDate.toMillis();
 		const normalizedAssets = assets.map(a => a.toUpperCase());
 
-		const results = await this.dataSource.query(`
-			SELECT p1.asset, p1.price_eur, p1.fetched_at
-			FROM asset_prices p1
-			INNER JOIN (
-				SELECT asset, DATE(fetched_at / 1000, 'unixepoch') as day, MAX(fetched_at) as max_fetched
-				FROM asset_prices
-				WHERE asset IN (${normalizedAssets.map(() => "?").join(",")})
-				AND fetched_at >= ? AND fetched_at <= ?
-				GROUP BY asset, day
-			) p2 ON p1.asset = p2.asset AND p1.fetched_at = p2.max_fetched
-			ORDER BY p1.fetched_at ASC
-		`, [...normalizedAssets, start, end]);
+		const results = await this.qb
+			.where("price.asset IN (:...assets)", { assets: normalizedAssets })
+			.andWhere("price.fetchedAt >= :start", { start })
+			.andWhere("price.fetchedAt <= :end", { end })
+			.orderBy("price.fetchedAt", "DESC")
+			.getMany();
 
 		const byAsset = new Map<string, Map<string, { date: DateTime; priceEur: number }>>();
 		
@@ -256,16 +250,16 @@ export class PricesRepository {
 			byAsset.set(asset, new Map());
 		}
 
-		for (const row of results) {
-			const asset = row.asset;
-			const date = DateTime.fromMillis(Number(row.fetched_at)).startOf("day");
+		for (const result of results) {
+			const asset = result.asset;
+			const date = result.fetchedAt.startOf("day");
 			const dayKey = date.toISODate() || "";
 			
 			const assetMap = byAsset.get(asset);
 			if (assetMap && !assetMap.has(dayKey)) {
 				assetMap.set(dayKey, {
 					date,
-					priceEur: Number(row.price_eur),
+					priceEur: Number(result.priceEur),
 				});
 			}
 		}

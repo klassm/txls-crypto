@@ -233,8 +233,9 @@ async getStatsByProviderAccountIdAndYear(
 
     const years = new Set<number>();
     for (const row of rows) {
-      const dt = DateTime.fromMillis(row.timestamp);
-      if (dt) {
+      const timestamp = typeof row.timestamp === "string" ? parseInt(row.timestamp, 10) : row.timestamp;
+      const dt = DateTime.fromMillis(timestamp);
+      if (dt.isValid) {
         years.add(dt.year);
       }
     }

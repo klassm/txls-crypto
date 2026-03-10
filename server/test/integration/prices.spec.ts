@@ -154,6 +154,60 @@ describe("Prices Integration Tests", () => {
 				expect(Number(remaining?.priceEur)).toBe(50000);
 			});
 		});
+
+		describe("getPriceHistoryBatch", () => {
+			it("should return price history for multiple assets", async () => {
+				const now = DateTime.utc();
+				const prices: CoinPrice[] = [
+					{ symbol: "BTC", priceEur: 50000, fetchedAt: now.minus({ days: 2 }) },
+					{ symbol: "BTC", priceEur: 51000, fetchedAt: now.minus({ days: 1 }) },
+					{ symbol: "BTC", priceEur: 52000, fetchedAt: now },
+					{ symbol: "ETH", priceEur: 3000, fetchedAt: now.minus({ days: 1 }) },
+					{ symbol: "ETH", priceEur: 3100, fetchedAt: now },
+					{ symbol: "SOL", priceEur: 100, fetchedAt: now },
+				];
+
+				await repository.savePrices(prices);
+
+				const result = await repository.getPriceHistoryBatch(
+					["BTC", "ETH", "SOL"],
+					now.minus({ days: 3 }),
+					now.plus({ days: 1 })
+				);
+
+				expect(result.size).toBe(3);
+				expect(result.get("BTC")?.length).toBe(3);
+				expect(result.get("ETH")?.length).toBe(2);
+				expect(result.get("SOL")?.length).toBe(1);
+			});
+
+			it("should return one price per day (latest)", async () => {
+				const now = DateTime.utc();
+				const prices: CoinPrice[] = [
+					{ symbol: "BTC", priceEur: 50000, fetchedAt: now.minus({ hours: 5 }) },
+					{ symbol: "BTC", priceEur: 51000, fetchedAt: now.minus({ hours: 2 }) },
+					{ symbol: "BTC", priceEur: 52000, fetchedAt: now },
+				];
+
+				await repository.savePrices(prices);
+
+				const result = await repository.getPriceHistoryBatch(
+					["BTC"],
+					now.minus({ days: 1 }),
+					now.plus({ days: 1 })
+				);
+
+				expect(result.get("BTC")?.length).toBe(1);
+				expect(Number(result.get("BTC")?.[0]?.priceEur)).toBe(52000);
+			});
+
+			it("should return empty map for empty assets array", async () => {
+				const now = DateTime.utc();
+				const result = await repository.getPriceHistoryBatch([], now.minus({ days: 1 }), now);
+
+				expect(result.size).toBe(0);
+			});
+		});
 	});
 
 	describe("CoinGeckoIdEntity", () => {
