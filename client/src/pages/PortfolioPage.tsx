@@ -50,6 +50,7 @@ function PortfolioStats({ history, assets }: { history: PortfolioHistoryPoint[] 
 
 	const dayChange = calculateChange(history, 1);
 	const weekChange = calculateChange(history, 7);
+	const monthChange = calculateChange(history, 30);
 
 	const totalEurInvested = assets.reduce((sum, a) => sum + a.eurInvested, 0);
 	const overallProfit = latest.totalEurValue - totalEurInvested;
@@ -77,6 +78,7 @@ function PortfolioStats({ history, assets }: { history: PortfolioHistoryPoint[] 
 
 	const dayFormatted = formatChange(dayChange);
 	const weekFormatted = formatChange(weekChange);
+	const monthFormatted = formatChange(monthChange);
 
 	return (
 		<Grid container spacing={2} sx={{ mb: 4 }}>
@@ -96,7 +98,7 @@ function PortfolioStats({ history, assets }: { history: PortfolioHistoryPoint[] 
 			<Grid size={{ xs: 12, sm: 6, md: 6 }}>
 				<Card sx={{ p: 2, height: "100%" }}>
 					<Grid container spacing={2}>
-						<Grid size={4}>
+						<Grid size={3}>
 							<Typography variant="body2" color="text.secondary">
 								Overall
 							</Typography>
@@ -107,7 +109,7 @@ function PortfolioStats({ history, assets }: { history: PortfolioHistoryPoint[] 
 								{overallProfitPercent >= 0 ? "+" : ""}{overallProfitPercent.toFixed(2)}%
 							</Typography>
 						</Grid>
-						<Grid size={4}>
+						<Grid size={3}>
 							<Typography variant="body2" color="text.secondary">
 								24h
 							</Typography>
@@ -118,7 +120,7 @@ function PortfolioStats({ history, assets }: { history: PortfolioHistoryPoint[] 
 								{dayFormatted.percent}
 							</Typography>
 						</Grid>
-						<Grid size={4}>
+						<Grid size={3}>
 							<Typography variant="body2" color="text.secondary">
 								7d
 							</Typography>
@@ -127,6 +129,17 @@ function PortfolioStats({ history, assets }: { history: PortfolioHistoryPoint[] 
 							</Typography>
 							<Typography variant="body2" sx={{ color: weekFormatted.color }}>
 								{weekFormatted.percent}
+							</Typography>
+						</Grid>
+						<Grid size={3}>
+							<Typography variant="body2" color="text.secondary">
+								30d
+							</Typography>
+							<Typography variant="h6" sx={{ color: monthFormatted.color }}>
+								{monthFormatted.value}
+							</Typography>
+							<Typography variant="body2" sx={{ color: monthFormatted.color }}>
+								{monthFormatted.percent}
 							</Typography>
 						</Grid>
 					</Grid>
