@@ -20,6 +20,7 @@ import { getUserIdFromRequest, verifyToken, AUTH_COOKIE_NAME } from "../../utils
 import { ApiSyncService } from "../../modules/api-sync/api-sync.service.js";
 import { encrypt } from "../../modules/api-sync/encryption.service.js";
 import { z } from "zod";
+import { createAccountSchema } from "../../validation/schemas.js";
 
 const upload = multer({ storage: multer.memoryStorage() });
 const router = Router();
@@ -46,9 +47,14 @@ router.post("/", async (req: Request, res: Response) => {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
+  const validationResult = createAccountSchema.safeParse(req.body);
+  if (!validationResult.success) {
+    return res.status(400).json({ error: validationResult.error.errors[0].message });
+  }
+
   const dataSource = await getDataSource();
   const accountsService = new AccountsService(undefined, dataSource);
-  const account = await accountsService.create(userId, req.body);
+  const account = await accountsService.create(userId, validationResult.data);
   const serializedAccount = account ? {
     ...account,
     createdAt: toISOString(account.createdAt) ?? "",

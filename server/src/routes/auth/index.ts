@@ -1,4 +1,5 @@
 import { Router, Request, Response } from "express";
+import rateLimit from "express-rate-limit";
 import { getDataSource } from "../../database.js";
 import { UsersService } from "../../modules/users/users.service.js";
 import { AUTH_COOKIE_NAME, generateToken, getSessionMaxAge, verifyToken } from "../../utils/password.js";
@@ -7,7 +8,15 @@ import { config } from "../../config/env.js";
 
 const router = Router();
 
-router.post("/login", async (req: Request, res: Response) => {
+const loginRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { error: "Too many login attempts, please try again later" },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+router.post("/login", loginRateLimiter, async (req: Request, res: Response) => {
   const dataSource = await getDataSource();
   const usersService = new UsersService(undefined, dataSource);
 
@@ -42,8 +51,9 @@ router.post("/login", async (req: Request, res: Response) => {
       },
     };
 
+    const isHomeAssistant = !!config.homeAssistant.supervisorToken;
     const forwardedProto = req.headers["x-forwarded-proto"];
-    const isSecure = forwardedProto === "https" || req.secure;
+    const isSecure = (isHomeAssistant && forwardedProto === "https") || req.secure;
     res.cookie(AUTH_COOKIE_NAME, token, {
       httpOnly: true,
       secure: isSecure,

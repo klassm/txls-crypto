@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ProviderType } from "@txls/shared";
 
 const passwordValidation = z
   .string()
@@ -59,6 +60,15 @@ export const providerSchema = z.object({
   path: ["type"],
 });
 
+export const createAccountSchema = z.object({
+  type: z.nativeEnum(ProviderType).optional(),
+  provider: z.nativeEnum(ProviderType).optional(),
+  name: z.string().max(100).optional(),
+}).refine((data) => data.type || data.provider, {
+  message: "Either type or provider is required",
+  path: ["type"],
+});
+
 export type UserInput = z.infer<typeof userSchema>;
 export type OnboardingUserInput = z.infer<typeof onboardingUserSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
@@ -66,3 +76,4 @@ export type UpdateUserInput = z.infer<typeof updateUserSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
 export type ProviderInput = z.infer<typeof providerSchema>;
+export type CreateAccountInput = z.infer<typeof createAccountSchema>;
