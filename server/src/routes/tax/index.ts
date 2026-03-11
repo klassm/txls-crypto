@@ -77,10 +77,10 @@ router.get("/", async (req: Request, res: Response) => {
       timestamp: e.timestamp,
       type: e.type as TransactionType,
       asset: e.asset,
-      quantity: e.quantity,
-      eurValue: e.eurValue,
-      eurFee: e.eurFee,
-      eurRate: e.eurRate ?? 0,
+      quantity: Number(e.quantity),
+      eurValue: Number(e.eurValue),
+      eurFee: Number(e.eurFee),
+      eurRate: Number(e.eurRate ?? 0),
       processed: e.processed,
     });
 
@@ -88,20 +88,10 @@ router.get("/", async (req: Request, res: Response) => {
       await Promise.all(
         accounts.map((account) =>
           transactionsRepository.findByProviderAccountId(userId, account.id)
-            .then((entities) => {
-              console.log(`[TAX DEBUG] Account ${account.id}: found ${entities.length} transactions`);
-              return entities.map(mapEntityToTransaction);
-            })
+            .then((entities) => entities.map(mapEntityToTransaction))
         )
       )
     ).flat();
-
-    console.log(`[TAX DEBUG] Year: ${year}, Total transactions: ${allTransactions.length}`);
-    if (allTransactions.length > 0) {
-      console.log(`[TAX DEBUG] Transaction types:`, [...new Set(allTransactions.map(t => t.type))]);
-      console.log(`[TAX DEBUG] Transaction years:`, [...new Set(allTransactions.map(t => t.timestamp?.year))].sort());
-      console.log(`[TAX DEBUG] Sample transaction:`, JSON.stringify(allTransactions[0], null, 2));
-    }
 
     const taxCalculator = new TaxCalculationService();
     const taxYear = year;
