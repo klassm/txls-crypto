@@ -134,6 +134,7 @@ export function TransactionsTable({
         initialState={{
           sorting: [{ id: "timestamp", desc: true }],
           pagination: { pageSize: 100, pageIndex: 0 },
+          columnVisibility: { externalId: false },
         }}
         muiTablePaperProps={{
           elevation: 0,

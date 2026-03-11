@@ -50,16 +50,24 @@ describe("PortfolioSnapshotsService", () => {
 		} as any;
 
 		mockDataSource = {
-			getRepository: vi.fn().mockReturnValue({
-				createQueryBuilder: vi.fn().mockReturnValue({
-					select: vi.fn().mockReturnThis(),
-					where: vi.fn().mockReturnThis(),
-					andWhere: vi.fn().mockReturnThis(),
-					groupBy: vi.fn().mockReturnThis(),
-					orderBy: vi.fn().mockReturnThis(),
-					getRawMany: vi.fn().mockResolvedValue([]),
-					getOne: vi.fn().mockResolvedValue(null),
-				}),
+			getRepository: vi.fn().mockImplementation((entity) => {
+				if (entity?.name === "AccountEntity" || entity?.name === "Account") {
+					return {
+						findOne: vi.fn().mockResolvedValue({ id: 1, provider: "bitpanda" }),
+					};
+				}
+				return {
+					createQueryBuilder: vi.fn().mockReturnValue({
+						select: vi.fn().mockReturnThis(),
+						where: vi.fn().mockReturnThis(),
+						andWhere: vi.fn().mockReturnThis(),
+						groupBy: vi.fn().mockReturnThis(),
+						orderBy: vi.fn().mockReturnThis(),
+						getRawMany: vi.fn().mockResolvedValue([]),
+						getOne: vi.fn().mockResolvedValue(null),
+					}),
+					findOne: vi.fn().mockResolvedValue(null),
+				};
 			}),
 		} as any;
 

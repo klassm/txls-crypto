@@ -5,6 +5,7 @@ import { DateTime } from "luxon";
 import { PortfolioSnapshotsRepository, type PortfolioSnapshotData } from "./portfolio-snapshots.repository.js";
 import { PortfolioSnapshotEntity } from "./portfolio-snapshot.entity.js";
 import { TransactionEntity } from "../transactions/transaction.entity.js";
+import { AccountEntity } from "../accounts/account.entity.js";
 import { PricesRepository } from "../prices/prices.repository.js";
 import { logger } from "../../common/logger.js";
 
@@ -36,12 +37,21 @@ export interface AssetOverview {
 	asset: string;
 	amount: number;
 	eurValue: number | null;
+	eurInvested: number;
 	priceHistory: AssetPriceHistoryPoint[];
+	positionHistory: { date: string; value: number | null }[];
+}
+
+export interface AccountOverview {
+	accountId: number;
+	provider: string;
+	eurValue: number | null;
 }
 
 export interface PortfolioOverview {
 	portfolioHistory: PortfolioHistoryPoint[];
 	assets: AssetOverview[];
+	accounts: AccountOverview[];
 }
 
 export class PortfolioSnapshotsService {
@@ -268,7 +278,7 @@ export class PortfolioSnapshotsService {
 		const pricesRepo = this.pricesRepository || new PricesRepository(this.dataSource);
 
 		const allAssets = new Set<string>();
-		const snapshotsByDate = new Map<string, Map<string, { amount: number; eurValue: number | null }>>();
+		const snapshotsByDate = new Map<string, Map<string, { amount: number; eurInvested: number }>>();
 
 		for (const snapshot of snapshots) {
 			allAssets.add(snapshot.asset);
@@ -279,17 +289,18 @@ export class PortfolioSnapshotsService {
 
 			const existing = snapshotsByDate.get(dateKey)!.get(snapshot.asset);
 			const newAmount = (existing?.amount || 0) + Number(snapshot.amount);
+			const newEurInvested = (existing?.eurInvested || 0) + Number(snapshot.eurInvested);
 
 			snapshotsByDate.get(dateKey)!.set(snapshot.asset, {
 				amount: newAmount,
-				eurValue: null,
+				eurInvested: newEurInvested,
 			});
 		}
 
 		const todayKey = endDate.toISODate() || "";
 		if (!snapshotsByDate.has(todayKey)) {
 			const currentHoldings = await this.getAllCurrentHoldings(userId);
-			const todayAssets = new Map<string, { amount: number; eurValue: number | null }>();
+			const todayAssets = new Map<string, { amount: number; eurInvested: number }>();
 
 			for (const [_accountId, holdings] of currentHoldings) {
 				for (const holding of holdings) {
@@ -299,7 +310,7 @@ export class PortfolioSnapshotsService {
 
 					todayAssets.set(holding.asset, {
 						amount: newAmount,
-						eurValue: null,
+						eurInvested: existing?.eurInvested || 0,
 					});
 				}
 			}
@@ -348,22 +359,68 @@ export class PortfolioSnapshotsService {
 			const amount = latestData?.amount ?? 0;
 			const eurValue = latestData?.eurValue ?? null;
 
+			let totalEurInvested = 0;
+			for (const [, assets] of snapshotsByDate) {
+				const assetData = assets.get(asset);
+				if (assetData) {
+					totalEurInvested = assetData.eurInvested;
+				}
+			}
+
+			const positionHistory: { date: string; value: number | null }[] = [];
+			for (const [date, assets] of snapshotsByDate) {
+				const assetData = assets.get(asset);
+				if (assetData) {
+					const priceForDate = assetHistory.find(p => p.date.toISODate() === date);
+					const value = priceForDate ? assetData.amount * priceForDate.priceEur : null;
+					positionHistory.push({ date, value });
+				}
+			}
+			positionHistory.sort((a, b) => a.date.localeCompare(b.date));
+
 			assetsOverview.push({
 				asset,
 				amount,
 				eurValue,
+				eurInvested: totalEurInvested,
 				priceHistory: assetHistory.map(p => ({
 					date: p.date.toISODate() || "",
 					priceEur: p.priceEur,
 				})),
+				positionHistory,
 			});
 		}
 
 		assetsOverview.sort((a, b) => (b.eurValue || 0) - (a.eurValue || 0));
 
+		const accountsOverview: AccountOverview[] = [];
+		const accountRepo = this.dataSource.getRepository(AccountEntity);
+		const currentHoldings = await this.getAllCurrentHoldings(userId);
+		
+		for (const [accountId, holdings] of currentHoldings) {
+			const account = await accountRepo.findOne({ where: { id: accountId } });
+			if (account) {
+				let accountValue: number | null = 0;
+				for (const holding of holdings) {
+					const latestPrice = await pricesRepo.getLatestPrice(holding.asset);
+					if (latestPrice) {
+						accountValue = (accountValue || 0) + holding.amount * Number(latestPrice.priceEur);
+					} else {
+						accountValue = null;
+					}
+				}
+				accountsOverview.push({
+					accountId,
+					provider: account.provider,
+					eurValue: accountValue,
+				});
+			}
+		}
+
 		return {
 			portfolioHistory,
 			assets: assetsOverview,
+			accounts: accountsOverview,
 		};
 	}
 

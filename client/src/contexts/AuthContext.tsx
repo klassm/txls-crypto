@@ -2,6 +2,8 @@ import {
   createContext,
   useContext,
   type ReactNode,
+  useEffect,
+  useRef,
 } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { User } from "@txls/shared";
@@ -32,6 +34,7 @@ interface AuthProviderProps {
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const queryClient = useQueryClient();
+  const expirationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const {
     data: configData,
@@ -42,7 +45,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     queryFn: async () => {
       const response = await fetch(apiUrl("/api/config"), { credentials: "include" });
       if (!response.ok) {
-        return { user: null, canOnboard: false, hassIngress: false, authError: null };
+        return { user: null, canOnboard: false, hassIngress: false, authError: null, tokenExpiresAt: null };
       }
       const data = await response.json();
       return data;
@@ -51,6 +54,41 @@ export function AuthProvider({ children }: AuthProviderProps) {
     staleTime: 5 * 60 * 1000,
     refetchOnMount: false,
   });
+
+  useEffect(() => {
+    if (expirationTimerRef.current) {
+      clearTimeout(expirationTimerRef.current);
+      expirationTimerRef.current = null;
+    }
+
+    const tokenExpiresAt = configData?.tokenExpiresAt;
+    
+    if (!tokenExpiresAt) {
+      return;
+    }
+
+    const expiresAtMs = tokenExpiresAt * 1000;
+    const now = Date.now();
+    const timeUntilExpiry = expiresAtMs - now;
+
+    if (timeUntilExpiry <= 0) {
+      window.location.reload();
+      return;
+    }
+
+    const checkBeforeExpiry = Math.max(timeUntilExpiry - 30000, 0);
+    
+    expirationTimerRef.current = setTimeout(() => {
+      window.location.reload();
+    }, checkBeforeExpiry);
+
+    return () => {
+      if (expirationTimerRef.current) {
+        clearTimeout(expirationTimerRef.current);
+        expirationTimerRef.current = null;
+      }
+    };
+  }, [configData?.tokenExpiresAt]);
 
   const loginMutation = useMutation({
     mutationFn: async ({

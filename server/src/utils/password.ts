@@ -35,16 +35,30 @@ export function generateToken(payload: JwtPayload): string {
   });
 }
 
+export interface VerifiedToken extends JwtPayload {
+  exp: number;
+}
+
 export function verifyToken(token: string): JwtPayload | null {
   try {
     const secret = getJwtSecret();
-    const decoded = jwt.verify(token, secret) as JwtPayload;
+    const decoded = jwt.verify(token, secret) as VerifiedToken;
     return {
       userId: decoded.userId,
       username: decoded.username,
       email: decoded.email,
       isAdmin: decoded.isAdmin,
     };
+  } catch {
+    return null;
+  }
+}
+
+export function getTokenExpiration(token: string): number | null {
+  try {
+    const secret = getJwtSecret();
+    const decoded = jwt.verify(token, secret) as VerifiedToken;
+    return decoded.exp;
   } catch {
     return null;
   }

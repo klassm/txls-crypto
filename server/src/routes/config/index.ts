@@ -5,7 +5,7 @@ import { AUTH_COOKIE_NAME, generateToken, getSessionMaxAge, verifyToken } from "
 import { toISOString } from "../../utils/date.js";
 import { onboardingUserSchema } from "../../validation/schemas.js";
 import { config } from "../../config/env.js";
-import { getUserIdFromRequest, getUserIdFromCookie } from "../../utils/session.js";
+import { getUserIdFromRequest, getUserIdFromCookie, getTokenExpirationFromCookie } from "../../utils/session.js";
 import { logger } from "../../common/logger.js";
 import { HassSupervisorError } from "../../utils/errors.js";
 
@@ -89,11 +89,14 @@ router.get("/", async (req: Request, res: Response) => {
       authError,
     });
 
+    const tokenExpiresAt = user ? getTokenExpirationFromCookie(req) : null;
+
     return res.json({
       canOnboard: existingUsersCount === 0,
       user,
       hassIngress,
       authError,
+      tokenExpiresAt,
     });
   } catch (error) {
     logger.error({ msg: "Error in /api/config", error });

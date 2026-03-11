@@ -10,15 +10,17 @@ import {
 	Legend,
 } from "recharts";
 
-interface AssetDistribution {
-	asset: string;
+interface AccountDistribution {
+	account: string;
 	value: number;
 	percentage: number;
+	accountId: number;
 }
 
-interface AssetDistributionChartProps {
-	data: AssetDistribution[];
+interface AccountDistributionChartProps {
+	data: AccountDistribution[];
 	height?: number;
+	onAccountClick?: (accountId: number) => void;
 }
 
 const COLORS = [
@@ -34,10 +36,11 @@ const COLORS = [
 	"#d0ed57",
 ];
 
-export function AssetDistributionChart({
+export function AccountDistributionChart({
 	data,
 	height = 300,
-}: AssetDistributionChartProps) {
+	onAccountClick,
+}: AccountDistributionChartProps) {
 	const theme = useTheme();
 
 	if (!data || data.length === 0) {
@@ -52,7 +55,7 @@ export function AssetDistributionChart({
 					borderRadius: 1,
 				}}
 			>
-				<Typography color="text.secondary">No asset data available</Typography>
+				<Typography color="text.secondary">No account data available</Typography>
 			</Box>
 		);
 	}
@@ -64,7 +67,7 @@ export function AssetDistributionChart({
 					<Pie
 						data={data}
 						dataKey="value"
-						nameKey="asset"
+						nameKey="account"
 						cx="50%"
 						cy="50%"
 						outerRadius={80}
@@ -72,11 +75,17 @@ export function AssetDistributionChart({
 							`${name}: ${((percent ?? 0) * 100).toFixed(1)}%`
 						}
 						labelLine
+						onClick={(_, index) => {
+							if (onAccountClick && data[index]) {
+								onAccountClick(data[index].accountId);
+							}
+						}}
 					>
 						{data.map((_entry, index) => (
 							<Cell
 								key={`cell-${index}`}
 								fill={COLORS[index % COLORS.length]}
+								style={{ cursor: onAccountClick ? "pointer" : "default" }}
 							/>
 						))}
 					</Pie>
@@ -93,7 +102,22 @@ export function AssetDistributionChart({
 							})}`
 						}
 					/>
-					<Legend />
+					<Legend
+						formatter={(value, _entry) => {
+							const item = data.find(d => d.account === value);
+							if (item && onAccountClick) {
+								return (
+									<span
+										style={{ cursor: "pointer", textDecoration: "underline" }}
+										onClick={() => onAccountClick(item.accountId)}
+									>
+										{value}
+									</span>
+								);
+							}
+							return value;
+						}}
+					/>
 				</PieChart>
 			</ResponsiveContainer>
 		</Box>

@@ -1,16 +1,16 @@
 "use client";
 
-import { Box, Typography } from "@mui/material";
+import { Box, Typography, Grid, Card } from "@mui/material";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { PageHeader } from "../../components/common/PageHeader";
-import { AccountStatsCards } from "../../components/account-detail/AccountStatsCards";
-import { AssetSummary } from "../../components/account-detail/AssetSummary";
 import { EmptyState } from "../../components/account-detail/EmptyState";
 import { ImportCsvDialog } from "../../components/account-detail/ImportCsvDialog";
 import { ApiSyncDialog } from "../../components/account-detail/ApiSyncDialog";
 import { TransactionsTable } from "../../components/account-detail/TransactionsTable";
 import { PortfolioValueChart } from "../../components/charts/PortfolioValueChart";
+import { AccountStats } from "../../components/account-detail/AccountStats";
+import { AssetDistributionSummary } from "../../components/account-detail/AssetDistributionSummary";
 import { useAccount, usePortfolioHistory, useSources, useApiSettings } from "../../hooks";
 import { useImportCsv } from "../../hooks/useAccountMutations";
 import { useAccountTransactions } from "../../hooks";
@@ -44,7 +44,7 @@ export default function AccountDetailPage() {
 
 	const { data: transactionsData, isLoading: isTransactionsLoading, refetch: refetchTransactions } = useAccountTransactions(Number(id), selectedYear);
 
-	const { data: portfolioHistory } = usePortfolioHistory(Number(id), 90);
+	const { data: portfolioHistory } = usePortfolioHistory(Number(id), 30);
 
 	const importMutation = useImportCsv(Number(id), () => {
 		setTimeout(() => {
@@ -95,13 +95,6 @@ export default function AccountDetailPage() {
 	};
 
 	const transactions = transactionsData?.transactions || [];
-	const stats = transactionsData?.stats ?? {
-		year: currentYear,
-		staking: { cryptoAmount: 0, fiatAmount: 0, count: 0 },
-		buys: { cryptoAmount: 0, fiatAmount: 0, count: 0 },
-		sells: { cryptoAmount: 0, fiatAmount: 0, count: 0 },
-		assetStats: [],
-	};
 	const yearOptions = transactionsData?.availableYears ?? [currentYear];
 
 	const isApiSyncEnabled = apiSettings?.apiEnabled ?? false;
@@ -110,6 +103,18 @@ export default function AccountDetailPage() {
 
 	const currentSource = sources.find((s) => s.source === account?.provider);
 	const apiSyncInstructions = currentSource?.apiSyncMarkdownInstructions ?? "";
+
+	const formatValue = (value: number) =>
+		new Intl.NumberFormat("de-DE", {
+			style: "currency",
+			currency: "EUR",
+			minimumFractionDigits: 2,
+			maximumFractionDigits: 2,
+		}).format(value);
+
+	const latestPortfolioValue = portfolioHistory && portfolioHistory.length > 0
+		? portfolioHistory[portfolioHistory.length - 1].totalEurValue
+		: null;
 
 	return (
 		<PageLayout>
@@ -131,16 +136,10 @@ export default function AccountDetailPage() {
 								<PortfolioValueChart
 									data={portfolioHistory}
 									height={250}
-									title="Portfolio Value (90 days)"
+									title="Portfolio Value (30 days)"
 								/>
 							</Box>
 						)}
-
-						<AccountStatsCards
-							staking={stats.staking}
-							buys={stats.buys}
-							sells={stats.sells}
-						/>
 
 						{isTransactionsLoading ? (
 							<Typography sx={{ textAlign: "center", py: 8 }}>
@@ -156,20 +155,39 @@ export default function AccountDetailPage() {
 								onConfigureApiKey={() => setApiSyncDialogOpen(true)}
 							/>
 						) : (
-						<Box>
-							<AssetSummary
-								stats={account?.assets ?? []}
-							/>
-								<TransactionsTable
-									transactions={transactions}
-									onImport={() => setImportDialogOpen(true)}
-									csvImportAllowed={csvImportAllowed}
-									apiSettings={apiSettings}
-									accountId={Number(id)}
-									onSyncComplete={handleSyncComplete}
-									onConfigureApiKey={() => setApiSyncDialogOpen(true)}
-								/>
-							</Box>
+							<Grid container spacing={3}>
+								<Grid size={{ xs: 12, lg: 8 }}>
+									<TransactionsTable
+										transactions={transactions}
+										onImport={() => setImportDialogOpen(true)}
+										csvImportAllowed={csvImportAllowed}
+										apiSettings={apiSettings}
+										accountId={Number(id)}
+										onSyncComplete={handleSyncComplete}
+										onConfigureApiKey={() => setApiSyncDialogOpen(true)}
+									/>
+								</Grid>
+								<Grid size={{ xs: 12, lg: 4 }}>
+									<Box sx={{ position: { lg: "sticky" }, top: { lg: 16 } }}>
+										{latestPortfolioValue !== null && (
+											<Card sx={{ p: 2, mb: 2 }}>
+												<Typography variant="body2" color="text.secondary">
+													Total Value
+												</Typography>
+												<Typography variant="h4" fontWeight={600}>
+													{formatValue(latestPortfolioValue)}
+												</Typography>
+											</Card>
+										)}
+
+										<Box sx={{ mb: 2 }}>
+											<AccountStats history={portfolioHistory} />
+										</Box>
+
+										<AssetDistributionSummary history={portfolioHistory} />
+									</Box>
+								</Grid>
+							</Grid>
 						)}
 					</Box>
 					<ImportCsvDialog

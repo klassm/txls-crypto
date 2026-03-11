@@ -40,12 +40,21 @@ export interface AssetOverview {
 	asset: string;
 	amount: number;
 	eurValue: number | null;
+	eurInvested: number;
 	priceHistory: AssetPriceHistoryPoint[];
+	positionHistory: { date: string; value: number | null }[];
+}
+
+export interface AccountOverview {
+	accountId: number;
+	provider: string;
+	eurValue: number | null;
 }
 
 export interface PortfolioOverview {
 	portfolioHistory: PortfolioHistoryPoint[];
 	assets: AssetOverview[];
+	accounts: AccountOverview[];
 }
 
 export const portfolioApi = {

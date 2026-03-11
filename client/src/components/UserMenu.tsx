@@ -39,12 +39,7 @@ export default function UserMenu() {
     return null;
   }
 
-  const initials = user.name
-    .split(" ")
-    .map((n: string) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
+  const initial = user.name.charAt(0).toUpperCase();
 
   return (
     <>
@@ -56,7 +51,7 @@ export default function UserMenu() {
         aria-expanded={open ? "true" : undefined}
       >
         <Avatar sx={{ width: 32, height: 32, bgcolor: "warning.main", border: 2, borderColor: "white" }}>
-          {initials}
+          {initial}
         </Avatar>
       </IconButton>
       <Menu
@@ -83,7 +78,7 @@ export default function UserMenu() {
         anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
       >
         <MenuItem disabled sx={{ opacity: 1 }}>
-          <Avatar sx={{ width: 32, height: 32 }}>{initials}</Avatar>
+          <Avatar sx={{ width: 32, height: 32 }}>{initial}</Avatar>
           <Box>
             <Typography variant="body2" fontWeight="bold">
               {user.username}

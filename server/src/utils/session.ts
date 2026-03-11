@@ -1,12 +1,12 @@
 import { Request } from "express";
-import { AUTH_COOKIE_NAME, verifyToken } from "./password.js";
+import { AUTH_COOKIE_NAME, verifyToken, getTokenExpiration } from "./password.js";
 import { config } from "../config/env.js";
 import { logger } from "../common/logger.js";
 import { getDataSource } from "../database.js";
 import cookie from "cookie";
 import { HassSupervisorError } from "./errors.js";
 
-export { AUTH_COOKIE_NAME, verifyToken, config, logger, getDataSource };
+export { AUTH_COOKIE_NAME, verifyToken, getTokenExpiration, config, logger, getDataSource };
 
 export async function getUserIdFromRequest(req: Request): Promise<number | null> {
   const authorization = req.headers.authorization || "";
@@ -98,6 +98,22 @@ export function getUserIdFromCookie(req: Request): number | null {
   }
 
   return payload.userId;
+}
+
+export function getTokenExpirationFromCookie(req: Request): number | null {
+  const cookieHeader = req.headers.cookie;
+  if (!cookieHeader) {
+    return null;
+  }
+
+  const cookies = cookie.parse(cookieHeader);
+  const token = cookies[AUTH_COOKIE_NAME];
+
+  if (!token) {
+    return null;
+  }
+
+  return getTokenExpiration(token);
 }
 
 export function getUserIdFromCookieExpress(req: { headers: { cookie?: string } }): number | null {

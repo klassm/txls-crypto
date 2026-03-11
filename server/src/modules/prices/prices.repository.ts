@@ -266,7 +266,9 @@ export class PricesRepository {
 
 		const result = new Map<string, { date: DateTime; priceEur: number }[]>();
 		for (const [asset, dayMap] of byAsset) {
-			result.set(asset, Array.from(dayMap.values()));
+			const prices = Array.from(dayMap.values());
+			prices.sort((a, b) => a.date.toMillis() - b.date.toMillis());
+			result.set(asset, prices);
 		}
 
 		return result;

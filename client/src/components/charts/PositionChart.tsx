@@ -1,53 +1,38 @@
 "use client";
 
-import { Box, Typography, useTheme } from "@mui/material";
+import { Box, useTheme } from "@mui/material";
 import {
 	LineChart,
 	Line,
 	XAxis,
 	YAxis,
+	ReferenceLine,
 	Tooltip,
 	ResponsiveContainer,
 } from "recharts";
-import type { AssetPriceHistoryPoint } from "../../lib/client/prices-api";
 
-interface AssetPriceChartProps {
-	data: AssetPriceHistoryPoint[];
+interface PositionChartProps {
+	data: { date: string; value: number | null }[];
+	eurInvested: number;
 	height?: number;
 }
 
-export function AssetPriceChart({ data, height = 80 }: AssetPriceChartProps) {
+export function PositionChart({ data, eurInvested, height = 50 }: PositionChartProps) {
 	const theme = useTheme();
 
-	const validData = data.filter((d) => d.priceEur !== null && d.priceEur !== undefined);
-	if (validData.length === 0) {
-		return (
-			<Box
-				sx={{
-					height,
-					display: "flex",
-					alignItems: "center",
-					justifyContent: "center",
-					bgcolor: "action.hover",
-					borderRadius: 1,
-				}}
-			>
-				<Typography variant="body2" color="text.secondary">
-					No price data
-				</Typography>
-			</Box>
-		);
-	}
+	const validData = data.filter((d) => d.value !== null);
+	if (validData.length === 0) return null;
 
-	const values = validData.map((d) => d.priceEur);
-	const minValue = Math.min(...values);
-	const maxValue = Math.max(...values);
+	const values = validData.map((d) => d.value as number);
+	const allValues = [...values, eurInvested];
+	const minValue = Math.min(...allValues);
+	const maxValue = Math.max(...allValues);
 	const padding = (maxValue - minValue) * 0.1 || 10;
 
 	return (
 		<Box sx={{ width: "100%", height }}>
 			<ResponsiveContainer width="100%" height="100%">
-				<LineChart data={validData} margin={{ top: 5, right: 5, left: 35, bottom: 20 }}>
+				<LineChart data={validData} margin={{ top: 5, right: 5, left: 45, bottom: 20 }}>
 					<XAxis
 						dataKey="date"
 						tick={{ fill: theme.palette.text.secondary, fontSize: 10 }}
@@ -70,7 +55,7 @@ export function AssetPriceChart({ data, height = 80 }: AssetPriceChartProps) {
 						}
 						stroke={theme.palette.divider}
 						domain={[minValue - padding, maxValue + padding]}
-						width={30}
+						width={40}
 						tickLine={false}
 					/>
 					<Tooltip
@@ -92,9 +77,15 @@ export function AssetPriceChart({ data, height = 80 }: AssetPriceChartProps) {
 							`€${Number(value).toLocaleString("de-DE", { minimumFractionDigits: 2 })}`
 						}
 					/>
+					<ReferenceLine
+						y={eurInvested}
+						stroke={theme.palette.warning.main}
+						strokeDasharray="3 3"
+						strokeWidth={1}
+					/>
 					<Line
 						type="monotone"
-						dataKey="priceEur"
+						dataKey="value"
 						stroke={theme.palette.primary.main}
 						strokeWidth={1.5}
 						dot={false}
