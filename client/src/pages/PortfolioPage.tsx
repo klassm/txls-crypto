@@ -65,11 +65,12 @@ function PortfolioStats({ history, assets }: { history: PortfolioHistoryPoint[] 
 		}).format(value);
 
 	const formatChange = (change: ChangeStats | null) => {
-		if (!change) return { value: "-", color: "text.secondary" };
+		if (!change) return { value: "-", percent: "-", color: "text.secondary" };
 		const sign = change.absolute >= 0 ? "+" : "";
 		const color = change.absolute >= 0 ? "success.main" : "error.main";
 		return {
-			value: `${sign}${formatValue(change.absolute)} (${sign}${change.relative.toFixed(2)}%)`,
+			value: `${sign}${formatValue(change.absolute)}`,
+			percent: `${sign}${change.relative.toFixed(2)}%`,
 			color,
 		};
 	};
@@ -79,7 +80,7 @@ function PortfolioStats({ history, assets }: { history: PortfolioHistoryPoint[] 
 
 	return (
 		<Grid container spacing={2} sx={{ mb: 4 }}>
-			<Grid size={{ xs: 12, sm: 6, md: 4 }}>
+			<Grid size={{ xs: 12, sm: 6, md: 6 }}>
 				<Card sx={{ p: 2, height: "100%" }}>
 					<Typography variant="body2" color="text.secondary">
 						Total Value
@@ -92,39 +93,43 @@ function PortfolioStats({ history, assets }: { history: PortfolioHistoryPoint[] 
 					</Typography>
 				</Card>
 			</Grid>
-			<Grid size={{ xs: 12, sm: 6, md: 4 }}>
+			<Grid size={{ xs: 12, sm: 6, md: 6 }}>
 				<Card sx={{ p: 2, height: "100%" }}>
-					<Typography variant="body2" color="text.secondary">
-						Overall Profit
-					</Typography>
-					<Typography variant="h5" sx={{ color: overallColor }}>
-						{overallProfit >= 0 ? "+" : ""}{formatValue(overallProfit)}
-					</Typography>
-					<Typography variant="body2" sx={{ color: overallColor }}>
-						{overallProfitPercent >= 0 ? "+" : ""}{overallProfitPercent.toFixed(2)}%
-					</Typography>
-				</Card>
-			</Grid>
-			<Grid size={{ xs: 12, sm: 6, md: 4 }}>
-				<Card sx={{ p: 2, height: "100%" }}>
-					<Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-						<Box sx={{ flex: 1 }}>
+					<Grid container spacing={2}>
+						<Grid size={4}>
 							<Typography variant="body2" color="text.secondary">
-								24h Change
+								Overall
+							</Typography>
+							<Typography variant="h6" sx={{ color: overallColor }}>
+								{overallProfit >= 0 ? "+" : ""}{formatValue(overallProfit)}
+							</Typography>
+							<Typography variant="body2" sx={{ color: overallColor }}>
+								{overallProfitPercent >= 0 ? "+" : ""}{overallProfitPercent.toFixed(2)}%
+							</Typography>
+						</Grid>
+						<Grid size={4}>
+							<Typography variant="body2" color="text.secondary">
+								24h
 							</Typography>
 							<Typography variant="h6" sx={{ color: dayFormatted.color }}>
 								{dayFormatted.value}
 							</Typography>
-						</Box>
-						<Box sx={{ flex: 1, textAlign: "right" }}>
+							<Typography variant="body2" sx={{ color: dayFormatted.color }}>
+								{dayFormatted.percent}
+							</Typography>
+						</Grid>
+						<Grid size={4}>
 							<Typography variant="body2" color="text.secondary">
-								7d Change
+								7d
 							</Typography>
 							<Typography variant="h6" sx={{ color: weekFormatted.color }}>
 								{weekFormatted.value}
 							</Typography>
-						</Box>
-					</Box>
+							<Typography variant="body2" sx={{ color: weekFormatted.color }}>
+								{weekFormatted.percent}
+							</Typography>
+						</Grid>
+					</Grid>
 				</Card>
 			</Grid>
 		</Grid>
