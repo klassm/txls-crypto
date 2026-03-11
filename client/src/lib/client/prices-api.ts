@@ -7,6 +7,7 @@ interface ApiError {
 
 async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
 	const response = await fetch(apiUrl(url), {
+		credentials: "include",
 		headers: {
 			"Content-Type": "application/json",
 			...options?.headers,
@@ -70,4 +71,7 @@ export const portfolioApi = {
 
 	getOverview: (days = 30) =>
 		fetchJson<PortfolioOverview>(`/api/portfolio/overview?days=${days}`),
+
+	getAssetPriceHistory: (asset: string, days = 30) =>
+		fetchJson<AssetPriceHistoryPoint[]>(`/api/prices/${asset}/history?days=${days}`),
 };

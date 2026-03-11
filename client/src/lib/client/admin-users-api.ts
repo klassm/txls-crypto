@@ -21,6 +21,7 @@ interface ResetPasswordDto {
 
 async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
   const response = await fetch(apiUrl(url), {
+    credentials: "include",
     headers: {
       'Content-Type': 'application/json',
       ...options?.headers,

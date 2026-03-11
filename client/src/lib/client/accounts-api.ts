@@ -14,6 +14,7 @@ import { apiUrl } from "../api-base";
 
 async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
   const response = await fetch(apiUrl(url), {
+    credentials: "include",
     headers: {
       'Content-Type': 'application/json',
       ...options?.headers,
@@ -50,6 +51,7 @@ export const accountsApi = {
 
     const response = await fetch(apiUrl(`/api/accounts/${accountId}/transactions/import`), {
       method: 'POST',
+      credentials: 'include',
       body: formData,
     })
 
@@ -88,7 +90,9 @@ export const accountsApi = {
   },
 
   exportTaxCsv: async (accountId: number, year: number): Promise<string> => {
-    const response = await fetch(apiUrl(`/api/accounts/${accountId}/tax/export?year=${year}`))
+    const response = await fetch(apiUrl(`/api/accounts/${accountId}/tax/export?year=${year}`), {
+      credentials: 'include',
+    })
 
     if (!response.ok) {
       const error: ApiError = await response.json().catch(() => ({
