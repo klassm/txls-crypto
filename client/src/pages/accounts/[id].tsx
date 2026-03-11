@@ -11,6 +11,8 @@ import { TransactionsTable } from "../../components/account-detail/TransactionsT
 import { PortfolioValueChart } from "../../components/charts/PortfolioValueChart";
 import { AccountStats } from "../../components/account-detail/AccountStats";
 import { AssetDistributionSummary } from "../../components/account-detail/AssetDistributionSummary";
+import { ChartDialog, type TimeSpan } from "../../components/charts/ChartDialog";
+import { ExpandButton } from "../../components/charts/ExpandButton";
 import { useAccount, usePortfolioHistory, useSources, useApiSettings } from "../../hooks";
 import { useImportCsv } from "../../hooks/useAccountMutations";
 import { useAccountTransactions } from "../../hooks";
@@ -35,6 +37,8 @@ export default function AccountDetailPage() {
 	const [apiSyncError, setApiSyncError] = useState<string | null>(null);
 	const [isSavingApiKey, setIsSavingApiKey] = useState(false);
 	const [isDeletingApiKey, setIsDeletingApiKey] = useState(false);
+	const [chartTimeSpan, setChartTimeSpan] = useState<TimeSpan>(30);
+	const [chartDialogOpen, setChartDialogOpen] = useState(false);
 
 	const handleYearChange = (year: number) => {
 		const params = new URLSearchParams(searchParams.toString());
@@ -44,7 +48,8 @@ export default function AccountDetailPage() {
 
 	const { data: transactionsData, isLoading: isTransactionsLoading, refetch: refetchTransactions } = useAccountTransactions(Number(id), selectedYear);
 
-	const { data: portfolioHistory } = usePortfolioHistory(Number(id), 30);
+	const chartDays = chartTimeSpan === "all" ? 3650 : chartTimeSpan;
+	const { data: portfolioHistory } = usePortfolioHistory(Number(id), chartDays);
 
 	const importMutation = useImportCsv(Number(id), () => {
 		setTimeout(() => {
@@ -133,11 +138,23 @@ export default function AccountDetailPage() {
 					<Box>
 						{portfolioHistory && portfolioHistory.length > 0 && (
 							<Box sx={{ mb: 3 }}>
+								<Box sx={{ display: "flex", justifyContent: "flex-end", mb: 1 }}>
+									<ExpandButton onClick={() => setChartDialogOpen(true)} />
+								</Box>
 								<PortfolioValueChart
 									data={portfolioHistory}
 									height={250}
-									title="Portfolio Value (30 days)"
+									title="Portfolio Value"
 								/>
+								<ChartDialog
+									open={chartDialogOpen}
+									onClose={() => setChartDialogOpen(false)}
+									title="Portfolio Value"
+									initialTimeSpan={chartTimeSpan}
+									onTimeSpanChange={setChartTimeSpan}
+								>
+									<PortfolioValueChart data={portfolioHistory} height={400} title="" />
+								</ChartDialog>
 							</Box>
 						)}
 

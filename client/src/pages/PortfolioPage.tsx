@@ -2,13 +2,18 @@
 
 import { Box, Card, Grid, Typography, Stack, Divider } from "@mui/material";
 import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 import { usePortfolioOverview, useSources } from "../hooks";
+import { useQuery } from "@tanstack/react-query";
 import { PageLayout } from "../components/common/PageLayout";
 import { PortfolioValueChart } from "../components/charts/PortfolioValueChart";
 import { AssetPriceChart } from "../components/charts/AssetPriceChart";
 import { AssetDistributionChart } from "../components/charts/AssetDistributionChart";
 import { AccountDistributionChart } from "../components/charts/AccountDistributionChart";
 import { PositionChart } from "../components/charts/PositionChart";
+import { ChartDialog, type TimeSpan } from "../components/charts/ChartDialog";
+import { ExpandButton } from "../components/charts/ExpandButton";
+import { portfolioApi } from "../lib/client/prices-api";
 import type { PortfolioHistoryPoint, AssetOverview } from "../lib/client/prices-api";
 
 interface ChangeStats {
@@ -127,7 +132,10 @@ function PortfolioStats({ history, assets }: { history: PortfolioHistoryPoint[] 
 }
 
 export default function PortfolioPage() {
-	const { data: overview, isLoading } = usePortfolioOverview(30);
+	const [chartTimeSpan, setChartTimeSpan] = useState<TimeSpan>(30);
+	const [dialogOpen, setDialogOpen] = useState(false);
+	const daysParam = chartTimeSpan === "all" ? 3650 : chartTimeSpan;
+	const { data: overview, isLoading } = usePortfolioOverview(daysParam);
 	const { data: sources = [] } = useSources();
 	const navigate = useNavigate();
 
@@ -160,15 +168,27 @@ export default function PortfolioPage() {
 				<>
 					<PortfolioStats history={portfolioHistory} assets={assets} />
 
-					{portfolioHistory.length > 0 && (
-						<Box sx={{ mb: 4 }}>
-							<PortfolioValueChart
-								data={portfolioHistory}
-								height={250}
-								title="Portfolio Value (30 days)"
-							/>
+				{portfolioHistory.length > 0 && (
+					<Box sx={{ mb: 4 }}>
+						<Box sx={{ display: "flex", justifyContent: "flex-end", mb: 1 }}>
+							<ExpandButton onClick={() => setDialogOpen(true)} />
 						</Box>
-					)}
+						<PortfolioValueChart
+							data={portfolioHistory}
+							height={250}
+							title="Portfolio Value"
+						/>
+						<ChartDialog
+							open={dialogOpen}
+							onClose={() => setDialogOpen(false)}
+							title="Portfolio Value"
+							initialTimeSpan={chartTimeSpan}
+							onTimeSpanChange={setChartTimeSpan}
+						>
+							<PortfolioValueChart data={portfolioHistory} height={400} title="" />
+						</ChartDialog>
+					</Box>
+				)}
 
 				{portfolioHistory.length > 0 && portfolioHistory[portfolioHistory.length - 1].totalEurValue !== null && (
 					<Grid container spacing={2} sx={{ mb: 4 }}>
@@ -241,9 +261,20 @@ export default function PortfolioPage() {
 }
 
 function AssetCard({ asset }: { asset: AssetOverview }) {
-	const { priceHistory, amount, eurValue, eurInvested, positionHistory } = asset;
+	const { priceHistory: initialPriceHistory, amount, eurValue, eurInvested, positionHistory } = asset;
+	const [priceDialogOpen, setPriceDialogOpen] = useState(false);
+	const [positionDialogOpen, setPositionDialogOpen] = useState(false);
+	const [priceTimeSpan, setPriceTimeSpan] = useState<TimeSpan>(30);
 
-	if (!priceHistory || priceHistory.length === 0) {
+	const priceDays = priceTimeSpan === "all" ? 3650 : priceTimeSpan;
+	const { data: expandedPriceHistory } = useQuery({
+		queryKey: ["asset-price", asset.asset, priceDays],
+		queryFn: () => portfolioApi.getAssetPriceHistory(asset.asset, priceDays),
+		enabled: priceDialogOpen,
+		staleTime: 5 * 60 * 1000,
+	});
+
+	if (!initialPriceHistory || initialPriceHistory.length === 0) {
 		return (
 			<Card sx={{ p: 2 }}>
 				<Typography variant="subtitle2" fontWeight={600}>
@@ -255,6 +286,8 @@ function AssetCard({ asset }: { asset: AssetOverview }) {
 			</Card>
 		);
 	}
+
+	const priceHistory = expandedPriceHistory || initialPriceHistory;
 
 	const currentPrice = priceHistory[priceHistory.length - 1]?.priceEur ?? 0;
 	const positionValue = eurValue ?? amount * currentPrice;
@@ -335,23 +368,49 @@ function AssetCard({ asset }: { asset: AssetOverview }) {
 				</Box>
 
 				{positionHistory && positionHistory.length > 0 && (
-					<Box sx={{ height: 100 }}>
-						<PositionChart data={positionHistory} eurInvested={eurInvested} height={100} />
+					<Box>
+						<Box sx={{ display: "flex", justifyContent: "flex-end", mb: 0.5 }}>
+							<ExpandButton onClick={() => setPositionDialogOpen(true)} />
+						</Box>
+						<Box sx={{ height: 100 }}>
+							<PositionChart data={positionHistory} eurInvested={eurInvested} height={100} />
+						</Box>
+						<ChartDialog
+							open={positionDialogOpen}
+							onClose={() => setPositionDialogOpen(false)}
+							title={`${asset.asset} Position`}
+							initialTimeSpan={30}
+							onTimeSpanChange={() => {}}
+						>
+							<PositionChart data={positionHistory} eurInvested={eurInvested} height={400} />
+						</ChartDialog>
 					</Box>
 				)}
 
 				<Divider />
 
-				<Box>
+				<Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
 					<Typography variant="caption" color="text.secondary">
 						Price
 					</Typography>
+					<ExpandButton onClick={() => setPriceDialogOpen(true)} />
 				</Box>
 
 				{priceHistory && priceHistory.length > 0 && (
-					<Box sx={{ height: 80 }}>
-						<AssetPriceChart data={priceHistory} height={80} />
-					</Box>
+					<>
+						<Box sx={{ height: 80 }}>
+							<AssetPriceChart data={priceHistory} height={80} />
+						</Box>
+						<ChartDialog
+							open={priceDialogOpen}
+							onClose={() => setPriceDialogOpen(false)}
+							title={`${asset.asset} Price`}
+							initialTimeSpan={priceTimeSpan}
+							onTimeSpanChange={setPriceTimeSpan}
+						>
+							<AssetPriceChart data={priceHistory} height={400} />
+						</ChartDialog>
+					</>
 				)}
 
 				<Grid container spacing={1}>

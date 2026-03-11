@@ -74,8 +74,8 @@ router.get("/portfolio-history", async (req: Request, res: Response) => {
 		const daysParam = req.query.days as string | undefined;
 		const days = daysParam ? Number.parseInt(daysParam, 10) : 30;
 
-		if (isNaN(days) || days < 1 || days > 365) {
-			return res.status(400).json({ error: "Days must be between 1 and 365" });
+		if (isNaN(days) || days < 1 || days > 3650) {
+			return res.status(400).json({ error: "Days must be between 1 and 3650" });
 		}
 
 		const snapshotsService = new PortfolioSnapshotsService(dataSource);
@@ -502,8 +502,8 @@ router.get("/:id/tax/export", async (req: Request, res: Response) => {
 		const daysParam = req.query.days as string | undefined;
 		const days = daysParam ? Number.parseInt(daysParam, 10) : 30;
 
-		if (isNaN(days) || days < 1 || days > 365) {
-			return res.status(400).json({ error: "Days must be between 1 and 365" });
+		if (isNaN(days) || days < 1 || days > 3650) {
+			return res.status(400).json({ error: "Days must be between 1 and 3650" });
 		}
 
 		const snapshotsService = new PortfolioSnapshotsService(dataSource);
