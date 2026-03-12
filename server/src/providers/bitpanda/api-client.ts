@@ -120,6 +120,12 @@ export class BitpandaApiClient implements ApiSyncClient {
     allTransactions.push(...walletResult.transactions);
     if (walletResult.stoppedEarly) wasIncremental = true;
 
+    logger.info({ 
+      tradesCount: tradesResult.transactions.length,
+      walletCount: walletResult.transactions.length,
+      totalCount: allTransactions.length 
+    }, "[BitpandaApiClient] Fetch completed");
+
     allTransactions.sort((a, b) => b.timestamp.toMillis() - a.timestamp.toMillis());
 
     return {
@@ -145,6 +151,12 @@ export class BitpandaApiClient implements ApiSyncClient {
       }
 
       const data = (await response.json()) as BitpandaApiResponse<BitpandaTrade>;
+
+      logger.info({ 
+        total_count: data.meta.total_count, 
+        page_size: data.meta.page_size,
+        has_next: !!data.meta.next_cursor 
+      }, "[BitpandaApiClient] Fetched trades page");
 
       for (const trade of data.data) {
         if (trade.attributes.status !== "finished") {
@@ -191,6 +203,12 @@ export class BitpandaApiClient implements ApiSyncClient {
       }
 
       const data = (await response.json()) as BitpandaApiResponse<BitpandaWalletTransaction>;
+
+      logger.info({ 
+        total_count: data.meta.total_count, 
+        page_size: data.meta.page_size,
+        has_next: !!data.meta.next_cursor 
+      }, "[BitpandaApiClient] Fetched wallet transactions page");
 
       for (const tx of data.data) {
         if (tx.attributes.status !== "finished") {

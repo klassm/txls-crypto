@@ -18,6 +18,7 @@ import { toISOString } from "../../utils/date.js";
 import { DateTime } from "luxon";
 import { getUserIdFromRequest, verifyToken, AUTH_COOKIE_NAME } from "../../utils/session.js";
 import { ApiSyncService } from "../../modules/api-sync/api-sync.service.js";
+import { logger } from "../../common/logger.js";
 import { encrypt } from "../../modules/api-sync/encryption.service.js";
 import { z } from "zod";
 import { createAccountSchema } from "../../validation/schemas.js";
@@ -605,9 +606,12 @@ router.patch("/:id/api-settings", async (req: Request, res: Response) => {
       account.syncError = null;
       await accountsRepository.save(account);
 
+      logger.info({ accountId, wasFirstTimeSetup }, "[ApiSettings] API key saved, checking if first time setup");
+
       if (wasFirstTimeSetup) {
+        logger.info({ accountId }, "[ApiSettings] Triggering full sync in background");
         syncService.syncAccount(accountId, userId, true).catch((err) => {
-          console.error("Initial sync failed:", err);
+          logger.error({ accountId, error: err.message }, "[ApiSettings] Initial sync failed");
         });
       }
 

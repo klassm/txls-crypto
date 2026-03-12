@@ -75,11 +75,21 @@ export class ApiSyncService {
 
       const apiKey = decrypt(account.apiKeyEncrypted);
 
-      logger.info({ accountId, provider: account.provider, fullSync }, "[ApiSyncService] Starting sync");
+      const shouldDoFullSync = fullSync || !account.lastSyncAt;
 
-      if (fullSync) {
+      logger.info({ 
+        accountId, 
+        provider: account.provider, 
+        fullSync: shouldDoFullSync,
+        requestedFullSync: fullSync,
+        hasLastSyncAt: !!account.lastSyncAt
+      }, "[ApiSyncService] Starting sync");
+
+      if (shouldDoFullSync) {
+        logger.info({ accountId }, "[ApiSyncService] Performing FULL sync");
         return await this.performFullSync(account, apiKey, providerConfig.apiClient);
       } else {
+        logger.info({ accountId }, "[ApiSyncService] Performing INCREMENTAL sync");
         return await this.performIncrementalSync(account, apiKey, providerConfig.apiClient);
       }
     } catch (error) {
@@ -236,13 +246,13 @@ export class ApiSyncService {
   private async deleteAllTransactions(accountId: number): Promise<void> {
     const repo = this.dataSource.getRepository(TransactionEntity);
 
-    await repo
+    const result = await repo
       .createQueryBuilder()
       .delete()
       .where("provider_account_id = :accountId", { accountId })
       .execute();
 
-    logger.info({ accountId }, "[ApiSyncService] Deleted all existing transactions");
+    logger.info({ accountId, deleted: result.affected }, "[ApiSyncService] Deleted all existing transactions");
   }
 
   private async getSavedTransactions(
