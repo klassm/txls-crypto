@@ -243,15 +243,6 @@ export class BitpandaApiClient implements ApiSyncClient {
       return null;
     }
 
-    if (attributes.type === "staking") {
-      logger.debug({ 
-        id: trade.id, 
-        asset: attributes.cryptocoin_symbol,
-        quantity,
-        eurValue 
-      }, "[BitpandaApiClient] Found staking trade");
-    }
-
     let type: TransactionType;
     if (attributes.type === "buy") {
       type = TransactionType.buy;
@@ -297,16 +288,6 @@ export class BitpandaApiClient implements ApiSyncClient {
       (tag) => tag.attributes.short_name === "stake"
     );
 
-    if (isStakeTag) {
-      logger.debug({ 
-        id: tx.id, 
-        asset: attributes.cryptocoin_symbol,
-        in_or_out: attributes.in_or_out,
-        quantity,
-        eurValue 
-      }, "[BitpandaApiClient] Found staking wallet transaction");
-    }
-
     let type: TransactionType;
     if (attributes.type === "deposit") {
       type = TransactionType.deposit;
@@ -316,12 +297,6 @@ export class BitpandaApiClient implements ApiSyncClient {
       if (isStakeTag) {
         type = attributes.in_or_out === "incoming" ? TransactionType.reward : TransactionType.stake;
       } else {
-        logger.debug({ 
-          id: tx.id, 
-          asset: attributes.cryptocoin_symbol,
-          in_or_out: attributes.in_or_out,
-          quantity 
-        }, "[BitpandaApiClient] Found non-stake transfer");
         type = attributes.in_or_out === "incoming" ? TransactionType.transfer_in : TransactionType.transfer_out;
       }
     } else {

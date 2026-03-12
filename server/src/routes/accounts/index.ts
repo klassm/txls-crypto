@@ -601,7 +601,7 @@ router.patch("/:id/api-settings", async (req: Request, res: Response) => {
 
       const wasFirstTimeSetup = !account.apiKeyEncrypted;
       account.apiKeyEncrypted = encrypt(apiKey);
-
+      account.apiEnabled = true;
       account.syncError = null;
       await accountsRepository.save(account);
 
@@ -612,7 +612,7 @@ router.patch("/:id/api-settings", async (req: Request, res: Response) => {
       }
 
       return res.json({
-        apiEnabled: account.apiEnabled,
+        apiEnabled: true,
         hasApiKey: true,
         lastSyncAt: account.lastSyncAt ? toISOString(account.lastSyncAt) : null,
         syncError: null,
