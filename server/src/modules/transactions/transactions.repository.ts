@@ -268,7 +268,7 @@ async getStatsByProviderAccountIdAndYear(
     const stats = await this.qb
       .select([
         "transaction.asset AS asset",
-        "SUM(CASE WHEN transaction.type = :sell THEN -ABS(transaction.quantity) ELSE ABS(transaction.quantity) END) AS amount",
+        "SUM(CASE WHEN transaction.type IN (:sell, :stake, :transferOut, :withdrawal) THEN -ABS(transaction.quantity) ELSE ABS(transaction.quantity) END) AS amount",
         "SUM(CASE WHEN transaction.type = :buy THEN 1 ELSE 0 END) AS buys",
         "SUM(CASE WHEN transaction.type = :sell THEN 1 ELSE 0 END) AS sells",
       ])
@@ -277,6 +277,9 @@ async getStatsByProviderAccountIdAndYear(
         providerAccountId,
         buy: TransactionType.buy,
         sell: TransactionType.sell,
+        stake: TransactionType.stake,
+        transferOut: TransactionType.transfer_out,
+        withdrawal: TransactionType.withdrawal,
       })
       .groupBy("transaction.asset")
       .getRawMany();
@@ -296,13 +299,16 @@ async getStatsByProviderAccountIdAndYear(
       .select([
         "transaction.providerAccountId AS providerAccountId",
         "transaction.asset AS asset",
-        "SUM(CASE WHEN transaction.type = :sell THEN -ABS(transaction.quantity) ELSE ABS(transaction.quantity) END) AS amount",
+        "SUM(CASE WHEN transaction.type IN (:sell, :stake, :transferOut, :withdrawal) THEN -ABS(transaction.quantity) ELSE ABS(transaction.quantity) END) AS amount",
         "SUM(CASE WHEN transaction.type = :buy THEN 1 ELSE 0 END) AS buys",
         "SUM(CASE WHEN transaction.type = :sell THEN 1 ELSE 0 END) AS sells",
       ])
       .where("1=1", {
         buy: TransactionType.buy,
         sell: TransactionType.sell,
+        stake: TransactionType.stake,
+        transferOut: TransactionType.transfer_out,
+        withdrawal: TransactionType.withdrawal,
       });
 
     if (userId) {

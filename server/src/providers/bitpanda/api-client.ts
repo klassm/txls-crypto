@@ -224,20 +224,22 @@ export class BitpandaApiClient implements ApiSyncClient {
 
   private mapTradeToTransaction(trade: BitpandaTrade): Transaction | null {
     const { attributes } = trade;
-
-    if (attributes.is_swap && attributes.is_fee_transparent === false) {
-      logger.debug({ id: trade.id }, "[BitpandaApiClient] Skipping swap trade without fee transparency");
-      return null;
-    }
-
     const timestamp = DateTime.fromISO(attributes.time.date_iso8601);
     const quantity = parseFloat(attributes.amount_cryptocoin);
     const eurValue = parseFloat(attributes.amount_fiat) * parseFloat(attributes.fiat_to_eur_rate);
     const eurRate = parseFloat(attributes.price);
-    const eurFee = this.parseFee(attributes.fee);
+
+    const eurFee = attributes.is_swap && attributes.is_fee_transparent === false
+      ? 0
+      : this.parseFee(attributes.fee);
 
     if (!attributes.cryptocoin_symbol) {
       logger.warn({ id: trade.id }, "[BitpandaApiClient] Trade missing cryptocoin_symbol, skipping");
+      return null;
+    }
+
+    if (attributes.cryptocoin_symbol === "BCPEUR" || attributes.fiat_symbol === "BCPEUR") {
+      logger.debug({ id: trade.id, symbol: attributes.cryptocoin_symbol }, "[BitpandaApiClient] Skipping BCPEUR trade");
       return null;
     }
 

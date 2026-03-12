@@ -185,7 +185,7 @@ describe("BitpandaApiClient", () => {
       expect(result.transactions[0].eurFee).toBe(49.75);
     });
 
-    it("should skip swap trade without fee transparency to avoid double-counting", async () => {
+    it("should import both sides of swap with fee on transparent side", async () => {
       nock(BITPANDA_API_BASE)
         .get("/trades")
         .query({ page_size: 100 })
@@ -244,8 +244,11 @@ describe("BitpandaApiClient", () => {
       const result = await client.fetchTransactions(API_KEY);
 
       expect(result.transactions).toHaveLength(1);
-      expect(result.transactions[0].externalId).toBe("swap-buy");
-      expect(result.transactions[0].eurFee).toBe(49.75);
+      const buyTx = result.transactions.find((t) => t.externalId === "swap-buy");
+      expect(buyTx).toBeDefined();
+      expect(buyTx?.type).toBe(TransactionType.buy);
+      expect(buyTx?.asset).toBe("BTC");
+      expect(buyTx?.eurFee).toBe(49.75);
     });
 
     it("should include swap trades with fee transparency", async () => {
