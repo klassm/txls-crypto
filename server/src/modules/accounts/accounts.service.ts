@@ -176,7 +176,6 @@ entity.provider = data.provider || entity.provider || ProviderType.Bitpanda;
       csvImportMarkdownInstructions: metadata.csvImportMarkdownInstructions,
       apiSyncMarkdownInstructions: metadata.apiSyncMarkdownInstructions,
       csvImportAllowed: true,
-      supportsManualStaking: metadata.supportsManualStaking,
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,
     };

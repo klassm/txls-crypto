@@ -25,13 +25,6 @@ import { createAccountSchema } from "../../validation/schemas.js";
 const upload = multer({ storage: multer.memoryStorage() });
 const router = Router();
 
-const manualStakingSchema = z.object({
-  timestamp: z.string().min(1, "Date and time is required"),
-  asset: z.string().min(1, "Asset is required"),
-  quantity: z.number().positive("Quantity must be positive"),
-  eurValue: z.number().positive("EUR value must be positive"),
-});
-
 router.get("/", async (req: Request, res: Response) => {
   const userId = await getUserIdFromRequest(req);
   if (!userId) {
@@ -330,73 +323,6 @@ const snapshotsService = new PortfolioSnapshotsService(dataSource);
     });
   } catch (error) {
     console.error("CSV import failed:", error);
-    return res.status(500).json({ error: error instanceof Error ? error.message : "Internal error" });
-  }
-});
-
-router.post("/:id/transactions", async (req: Request, res: Response) => {
-  const userId = await getUserIdFromRequest(req);
-  if (!userId) {
-    return res.status(401).json({ error: "Unauthorized" });
-  }
-
-  const dataSource = await getDataSource();
-  try {
-    const accountId = Number.parseInt(req.params.id as string, 10);
-    if (isNaN(accountId)) {
-      return res.status(400).json({ error: "Invalid account ID" });
-    }
-
-    const validationResult = manualStakingSchema.safeParse(req.body);
-    if (!validationResult.success) {
-      return res.status(400).json({ error: validationResult.error.errors[0].message });
-    }
-
-    const { timestamp, asset, quantity, eurValue } = validationResult.data;
-
-    const accountsRepository = new AccountsRepository(dataSource);
-    const account = await accountsRepository.findById(userId, accountId);
-
-    if (!account) {
-      return res.status(404).json({ error: "Account not found" });
-    }
-
-    const providerConfig = getProviderConfig(account.provider);
-    if (!providerConfig.supportsManualStaking) {
-      return res.status(400).json({ error: "This provider does not support manual staking entries" });
-    }
-
-    const parsedTimestamp = DateTime.fromISO(timestamp);
-    if (!parsedTimestamp.isValid) {
-      return res.status(400).json({ error: "Invalid timestamp format" });
-    }
-
-    const transaction = {
-      id: 0,
-      providerAccountId: accountId,
-      externalId: `manual-staking-${timestamp}-${asset}`,
-      timestamp: parsedTimestamp,
-      type: TransactionType.reward,
-      asset,
-      quantity,
-      eurValue,
-      eurFee: 0,
-      eurRate: eurValue / quantity,
-      processed: false,
-    };
-
-    const repository = new TransactionsRepository(dataSource);
-    const transactionsService = new TransactionsService(repository);
-    const result = await transactionsService.importTransactions(userId, accountId, [transaction]);
-
-    if (result.imported > 0) {
-      const snapshotsService = new PortfolioSnapshotsService(dataSource);
-      await snapshotsService.rebuildFromDate(userId, accountId, parsedTimestamp.startOf("day"));
-    }
-
-    return res.json({ success: true, imported: result.imported });
-  } catch (error) {
-    console.error("Manual staking failed:", error);
     return res.status(500).json({ error: error instanceof Error ? error.message : "Internal error" });
   }
 });

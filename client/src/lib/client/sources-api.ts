@@ -9,7 +9,6 @@ export interface SourceConfig {
   csvImportMarkdownInstructions: string;
   apiSyncMarkdownInstructions: string;
   csvImportAllowed: boolean;
-  supportsManualStaking: boolean;
 }
 
 export const sourcesApi = {

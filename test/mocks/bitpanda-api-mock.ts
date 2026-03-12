@@ -77,62 +77,38 @@ export function mockBitpandaApi() {
       return scope;
     },
 
-    mockCryptoTransactions(apiKey: string, transactions: MockTransaction[]) {
+    mockWalletTransactions(apiKey: string, transactions: MockTransaction[]) {
+      const data = transactions.map((t) => ({
+        id: t.id,
+        type: "wallet_transaction",
+        attributes: {
+          amount: t.amount,
+          time: { date_iso8601: t.timestamp },
+          in_or_out: t.type === "deposit" ? "incoming" : "outgoing",
+          type: t.type,
+          status: t.status || "finished",
+          amount_eur: t.eurValue,
+          cryptocoin_symbol: t.asset,
+          fee: "0",
+          tags: [],
+        },
+      }));
+
       const scope = nock(BITPANDA_API_BASE)
         .get("/wallets/transactions")
-        .query({ type: "deposit", page_size: 100 })
+        .query({ page_size: 100 })
         .matchHeader("X-Api-Key", apiKey)
         .reply(200, {
-          data: transactions
-            .filter((t) => t.type === "deposit")
-            .map((t) => ({
-              id: t.id,
-              type: "transaction",
-              attributes: {
-                amount: t.amount,
-                time: { date_iso8601: t.timestamp },
-                type: "deposit",
-                status: t.status || "finished",
-                amount_eur: t.eurValue,
-                cryptocoin_symbol: t.asset,
-                fee: "0",
-              },
-            })),
-          meta: { total_count: 0, page_size: 100 },
+          data,
+          meta: { total_count: data.length, page_size: 100 },
         });
-
-      nock(BITPANDA_API_BASE)
-        .get("/wallets/transactions")
-        .query({ type: "withdrawal", page_size: 100 })
-        .reply(200, { data: [], meta: { total_count: 0, page_size: 100 } });
-
-      nock(BITPANDA_API_BASE)
-        .get("/wallets/transactions")
-        .query({ type: "transfer", page_size: 100 })
-        .reply(200, { data: [], meta: { total_count: 0, page_size: 100 } });
-
       scopes.push(scope);
       return scope;
     },
 
     mockAllEndpoints(apiKey: string, options?: { trades?: MockTrade[] }) {
       this.mockTrades(apiKey, options?.trades || []);
-      this.mockCryptoTransactions(apiKey, []);
-
-      nock(BITPANDA_API_BASE)
-        .get("/fiatwallets/transactions")
-        .query({ type: "deposit", page_size: 100 })
-        .reply(200, { data: [], meta: { total_count: 0, page_size: 100 } });
-
-      nock(BITPANDA_API_BASE)
-        .get("/fiatwallets/transactions")
-        .query({ type: "withdrawal", page_size: 100 })
-        .reply(200, { data: [], meta: { total_count: 0, page_size: 100 } });
-
-      nock(BITPANDA_API_BASE)
-        .get("/assets/transactions/commodity")
-        .query({ page_size: 100 })
-        .reply(200, { data: [], meta: { total_count: 0, page_size: 100 } });
+      this.mockWalletTransactions(apiKey, []);
     },
 
     cleanAll() {

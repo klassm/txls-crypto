@@ -6,23 +6,9 @@ import { TransactionType } from "@txls/shared";
 const API_KEY = "test-api-key-12345";
 const BITPANDA_API_BASE = "https://api.bitpanda.com/v1";
 
-function mockAllNonTradeEndpoints() {
-  for (const txType of ["deposit", "withdrawal", "transfer"]) {
-    nock(BITPANDA_API_BASE)
-      .get("/wallets/transactions")
-      .query({ type: txType, page_size: 100 })
-      .reply(200, { data: [], meta: { total_count: 0, page_size: 100 } });
-  }
-
-  for (const txType of ["deposit", "withdrawal", "transfer"]) {
-    nock(BITPANDA_API_BASE)
-      .get("/fiatwallets/transactions")
-      .query({ type: txType, page_size: 100 })
-      .reply(200, { data: [], meta: { total_count: 0, page_size: 100 } });
-  }
-
+function mockWalletEndpoints() {
   nock(BITPANDA_API_BASE)
-    .get("/assets/transactions/commodity")
+    .get("/wallets/transactions")
     .query({ page_size: 100 })
     .reply(200, { data: [], meta: { total_count: 0, page_size: 100 } });
 }
@@ -133,7 +119,7 @@ describe("BitpandaApiClient", () => {
           meta: { total_count: 2, page_size: 100 },
         });
 
-      mockAllNonTradeEndpoints();
+      mockWalletEndpoints();
 
       const result = await client.fetchTransactions(API_KEY);
 
@@ -154,7 +140,115 @@ describe("BitpandaApiClient", () => {
       expect(sellTx?.eurFee).toBe(1.5);
     });
 
-    it("should skip non-finished trades", async () => {
+    it("should handle new fee object format", async () => {
+      nock(BITPANDA_API_BASE)
+        .get("/trades")
+        .query({ page_size: 100 })
+        .reply(200, {
+          data: [
+            {
+              id: "trade-1",
+              type: "trade",
+              attributes: {
+                status: "finished",
+                type: "buy",
+                cryptocoin_id: "1",
+                cryptocoin_symbol: "BTC",
+                fiat_id: "1",
+                fiat_symbol: "EUR",
+                amount_fiat: "5000.00",
+                amount_cryptocoin: "0.06124219",
+                fiat_to_eur_rate: "1.0",
+                time: {
+                  date_iso8601: "2024-01-15T10:00:00+01:00",
+                  unix: "1705311600",
+                },
+                price: "81643.05",
+                is_swap: false,
+                fee: {
+                  type: "fee",
+                  attributes: {
+                    fee_amount_in_fiat: "49.75",
+                  },
+                },
+              },
+            },
+          ],
+          meta: { total_count: 1, page_size: 100 },
+        });
+
+      mockWalletEndpoints();
+
+      const result = await client.fetchTransactions(API_KEY);
+
+      expect(result.transactions).toHaveLength(1);
+      expect(result.transactions[0].eurFee).toBe(49.75);
+    });
+
+    it("should skip swap trade without fee transparency to avoid double-counting", async () => {
+      nock(BITPANDA_API_BASE)
+        .get("/trades")
+        .query({ page_size: 100 })
+        .reply(200, {
+          data: [
+            {
+              id: "swap-buy",
+              type: "trade",
+              attributes: {
+                status: "finished",
+                type: "buy",
+                cryptocoin_symbol: "BTC",
+                amount_fiat: "5000.00",
+                amount_cryptocoin: "0.06124219",
+                fiat_to_eur_rate: "1.0",
+                time: {
+                  date_iso8601: "2024-01-15T10:00:00+01:00",
+                  unix: "1705311600",
+                },
+                price: "81643.05",
+                is_swap: true,
+                is_fee_transparent: true,
+                fee: {
+                  type: "fee",
+                  attributes: {
+                    fee_amount_in_fiat: "49.75",
+                  },
+                },
+              },
+            },
+            {
+              id: "swap-sell",
+              type: "trade",
+              attributes: {
+                status: "finished",
+                type: "sell",
+                cryptocoin_symbol: "BCPEUR",
+                amount_fiat: "5000.00",
+                amount_cryptocoin: "5000.00",
+                fiat_to_eur_rate: "1.0",
+                time: {
+                  date_iso8601: "2024-01-15T10:00:00+01:00",
+                  unix: "1705311600",
+                },
+                price: "1.00",
+                is_swap: true,
+                is_fee_transparent: false,
+              },
+            },
+          ],
+          meta: { total_count: 2, page_size: 100 },
+        });
+
+      mockWalletEndpoints();
+
+      const result = await client.fetchTransactions(API_KEY);
+
+      expect(result.transactions).toHaveLength(1);
+      expect(result.transactions[0].externalId).toBe("swap-buy");
+      expect(result.transactions[0].eurFee).toBe(49.75);
+    });
+
+    it("should include swap trades with fee transparency", async () => {
       nock(BITPANDA_API_BASE)
         .get("/trades")
         .query({ page_size: 100 })
@@ -179,14 +273,14 @@ describe("BitpandaApiClient", () => {
           meta: { total_count: 1, page_size: 100 },
         });
 
-      mockAllNonTradeEndpoints();
+      mockWalletEndpoints();
 
       const result = await client.fetchTransactions(API_KEY);
 
       expect(result.transactions).toHaveLength(0);
     });
 
-    it("should fetch crypto deposits and withdrawals", async () => {
+    it("should fetch wallet transfers (staking, deposits, withdrawals)", async () => {
       nock(BITPANDA_API_BASE)
         .get("/trades")
         .query({ page_size: 100 })
@@ -194,171 +288,74 @@ describe("BitpandaApiClient", () => {
 
       nock(BITPANDA_API_BASE)
         .get("/wallets/transactions")
-        .query({ type: "deposit", page_size: 100 })
+        .query({ page_size: 100 })
         .reply(200, {
           data: [
             {
-              id: "crypto-deposit-1",
-              type: "transaction",
+              id: "wallet-transfer-1",
+              type: "wallet_transaction",
+              attributes: {
+                amount: "1.84379034",
+                time: { date_iso8601: "2024-01-15T10:00:00+01:00" },
+                in_or_out: "outgoing",
+                type: "transfer",
+                status: "finished",
+                amount_eur: "4871.40",
+                cryptocoin_symbol: "ETH",
+                fee: "0",
+                tags: [
+                  {
+                    type: "tag",
+                    attributes: {
+                      short_name: "stake",
+                      name: "Stake",
+                    },
+                  },
+                ],
+              },
+            },
+            {
+              id: "wallet-transfer-2",
+              type: "wallet_transaction",
               attributes: {
                 amount: "0.5",
-                time: { date_iso8601: "2024-01-15T10:00:00+01:00" },
+                time: { date_iso8601: "2024-01-14T10:00:00+01:00" },
                 in_or_out: "incoming",
-                type: "deposit",
+                type: "transfer",
                 status: "finished",
                 amount_eur: "20000",
                 cryptocoin_symbol: "BTC",
                 fee: "0",
+                tags: [],
               },
             },
-          ],
-          meta: { total_count: 1, page_size: 100 },
-        });
-
-      nock(BITPANDA_API_BASE)
-        .get("/wallets/transactions")
-        .query({ type: "withdrawal", page_size: 100 })
-        .reply(200, { data: [], meta: { total_count: 0, page_size: 100 } });
-
-      nock(BITPANDA_API_BASE)
-        .get("/wallets/transactions")
-        .query({ type: "transfer", page_size: 100 })
-        .reply(200, { data: [], meta: { total_count: 0, page_size: 100 } });
-
-      for (const txType of ["deposit", "withdrawal", "transfer"]) {
-        nock(BITPANDA_API_BASE)
-          .get("/fiatwallets/transactions")
-          .query({ type: txType, page_size: 100 })
-          .reply(200, { data: [], meta: { total_count: 0, page_size: 100 } });
-      }
-
-      nock(BITPANDA_API_BASE)
-        .get("/assets/transactions/commodity")
-        .query({ page_size: 100 })
-        .reply(200, { data: [], meta: { total_count: 0, page_size: 100 } });
-
-      const result = await client.fetchTransactions(API_KEY);
-
-      expect(result.transactions).toHaveLength(1);
-      expect(result.transactions[0].type).toBe(TransactionType.deposit);
-      expect(result.transactions[0].asset).toBe("BTC");
-      expect(result.transactions[0].quantity).toBe(0.5);
-    });
-
-    it("should fetch fiat deposits", async () => {
-      nock(BITPANDA_API_BASE)
-        .get("/trades")
-        .query({ page_size: 100 })
-        .reply(200, { data: [], meta: { total_count: 0, page_size: 100 } });
-
-      for (const txType of ["deposit", "withdrawal", "transfer"]) {
-        nock(BITPANDA_API_BASE)
-          .get("/wallets/transactions")
-          .query({ type: txType, page_size: 100 })
-          .reply(200, { data: [], meta: { total_count: 0, page_size: 100 } });
-      }
-
-      nock(BITPANDA_API_BASE)
-        .get("/fiatwallets/transactions")
-        .query({ type: "deposit", page_size: 100 })
-        .reply(200, {
-          data: [
             {
-              id: "fiat-deposit-1",
-              type: "fiat_wallet_transaction",
+              id: "wallet-buy-duplicate",
+              type: "wallet_transaction",
               attributes: {
-                fiat_symbol: "EUR",
-                amount: "1000.00",
-                fee: "0",
-                to_eur_rate: "1.0",
-                time: { date_iso8601: "2024-01-15T10:00:00+01:00" },
-                type: "deposit",
-                status: "finished",
-              },
-            },
-          ],
-          meta: { total_count: 1, page_size: 100 },
-        });
-
-      nock(BITPANDA_API_BASE)
-        .get("/fiatwallets/transactions")
-        .query({ type: "withdrawal", page_size: 100 })
-        .reply(200, { data: [], meta: { total_count: 0, page_size: 100 } });
-
-      nock(BITPANDA_API_BASE)
-        .get("/fiatwallets/transactions")
-        .query({ type: "transfer", page_size: 100 })
-        .reply(200, { data: [], meta: { total_count: 0, page_size: 100 } });
-
-      nock(BITPANDA_API_BASE)
-        .get("/assets/transactions/commodity")
-        .query({ page_size: 100 })
-        .reply(200, { data: [], meta: { total_count: 0, page_size: 100 } });
-
-      const result = await client.fetchTransactions(API_KEY);
-
-      expect(result.transactions).toHaveLength(1);
-      expect(result.transactions[0].type).toBe(TransactionType.deposit);
-      expect(result.transactions[0].asset).toBe("EUR");
-      expect(result.transactions[0].quantity).toBe(1000);
-    });
-
-    it("should fetch commodity transactions (gold/silver)", async () => {
-      nock(BITPANDA_API_BASE)
-        .get("/trades")
-        .query({ page_size: 100 })
-        .reply(200, { data: [], meta: { total_count: 0, page_size: 100 } });
-
-      for (const txType of ["deposit", "withdrawal", "transfer"]) {
-        nock(BITPANDA_API_BASE)
-          .get("/wallets/transactions")
-          .query({ type: txType, page_size: 100 })
-          .reply(200, { data: [], meta: { total_count: 0, page_size: 100 } });
-      }
-
-      for (const txType of ["deposit", "withdrawal", "transfer"]) {
-        nock(BITPANDA_API_BASE)
-          .get("/fiatwallets/transactions")
-          .query({ type: txType, page_size: 100 })
-          .reply(200, { data: [], meta: { total_count: 0, page_size: 100 } });
-      }
-
-      nock(BITPANDA_API_BASE)
-        .get("/assets/transactions/commodity")
-        .query({ page_size: 100 })
-        .reply(200, {
-          data: [
-            {
-              id: "commodity-1",
-              type: "transaction",
-              attributes: {
-                amount: "0.5",
-                time: { date_iso8601: "2024-01-15T10:00:00+01:00" },
+                amount: "0.06124219",
+                time: { date_iso8601: "2024-01-13T10:00:00+01:00" },
                 in_or_out: "incoming",
                 type: "buy",
                 status: "finished",
-                amount_eur: "1000.00",
-                cryptocoin_symbol: "XAU",
+                amount_eur: "5000.00",
+                cryptocoin_symbol: "BTC",
                 fee: "0",
-                trade: {
-                  id: "trade-1",
-                  attributes: {
-                    type: "buy",
-                    price: "2000.00",
-                  },
-                },
+                trade: { id: "trade-123" },
+                tags: [],
               },
             },
           ],
-          meta: { total_count: 1, page_size: 100 },
+          meta: { total_count: 3, page_size: 100 },
         });
 
       const result = await client.fetchTransactions(API_KEY);
 
-      expect(result.transactions).toHaveLength(1);
-      expect(result.transactions[0].type).toBe(TransactionType.buy);
-      expect(result.transactions[0].asset).toBe("XAU");
-      expect(result.transactions[0].eurRate).toBe(2000);
+      expect(result.transactions).toHaveLength(2);
+      expect(result.transactions[0].type).toBe(TransactionType.stake);
+      expect(result.transactions[0].asset).toBe("ETH");
+      expect(result.transactions[0].quantity).toBe(1.84379034);
+      expect(result.transactions[1].type).toBe(TransactionType.transfer_in);
     });
 
     it("should fetch all pages until no cursor", async () => {
@@ -417,7 +414,7 @@ describe("BitpandaApiClient", () => {
           },
         });
 
-      mockAllNonTradeEndpoints();
+      mockWalletEndpoints();
 
       const result = await client.fetchTransactions(API_KEY);
 
@@ -475,7 +472,7 @@ describe("BitpandaApiClient", () => {
           meta: { total_count: 2, page_size: 100 },
         });
 
-      mockAllNonTradeEndpoints();
+      mockWalletEndpoints();
 
       const result = await client.fetchTransactions(API_KEY);
 
@@ -524,7 +521,7 @@ describe("BitpandaApiClient", () => {
             meta: { total_count: 10, page_size: 100, next_cursor: "more-data" },
           });
 
-        mockAllNonTradeEndpoints();
+        mockWalletEndpoints();
 
         const knownIds = new Set(["trade-known"]);
         const result = await client.fetchTransactions(API_KEY, knownIds);
@@ -559,7 +556,7 @@ describe("BitpandaApiClient", () => {
             meta: { total_count: 1, page_size: 100 },
           });
 
-        mockAllNonTradeEndpoints();
+        mockWalletEndpoints();
 
         const result = await client.fetchTransactions(API_KEY);
 
@@ -567,7 +564,7 @@ describe("BitpandaApiClient", () => {
         expect(result.wasIncremental).toBe(false);
       });
 
-      it("should stop early in crypto transactions", async () => {
+      it("should stop early in wallet transactions", async () => {
         nock(BITPANDA_API_BASE)
           .get("/trades")
           .query({ page_size: 100 })
@@ -575,65 +572,48 @@ describe("BitpandaApiClient", () => {
 
         nock(BITPANDA_API_BASE)
           .get("/wallets/transactions")
-          .query({ type: "deposit", page_size: 100 })
+          .query({ page_size: 100 })
           .reply(200, {
             data: [
               {
-                id: "crypto-new",
-                type: "transaction",
+                id: "wallet-new",
+                type: "wallet_transaction",
                 attributes: {
                   amount: "0.5",
                   time: { date_iso8601: "2024-01-20T10:00:00+01:00" },
                   in_or_out: "incoming",
-                  type: "deposit",
+                  type: "transfer",
                   status: "finished",
                   amount_eur: "20000",
                   cryptocoin_symbol: "BTC",
                   fee: "0",
+                  tags: [],
                 },
               },
               {
-                id: "crypto-known",
-                type: "transaction",
+                id: "wallet-known",
+                type: "wallet_transaction",
                 attributes: {
                   amount: "0.3",
                   time: { date_iso8601: "2024-01-15T10:00:00+01:00" },
                   in_or_out: "incoming",
-                  type: "deposit",
+                  type: "transfer",
                   status: "finished",
                   amount_eur: "12000",
                   cryptocoin_symbol: "BTC",
                   fee: "0",
+                  tags: [],
                 },
               },
             ],
             meta: { total_count: 5, page_size: 100 },
           });
 
-        for (const txType of ["withdrawal", "transfer"]) {
-          nock(BITPANDA_API_BASE)
-            .get("/wallets/transactions")
-            .query({ type: txType, page_size: 100 })
-            .reply(200, { data: [], meta: { total_count: 0, page_size: 100 } });
-        }
-
-        for (const txType of ["deposit", "withdrawal", "transfer"]) {
-          nock(BITPANDA_API_BASE)
-            .get("/fiatwallets/transactions")
-            .query({ type: txType, page_size: 100 })
-            .reply(200, { data: [], meta: { total_count: 0, page_size: 100 } });
-        }
-
-        nock(BITPANDA_API_BASE)
-          .get("/assets/transactions/commodity")
-          .query({ page_size: 100 })
-          .reply(200, { data: [], meta: { total_count: 0, page_size: 100 } });
-
-        const knownIds = new Set(["crypto-known"]);
+        const knownIds = new Set(["wallet-known"]);
         const result = await client.fetchTransactions(API_KEY, knownIds);
 
         expect(result.transactions).toHaveLength(1);
-        expect(result.transactions[0].externalId).toBe("crypto-new");
+        expect(result.transactions[0].externalId).toBe("wallet-new");
         expect(result.wasIncremental).toBe(true);
       });
     });

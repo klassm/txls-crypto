@@ -108,7 +108,6 @@ export default function AccountDetailPage() {
 
 	const currentSource = sources.find((s) => s.source === account?.provider);
 	const apiSyncInstructions = currentSource?.apiSyncMarkdownInstructions ?? "";
-	const supportsManualStaking = currentSource?.supportsManualStaking ?? false;
 
 	const formatValue = (value: number) =>
 		new Intl.NumberFormat("de-DE", {
@@ -175,29 +174,33 @@ export default function AccountDetailPage() {
 						) : (
 							<Grid container spacing={3}>
 								<Grid size={{ xs: 12, lg: 8 }}>
-							<TransactionsTable
-								transactions={transactions}
-								onImport={() => setImportDialogOpen(true)}
-								csvImportAllowed={csvImportAllowed}
-								apiSettings={apiSettings}
-								accountId={Number(id)}
-								onSyncComplete={handleSyncComplete}
-								onConfigureApiKey={() => setApiSyncDialogOpen(true)}
-								supportsManualStaking={supportsManualStaking}
-							/>
+									<TransactionsTable
+										transactions={transactions}
+										onImport={() => setImportDialogOpen(true)}
+										csvImportAllowed={csvImportAllowed}
+										apiSettings={apiSettings}
+										accountId={Number(id)}
+										onSyncComplete={handleSyncComplete}
+										onConfigureApiKey={() => setApiSyncDialogOpen(true)}
+									/>
 								</Grid>
 								<Grid size={{ xs: 12, lg: 4 }}>
 									<Box sx={{ position: { lg: "sticky" }, top: { lg: 16 } }}>
-										{latestPortfolioValue !== null && (
-											<Card sx={{ p: 2, mb: 2 }}>
-												<Typography variant="body2" color="text.secondary">
-													Total Value
-												</Typography>
-												<Typography variant="h4" fontWeight={600}>
-													{formatValue(latestPortfolioValue)}
-												</Typography>
-											</Card>
-										)}
+							{latestPortfolioValue !== null && (
+								<Card sx={{ p: 2, mb: 2 }}>
+									<Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+										<Box>
+											<Typography variant="body2" color="text.secondary">
+												Total Value
+											</Typography>
+											<Typography variant="h4" fontWeight={600}>
+												{formatValue(latestPortfolioValue)}
+											</Typography>
+										</Box>
+										<AccountStats history={portfolioHistory} variant="overall" />
+									</Box>
+								</Card>
+							)}
 
 										<Box sx={{ mb: 2 }}>
 											<AccountStats history={portfolioHistory} />

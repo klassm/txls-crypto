@@ -36,7 +36,7 @@ async function ensureUserExists(page: import('@playwright/test').Page) {
 async function logout(page: import('@playwright/test').Page, baseURL: string | undefined) {
   const isHassIngress = baseURL?.includes('hassio_ingress')
   
-  await page.getByRole('button', { name: /TU/i }).first().click()
+  await page.locator('.MuiAvatar-root:has-text("T")').click()
   await page.getByRole('menuitem', { name: 'Logout' }).click()
   
   if (isHassIngress) {
@@ -158,7 +158,7 @@ test.describe('Onboarding', () => {
   test('onboard new user', async ({ page }) => {
     await ensureUserExists(page)
     await expect(page.locator('header')).toBeVisible()
-    await expect(page.getByRole('button', { name: /TU/i }).first()).toBeVisible()
+    await expect(page.locator('.MuiAvatar-root:has-text("T")')).toBeVisible()
   })
 
   test('authentication persists after page reload in HASS ingress', async ({ page, baseURL }) => {

@@ -43,5 +43,4 @@ You can import your TradeRepublic transactions using the [pytr](https://github.c
  
  Upload the \`account_transactions.csv\` file to import your TradeRepublic transactions.`,
   apiSyncMarkdownInstructions: "",
-  supportsManualStaking: true,
 };

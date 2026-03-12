@@ -12,6 +12,14 @@ interface FetchResult {
   stoppedEarly: boolean;
 }
 
+interface BitpandaFee {
+  type: "fee";
+  attributes: {
+    fee_amount_in_fiat: string;
+    fee_percentage?: string | null;
+  };
+}
+
 interface BitpandaTrade {
   id: string;
   type: "trade";
@@ -31,13 +39,14 @@ interface BitpandaTrade {
     };
     price: string;
     is_swap: boolean;
-    fee?: string;
+    is_fee_transparent?: boolean;
+    fee?: string | BitpandaFee;
   };
 }
 
-interface BitpandaCryptoTransaction {
+interface BitpandaWalletTransaction {
   id: string;
-  type: "transaction";
+  type: "wallet_transaction";
   attributes: {
     amount: string;
     recipient: string;
@@ -56,58 +65,20 @@ interface BitpandaCryptoTransaction {
     current_fiat_id: string;
     current_fiat_amount: string;
     wallet_id: string;
-    related_wallet_transaction_id?: string;
-  };
-}
-
-interface BitpandaFiatTransaction {
-  id: string;
-  type: "fiat_wallet_transaction";
-  attributes: {
-    fiat_wallet_id: string;
-    user_id: string;
-    fiat_id: string;
-    fiat_symbol: string;
-    amount: string;
-    fee: string;
-    to_eur_rate: string;
-    time: {
-      date_iso8601: string;
-      unix: string;
-    };
-    in_or_out: "incoming" | "outgoing";
-    type: string;
-    status: string;
-  };
-}
-
-interface BitpandaCommodityTransaction {
-  id: string;
-  type: "transaction";
-  attributes: {
-    amount: string;
-    time: {
-      date_iso8601: string;
-      unix: string;
-    };
-    in_or_out: "incoming" | "outgoing";
-    type: string;
-    status: string;
-    amount_eur: string;
-    cryptocoin_id: string;
-    cryptocoin_symbol: string;
-    fee: string;
     trade?: {
       id: string;
-      attributes: {
-        type: "buy" | "sell";
-        amount_fiat: string;
-        amount_cryptocoin: string;
-        price: string;
-      };
     };
+    tags?: Array<{
+      type: "tag";
+      attributes: {
+        short_name: string;
+        name: string;
+      };
+    }>;
   };
 }
+
+
 
 interface BitpandaApiResponse<T> {
   data: T[];
@@ -145,17 +116,9 @@ export class BitpandaApiClient implements ApiSyncClient {
     allTransactions.push(...tradesResult.transactions);
     if (tradesResult.stoppedEarly) wasIncremental = true;
 
-    const cryptoResult = await this.fetchAllCryptoTransactions(apiKey, knownExternalIds);
-    allTransactions.push(...cryptoResult.transactions);
-    if (cryptoResult.stoppedEarly) wasIncremental = true;
-
-    const fiatResult = await this.fetchAllFiatTransactions(apiKey, knownExternalIds);
-    allTransactions.push(...fiatResult.transactions);
-    if (fiatResult.stoppedEarly) wasIncremental = true;
-
-    const commodityResult = await this.fetchAllCommodityTransactions(apiKey, knownExternalIds);
-    allTransactions.push(...commodityResult.transactions);
-    if (commodityResult.stoppedEarly) wasIncremental = true;
+    const walletResult = await this.fetchAllWalletTransactions(apiKey, knownExternalIds);
+    allTransactions.push(...walletResult.transactions);
+    if (walletResult.stoppedEarly) wasIncremental = true;
 
     allTransactions.sort((a, b) => b.timestamp.toMillis() - a.timestamp.toMillis());
 
@@ -210,139 +173,42 @@ export class BitpandaApiClient implements ApiSyncClient {
     return { transactions, stoppedEarly };
   }
 
-  private async fetchAllCryptoTransactions(apiKey: string, knownExternalIds?: Set<string>): Promise<FetchResult> {
-    const transactions: Transaction[] = [];
-    let stoppedEarly = false;
-
-    const txTypes = ["deposit", "withdrawal", "transfer"];
-
-    for (const txType of txTypes) {
-      if (stoppedEarly) break;
-      
-      let cursor: string | undefined;
-
-      do {
-        let url = `/wallets/transactions?type=${txType}&page_size=${DEFAULT_PAGE_SIZE}`;
-        if (cursor) {
-          url += `&cursor=${cursor}`;
-        }
-
-        const response = await this.fetchApi(url, apiKey);
-        if (!response.ok) {
-          logger.warn({ status: response.status, type: txType }, "[BitpandaApiClient] Failed to fetch crypto transactions");
-          break;
-        }
-
-        const data = (await response.json()) as BitpandaApiResponse<BitpandaCryptoTransaction>;
-
-        for (const tx of data.data) {
-          if (tx.attributes.status !== "finished") {
-            continue;
-          }
-
-          if (knownExternalIds && knownExternalIds.has(tx.id)) {
-            logger.debug({ id: tx.id }, "[BitpandaApiClient] Found known crypto transaction, stopping early");
-            stoppedEarly = true;
-            break;
-          }
-
-          const mapped = this.mapCryptoTransactionToTransaction(tx);
-          if (mapped) {
-            transactions.push(mapped);
-          }
-        }
-
-        if (stoppedEarly) break;
-
-        cursor = data.meta.next_cursor;
-      } while (cursor);
-    }
-
-    return { transactions, stoppedEarly };
-  }
-
-  private async fetchAllFiatTransactions(apiKey: string, knownExternalIds?: Set<string>): Promise<FetchResult> {
-    const transactions: Transaction[] = [];
-    let stoppedEarly = false;
-
-    const txTypes = ["deposit", "withdrawal", "transfer"];
-
-    for (const txType of txTypes) {
-      if (stoppedEarly) break;
-      
-      let cursor: string | undefined;
-
-      do {
-        let url = `/fiatwallets/transactions?type=${txType}&page_size=${DEFAULT_PAGE_SIZE}`;
-        if (cursor) {
-          url += `&cursor=${cursor}`;
-        }
-
-        const response = await this.fetchApi(url, apiKey);
-        if (!response.ok) {
-          logger.warn({ status: response.status, type: txType }, "[BitpandaApiClient] Failed to fetch fiat transactions");
-          break;
-        }
-
-        const data = (await response.json()) as BitpandaApiResponse<BitpandaFiatTransaction>;
-
-        for (const tx of data.data) {
-          if (tx.attributes.status !== "finished") {
-            continue;
-          }
-
-          if (knownExternalIds && knownExternalIds.has(tx.id)) {
-            logger.debug({ id: tx.id }, "[BitpandaApiClient] Found known fiat transaction, stopping early");
-            stoppedEarly = true;
-            break;
-          }
-
-          const mapped = this.mapFiatTransactionToTransaction(tx);
-          if (mapped) {
-            transactions.push(mapped);
-          }
-        }
-
-        if (stoppedEarly) break;
-
-        cursor = data.meta.next_cursor;
-      } while (cursor);
-    }
-
-    return { transactions, stoppedEarly };
-  }
-
-  private async fetchAllCommodityTransactions(apiKey: string, knownExternalIds?: Set<string>): Promise<FetchResult> {
+  private async fetchAllWalletTransactions(apiKey: string, knownExternalIds?: Set<string>): Promise<FetchResult> {
     const transactions: Transaction[] = [];
     let cursor: string | undefined;
     let stoppedEarly = false;
 
     do {
-      let url = `/assets/transactions/commodity?page_size=${DEFAULT_PAGE_SIZE}`;
+      let url = `/wallets/transactions?page_size=${DEFAULT_PAGE_SIZE}`;
       if (cursor) {
         url += `&cursor=${cursor}`;
       }
 
       const response = await this.fetchApi(url, apiKey);
       if (!response.ok) {
-        logger.warn({ status: response.status }, "[BitpandaApiClient] Failed to fetch commodity transactions");
+        logger.warn({ status: response.status }, "[BitpandaApiClient] Failed to fetch wallet transactions");
         break;
       }
 
-      const data = (await response.json()) as BitpandaApiResponse<BitpandaCommodityTransaction>;
+      const data = (await response.json()) as BitpandaApiResponse<BitpandaWalletTransaction>;
 
       for (const tx of data.data) {
         if (tx.attributes.status !== "finished") {
           continue;
         }
 
+        if (tx.attributes.trade) {
+          logger.debug({ id: tx.id }, "[BitpandaApiClient] Skipping wallet transaction with trade reference");
+          continue;
+        }
+
         if (knownExternalIds && knownExternalIds.has(tx.id)) {
-          logger.debug({ id: tx.id }, "[BitpandaApiClient] Found known commodity transaction, stopping early");
+          logger.debug({ id: tx.id }, "[BitpandaApiClient] Found known wallet transaction, stopping early");
           stoppedEarly = true;
           break;
         }
 
-        const mapped = this.mapCommodityTransactionToTransaction(tx);
+        const mapped = this.mapWalletTransactionToTransaction(tx);
         if (mapped) {
           transactions.push(mapped);
         }
@@ -358,12 +224,17 @@ export class BitpandaApiClient implements ApiSyncClient {
 
   private mapTradeToTransaction(trade: BitpandaTrade): Transaction | null {
     const { attributes } = trade;
-    const timestamp = DateTime.fromISO(attributes.time.date_iso8601);
 
+    if (attributes.is_swap && attributes.is_fee_transparent === false) {
+      logger.debug({ id: trade.id }, "[BitpandaApiClient] Skipping swap trade without fee transparency");
+      return null;
+    }
+
+    const timestamp = DateTime.fromISO(attributes.time.date_iso8601);
     const quantity = parseFloat(attributes.amount_cryptocoin);
     const eurValue = parseFloat(attributes.amount_fiat) * parseFloat(attributes.fiat_to_eur_rate);
     const eurRate = parseFloat(attributes.price);
-    const eurFee = attributes.fee ? parseFloat(attributes.fee) : 0;
+    const eurFee = this.parseFee(attributes.fee);
 
     if (!attributes.cryptocoin_symbol) {
       logger.warn({ id: trade.id }, "[BitpandaApiClient] Trade missing cryptocoin_symbol, skipping");
@@ -397,7 +268,13 @@ export class BitpandaApiClient implements ApiSyncClient {
     };
   }
 
-  private mapCryptoTransactionToTransaction(tx: BitpandaCryptoTransaction): Transaction | null {
+  private parseFee(fee?: string | BitpandaFee): number {
+    if (!fee) return 0;
+    if (typeof fee === "string") return parseFloat(fee);
+    return parseFloat(fee.attributes.fee_amount_in_fiat) || 0;
+  }
+
+  private mapWalletTransactionToTransaction(tx: BitpandaWalletTransaction): Transaction | null {
     const { attributes } = tx;
     const timestamp = DateTime.fromISO(attributes.time.date_iso8601);
 
@@ -405,15 +282,23 @@ export class BitpandaApiClient implements ApiSyncClient {
     const eurValue = parseFloat(attributes.amount_eur) || 0;
     const eurFee = parseFloat(attributes.fee) || 0;
 
+    const isStakeTag = attributes.tags?.some(
+      (tag) => tag.attributes.short_name === "stake"
+    );
+
     let type: TransactionType;
     if (attributes.type === "deposit") {
       type = TransactionType.deposit;
     } else if (attributes.type === "withdrawal") {
       type = TransactionType.transfer_out;
     } else if (attributes.type === "transfer") {
-      type = attributes.in_or_out === "incoming" ? TransactionType.transfer_in : TransactionType.transfer_out;
+      if (isStakeTag) {
+        type = attributes.in_or_out === "incoming" ? TransactionType.reward : TransactionType.stake;
+      } else {
+        type = attributes.in_or_out === "incoming" ? TransactionType.transfer_in : TransactionType.transfer_out;
+      }
     } else {
-      logger.debug({ type: attributes.type, id: tx.id }, "[BitpandaApiClient] Skipping unknown crypto transaction type");
+      logger.debug({ type: attributes.type, id: tx.id }, "[BitpandaApiClient] Skipping unknown wallet transaction type");
       return null;
     }
 
@@ -428,58 +313,6 @@ export class BitpandaApiClient implements ApiSyncClient {
       eurValue: Math.abs(eurValue),
       eurFee: Math.abs(eurFee),
       eurRate: 0,
-      processed: false,
-    };
-  }
-
-  private mapFiatTransactionToTransaction(tx: BitpandaFiatTransaction): Transaction | null {
-    const { attributes } = tx;
-    const timestamp = DateTime.fromISO(attributes.time.date_iso8601);
-
-    const quantity = parseFloat(attributes.amount);
-    const eurValue = quantity * parseFloat(attributes.to_eur_rate);
-    const eurFee = parseFloat(attributes.fee) || 0;
-
-    const isDeposit = attributes.type === "deposit" || 
-      (attributes.type === "transfer" && attributes.in_or_out === "incoming");
-
-    return {
-      id: 0,
-      providerAccountId: 0,
-      externalId: tx.id,
-      timestamp,
-      type: isDeposit ? TransactionType.deposit : TransactionType.transfer_out,
-      asset: attributes.fiat_symbol,
-      quantity: Math.abs(eurValue),
-      eurValue: Math.abs(eurValue),
-      eurFee: Math.abs(eurFee),
-      eurRate: parseFloat(attributes.to_eur_rate),
-      processed: false,
-    };
-  }
-
-  private mapCommodityTransactionToTransaction(tx: BitpandaCommodityTransaction): Transaction | null {
-    const { attributes } = tx;
-    const timestamp = DateTime.fromISO(attributes.time.date_iso8601);
-
-    const quantity = parseFloat(attributes.amount);
-    const eurValue = parseFloat(attributes.amount_eur) || 0;
-    const eurFee = parseFloat(attributes.fee) || 0;
-    const eurRate = attributes.trade ? parseFloat(attributes.trade.attributes.price) : 0;
-
-    const type = attributes.type === "buy" ? TransactionType.buy : TransactionType.sell;
-
-    return {
-      id: 0,
-      providerAccountId: 0,
-      externalId: tx.id,
-      timestamp,
-      type,
-      asset: attributes.cryptocoin_symbol,
-      quantity: Math.abs(quantity),
-      eurValue: Math.abs(eurValue),
-      eurFee: Math.abs(eurFee),
-      eurRate,
       processed: false,
     };
   }

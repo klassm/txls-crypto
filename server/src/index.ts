@@ -37,7 +37,7 @@ async function startServer() {
 	apiSyncScheduler = new ApiSyncScheduler(dataSource);
 	await apiSyncScheduler.start();
 	
-	app.set("trust proxy", 1);
+	app.set("trust proxy", true);
 	app.use(helmet());
 	app.use(cors({
 		origin: process.env.NODE_ENV === "production" ? false : "http://localhost:3000",

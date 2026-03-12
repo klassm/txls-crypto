@@ -63,7 +63,6 @@ describe("PortfolioSnapshotsService", () => {
 						andWhere: vi.fn().mockReturnThis(),
 						groupBy: vi.fn().mockReturnThis(),
 						orderBy: vi.fn().mockReturnThis(),
-						distinct: vi.fn().mockReturnThis(),
 						getRawMany: vi.fn().mockResolvedValue([]),
 						getOne: vi.fn().mockResolvedValue(null),
 					}),
@@ -582,34 +581,6 @@ describe("PortfolioSnapshotsService", () => {
 			expect(result.assets).toHaveLength(2);
 			expect(result.assets[0].asset).toBe("BTC");
 			expect(result.assets[1].asset).toBe("ETH");
-		});
-
-		it("should use eurInvested from latest snapshot", async () => {
-			const today = DateTime.utc().startOf("day");
-			const yesterday = today.minus({ days: 1 });
-			const twoDaysAgo = today.minus({ days: 2 });
-
-			const mockSnapshots = [
-				createMockSnapshot({ date: twoDaysAgo, asset: "BTC", amount: 1.0, eurInvested: 30000 }),
-				createMockSnapshot({ date: yesterday, asset: "BTC", amount: 1.0, eurInvested: 40000 }),
-				createMockSnapshot({ date: today, asset: "BTC", amount: 1.0, eurInvested: 50000 }),
-			];
-			vi.mocked(mockRepository.findByUserAndDateRange).mockResolvedValue(mockSnapshots);
-			vi.mocked(mockRepository.findLatestByUser).mockResolvedValue(new Map());
-
-			const btcHistory = [
-				{ date: twoDaysAgo, asset: "BTC", priceEur: 50000, fetchedAt: twoDaysAgo },
-				{ date: yesterday, asset: "BTC", priceEur: 50000, fetchedAt: yesterday },
-				{ date: today, asset: "BTC", priceEur: 50000, fetchedAt: today },
-			];
-			vi.mocked(mockPricesRepository.getPriceHistoryBatch).mockResolvedValue(
-				new Map([["BTC", btcHistory]])
-			);
-
-			const result = await service.getPortfolioOverview(1, 30);
-
-			expect(result.assets).toHaveLength(1);
-			expect(result.assets[0].eurInvested).toBe(50000);
 		});
 	});
 });

@@ -48,7 +48,6 @@ export class ProvidersService {
 		logoPath: string;
 		csvImportMarkdownInstructions: string;
 		csvImportAllowed: boolean;
-		supportsManualStaking: boolean;
 	}> {
 		return Object.entries(providerMetadata).map(([key, value]) => ({
 			type: key as ProviderType,
@@ -58,7 +57,6 @@ export class ProvidersService {
 			logoPath: value.logoPath,
 			csvImportMarkdownInstructions: value.csvImportMarkdownInstructions,
 			csvImportAllowed: csvImporters[key as ProviderType] !== undefined,
-			supportsManualStaking: value.supportsManualStaking,
 		}));
 	}
 
@@ -222,7 +220,6 @@ export class ProvidersService {
 			csvImportMarkdownInstructions: metadata?.csvImportMarkdownInstructions || "",
 			apiSyncMarkdownInstructions: metadata?.apiSyncMarkdownInstructions || "",
 			csvImportAllowed: csvImporters[entity.provider as ProviderType] !== undefined,
-			supportsManualStaking: metadata?.supportsManualStaking ?? false,
 			createdAt: entity.createdAt,
 			updatedAt: entity.updatedAt,
 		};

@@ -39,7 +39,6 @@ export interface Provider {
   csvImportMarkdownInstructions: string;
   apiSyncMarkdownInstructions: string;
   csvImportAllowed: boolean;
-  supportsManualStaking: boolean;
   createdAt: DateTime;
   updatedAt: DateTime;
   assets?: AssetStat[];
