@@ -599,7 +599,24 @@ router.patch("/:id/api-settings", async (req: Request, res: Response) => {
         return res.status(400).json({ error: validation.error || "Invalid API key" });
       }
 
+      const wasFirstTimeSetup = !account.apiKeyEncrypted;
       account.apiKeyEncrypted = encrypt(apiKey);
+
+      account.syncError = null;
+      await accountsRepository.save(account);
+
+      if (wasFirstTimeSetup) {
+        syncService.syncAccount(accountId, userId, true).catch((err) => {
+          console.error("Initial sync failed:", err);
+        });
+      }
+
+      return res.json({
+        apiEnabled: account.apiEnabled,
+        hasApiKey: true,
+        lastSyncAt: account.lastSyncAt ? toISOString(account.lastSyncAt) : null,
+        syncError: null,
+      });
     }
 
     account.apiEnabled = apiEnabled;
