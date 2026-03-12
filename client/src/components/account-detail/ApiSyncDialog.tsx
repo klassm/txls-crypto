@@ -15,6 +15,7 @@ import {
   Alert,
 } from "@mui/material";
 import { useState, useEffect } from "react";
+import ReactMarkdown from "react-markdown";
 
 interface ApiSyncDialogProps {
   open: boolean;
@@ -71,68 +72,6 @@ export function ApiSyncDialog({
 
   const isLoading = isSaving || isDeleting;
 
-  const renderInstructions = (markdown: string) => {
-    const lines = markdown.split("\n");
-    const elements: React.ReactNode[] = [];
-    let listItems: string[] = [];
-
-    const flushList = () => {
-      if (listItems.length > 0) {
-        elements.push(
-          <Box component="ol" key={`list-${elements.length}`} sx={{ pl: 2, mb: 2 }}>
-            {listItems.map((item, idx) => (
-              <Typography component="li" key={idx} variant="body2" sx={{ mb: 0.5 }}>
-                {item}
-              </Typography>
-            ))}
-          </Box>
-        );
-        listItems = [];
-      }
-    };
-
-    lines.forEach((line, idx) => {
-      if (line.startsWith("# ")) {
-        flushList();
-        elements.push(
-          <Typography key={idx} variant="h6" sx={{ mb: 2, mt: 2 }}>
-            {line.slice(2)}
-          </Typography>
-        );
-      } else if (line.startsWith("## ")) {
-        flushList();
-        elements.push(
-          <Typography key={idx} variant="subtitle1" sx={{ mb: 1, mt: 2 }}>
-            {line.slice(3)}
-          </Typography>
-        );
-      } else if (line.startsWith("**") && line.endsWith("**")) {
-        flushList();
-        elements.push(
-          <Typography key={idx} variant="body2" sx={{ mb: 2, fontWeight: "bold" }}>
-            {line.slice(2, -2)}
-          </Typography>
-        );
-      } else if (/^\d+\.\s/.test(line)) {
-        listItems.push(line.replace(/^\d+\.\s/, ""));
-      } else if (line.startsWith("- ")) {
-        listItems.push(line.slice(2));
-      } else if (line.trim() === "") {
-        flushList();
-      } else if (line.trim()) {
-        flushList();
-        elements.push(
-          <Typography key={idx} variant="body2" sx={{ mb: 1 }}>
-            {line}
-          </Typography>
-        );
-      }
-    });
-
-    flushList();
-    return elements;
-  };
-
   return (
     <Dialog
       open={open}
@@ -159,7 +98,16 @@ export function ApiSyncDialog({
           </Box>
         ) : (
           <Box sx={{ py: 2 }}>
-            {renderInstructions(instructions)}
+            <Box sx={{ 
+              "& h1": { typography: "h6", mb: 2, mt: 2 },
+              "& h2": { typography: "subtitle1", mb: 1, mt: 2 },
+              "& p": { typography: "body2", mb: 1 },
+              "& ol": { pl: 2, mb: 2 },
+              "& ul": { pl: 2, mb: 2 },
+              "& li": { typography: "body2", mb: 0.5 },
+            }}>
+              <ReactMarkdown>{instructions}</ReactMarkdown>
+            </Box>
             
             {(error || localError) && (
               <Alert severity="error" sx={{ mb: 2 }} onClose={() => setLocalError(null)}>
