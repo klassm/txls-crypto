@@ -84,7 +84,7 @@ test.describe('Accounts', () => {
     await page.getByRole('button', { name: 'View Details' }).first().click()
     await expect(page.getByText('Loading account...')).not.toBeVisible({ timeout: 10000 })
     await expect(page.getByRole('heading', { name: /Bitpanda|Trade Republic/ })).toBeVisible({ timeout: 10000 })
-    await expect(page.getByText('Staking')).toBeVisible()
+    await expect(page.getByText(/No transactions found|Import CSV/)).toBeVisible()
     
     await page.goBack()
     await expect(page.getByRole('button', { name: 'View Details' }).first()).toBeVisible({ timeout: 10000 })

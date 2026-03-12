@@ -38,15 +38,6 @@ const CRYPTO_ISIN_MAP: Record<string, string> = {
   "XF000SOL0012": "SOL",
 };
 
-const CRYPTO_ASSET_NAMES = new Set([
-  "Bitcoin",
-  "XRP",
-  "Solana",
-  "BTC",
-  "XRP",
-  "SOL",
-]);
-
 export class TradeRepublicImporter implements CsvImporter {
   parseCsv(csvContent: string, accountId: number): CsvImportResult {
     logger.info({
@@ -100,42 +91,36 @@ const csvContentWithHeader = [lines[headerRowIndex], ...dataLines].join("\n");
       );
     }
 
-    const { transactions, validationErrors } = Array.from(
-      records.entries(),
-    ).reduce<{
-      transactions: Transaction[];
-      validationErrors: string[];
-    }>(
-      (acc, [index, record]) => {
-        const parsedRow = TradeRepublicRowSchema.safeParse(record);
+    const parsedRows: TradeRepublicRow[] = [];
+    const validationErrors: string[] = [];
 
-        if (!parsedRow.success) {
-          const errorMsg = `Row ${index + 2}: ${parsedRow.error.errors
-            .map((e) => `${e.path.join(".")}: ${e.message}`)
-            .join(", ")}`;
-          acc.validationErrors.push(errorMsg);
-          logger.warn({ accountId, rowIndex: index + 2 }, errorMsg);
-          return acc;
+    for (const [index, record] of records.entries()) {
+      const parsedRow = TradeRepublicRowSchema.safeParse(record);
+
+      if (!parsedRow.success) {
+        const errorMsg = `Row ${index + 2}: ${parsedRow.error.errors
+          .map((e) => `${e.path.join(".")}: ${e.message}`)
+          .join(", ")}`;
+        validationErrors.push(errorMsg);
+        logger.warn({ accountId, rowIndex: index + 2 }, errorMsg);
+        continue;
+      }
+      parsedRows.push(parsedRow.data);
+    }
+
+    const transactions: Transaction[] = [];
+    for (const row of parsedRows) {
+      try {
+        const transaction = this.createTransaction(row, accountId);
+        if (transaction) {
+          transactions.push(transaction);
         }
-
-        try {
-          const transaction = this.createTransaction(
-            parsedRow.data,
-            accountId,
-          );
-          if (transaction) {
-            acc.transactions.push(transaction);
-          }
-        } catch (error) {
-          const errorMsg = `Row ${index + 2}: ${error instanceof Error ? error.message : String(error)}`;
-          acc.validationErrors.push(errorMsg);
-          logger.error({ accountId, rowIndex: index + 2, error }, errorMsg);
-        }
-
-        return acc;
-      },
-      { transactions: [], validationErrors: [] }
-    );
+      } catch (error) {
+        const errorMsg = `${error instanceof Error ? error.message : String(error)}`;
+        validationErrors.push(errorMsg);
+        logger.error({ accountId, error }, errorMsg);
+      }
+    }
 
     if (transactions.length === 0 && validationErrors.length > 0) {
       throw new ImportError(
@@ -162,7 +147,6 @@ const csvContentWithHeader = [lines[headerRowIndex], ...dataLines].join("\n");
     accountId: number,
   ): Transaction | null {
     const type = row.Type;
-    const note = row.Note;
     const value = this.parseNumber(row.Value);
     const shares = this.parseNumber(row.Shares);
     const fees = this.parseNumber(row.Fees) || 0;
@@ -174,22 +158,16 @@ const csvContentWithHeader = [lines[headerRowIndex], ...dataLines].join("\n");
     let quantity: number | null = null;
     let eurValue: number | null = null;
 
-    if (type === "Deposit" && !isin) {
-      asset = this.getAssetFromNote(note);
-      if (!CRYPTO_ASSET_NAMES.has(asset)) {
-        return null;
-      }
-      transactionType = TransactionType.reward;
-      quantity = value;
-      eurValue = value;
-    } else if (type === "Buy") {
-      transactionType = TransactionType.buy;
+    if (type === "Buy") {
       asset = CRYPTO_ISIN_MAP[isin];
+      if (!asset) return null;
+      transactionType = TransactionType.buy;
       quantity = shares;
       eurValue = value !== null ? Math.abs(value) : 0;
     } else if (type === "Sell") {
-      transactionType = TransactionType.sell;
       asset = CRYPTO_ISIN_MAP[isin];
+      if (!asset) return null;
+      transactionType = TransactionType.sell;
       quantity = shares;
       eurValue = value;
     }
@@ -217,17 +195,6 @@ const csvContentWithHeader = [lines[headerRowIndex], ...dataLines].join("\n");
       eurRate,
       processed: false,
     };
-  }
-
-  private getAssetFromNote(note: string): string {
-    const assetName = note.split(" ")[0];
-    if (assetName === "Bitcoin") return "BTC";
-    if (assetName === "XRP") return "XRP";
-    if (assetName === "Solana") return "SOL";
-    if (assetName === "BTC") return "BTC";
-    if (assetName === "XRP") return "XRP";
-    if (assetName === "SOL") return "SOL";
-    return assetName;
   }
 
   private parseNumber(value: string): number | null {

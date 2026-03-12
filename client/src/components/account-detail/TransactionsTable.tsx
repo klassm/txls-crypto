@@ -1,4 +1,4 @@
-import { CloudUpload, Sync, Key, ArrowDropDown } from "@mui/icons-material";
+import { CloudUpload, Sync, Key, ArrowDropDown, Add } from "@mui/icons-material";
 import { Box, Button, Chip, CircularProgress, Typography, Alert, Menu, MenuItem, ButtonGroup } from "@mui/material";
 import { type MRT_ColumnDef, MaterialReactTable } from "material-react-table";
 import type { Transaction, ApiSettings } from "@txls/shared";
@@ -7,6 +7,7 @@ import { StyledBox, StyledSectionTitle } from "./TransactionsTable.styles";
 import { DateTime } from "luxon";
 import { useState } from "react";
 import { accountsApi } from "../../lib/client/accounts-api";
+import { AddStakingDialog } from "./AddStakingDialog";
 
 interface TransactionsTableProps {
   transactions: Transaction[];
@@ -16,6 +17,7 @@ interface TransactionsTableProps {
   accountId: number;
   onSyncComplete?: () => void;
   onConfigureApiKey: () => void;
+  supportsManualStaking?: boolean;
 }
 
 export function TransactionsTable({
@@ -26,11 +28,14 @@ export function TransactionsTable({
   accountId,
   onSyncComplete,
   onConfigureApiKey,
+  supportsManualStaking = false,
 }: TransactionsTableProps) {
   const [isSyncing, setIsSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [syncMenuAnchor, setSyncMenuAnchor] = useState<null | HTMLElement>(null);
+  const [addStakingOpen, setAddStakingOpen] = useState(false);
+  const [isAddingStaking, setIsAddingStaking] = useState(false);
 
   const handleSync = async (fullSync = false) => {
     setIsSyncing(true);
@@ -49,6 +54,24 @@ export function TransactionsTable({
       setError(err instanceof Error ? err.message : "Failed to sync");
     } finally {
       setIsSyncing(false);
+    }
+  };
+
+  const handleAddStaking = async (data: { timestamp: string; asset: string; quantity: number; eurValue: number }) => {
+    setIsAddingStaking(true);
+    try {
+      const result = await accountsApi.addManualStaking(accountId, data);
+      if (result.success) {
+        setSuccess("Staking reward added");
+        onSyncComplete?.();
+        return { success: true };
+      }
+      return { success: false, error: "Failed to add staking reward" };
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : "Failed to add staking reward";
+      return { success: false, error: errorMsg };
+    } finally {
+      setIsAddingStaking(false);
     }
   };
 
@@ -216,7 +239,25 @@ export function TransactionsTable({
             )}
           </Box>
         )}
+
+        {supportsManualStaking && (
+          <Button
+            variant="outlined"
+            color="secondary"
+            onClick={() => setAddStakingOpen(true)}
+            startIcon={<Add />}
+          >
+            Add Staking
+          </Button>
+        )}
       </StyledBox>
+
+      <AddStakingDialog
+        open={addStakingOpen}
+        onClose={() => setAddStakingOpen(false)}
+        onSubmit={handleAddStaking}
+        isLoading={isAddingStaking}
+      />
     </Box>
   );
 }

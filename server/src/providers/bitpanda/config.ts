@@ -43,4 +43,5 @@ export const bitpandaConfig: ProviderConfig = {
 - Fiat deposits and withdrawals
 - Staking rewards
 - Commodity transactions (gold, silver, etc.)`,
+  supportsManualStaking: false,
 };

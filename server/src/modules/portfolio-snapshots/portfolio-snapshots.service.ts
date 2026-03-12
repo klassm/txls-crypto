@@ -156,6 +156,20 @@ export class PortfolioSnapshotsService {
 		}
 	}
 
+	async rebuildAllSnapshotsForUser(userId: number): Promise<void> {
+		logger.info({ message: "Rebuilding all snapshots for user", userId });
+
+		const accounts = await this.getUserAccountsWithTransactions(userId);
+		
+		for (const { providerAccountId } of accounts) {
+			try {
+				await this.rebuildAll(userId, providerAccountId);
+			} catch (error) {
+				logger.error({ error, userId, providerAccountId }, "Failed to rebuild snapshots");
+			}
+		}
+	}
+
 	async getPortfolioHistory(
 		userId: number,
 		providerAccountId?: number,
@@ -274,7 +288,13 @@ export class PortfolioSnapshotsService {
 		const endDate = DateTime.utc().endOf("day");
 		const startDate = endDate.minus({ days }).startOf("day");
 
-		const snapshots = await this.repository.findByUserAndDateRange(userId, startDate, endDate);
+		let snapshots = await this.repository.findByUserAndDateRange(userId, startDate, endDate);
+		
+		if (snapshots.length === 0) {
+			await this.rebuildAllSnapshotsForUser(userId);
+			snapshots = await this.repository.findByUserAndDateRange(userId, startDate, endDate);
+		}
+
 		const pricesRepo = this.pricesRepository || new PricesRepository(this.dataSource);
 
 		const allAssets = new Set<string>();
@@ -298,25 +318,32 @@ export class PortfolioSnapshotsService {
 		}
 
 		const todayKey = endDate.toISODate() || "";
-		if (!snapshotsByDate.has(todayKey)) {
-			const currentHoldings = await this.getAllCurrentHoldings(userId);
-			const todayAssets = new Map<string, { amount: number; eurInvested: number }>();
+		const accountsWithTodaySnapshot = new Set<number>();
+		for (const snapshot of snapshots) {
+			if (snapshot.date.toISODate() === todayKey) {
+				accountsWithTodaySnapshot.add(snapshot.providerAccountId);
+			}
+		}
 
-			for (const [_accountId, holdings] of currentHoldings) {
+		const currentHoldings = await this.getAllCurrentHoldings(userId);
+		const todayAssets = snapshotsByDate.get(todayKey);
+
+		for (const [accountId, holdings] of currentHoldings) {
+			if (!accountsWithTodaySnapshot.has(accountId)) {
+				if (!snapshotsByDate.has(todayKey)) {
+					snapshotsByDate.set(todayKey, new Map());
+				}
 				for (const holding of holdings) {
 					allAssets.add(holding.asset);
-					const existing = todayAssets.get(holding.asset);
+					const todayMap = snapshotsByDate.get(todayKey)!;
+					const existing = todayMap.get(holding.asset);
 					const newAmount = (existing?.amount || 0) + holding.amount;
 
-					todayAssets.set(holding.asset, {
+					todayMap.set(holding.asset, {
 						amount: newAmount,
 						eurInvested: existing?.eurInvested || 0,
 					});
 				}
-			}
-
-			if (todayAssets.size > 0) {
-				snapshotsByDate.set(todayKey, todayAssets);
 			}
 		}
 
@@ -351,21 +378,19 @@ export class PortfolioSnapshotsService {
 		portfolioHistory.sort((a, b) => a.date.localeCompare(b.date));
 
 		const latest = portfolioHistory[portfolioHistory.length - 1];
+		const sortedDates = Array.from(snapshotsByDate.keys()).sort();
+		const latestSnapshotDate = sortedDates[sortedDates.length - 1];
+		const latestSnapshotAssets = latestSnapshotDate ? snapshotsByDate.get(latestSnapshotDate) : new Map();
+		
 		const assetsOverview: AssetOverview[] = [];
 
 		for (const asset of assetList) {
 			const assetHistory = priceHistories.get(asset) || [];
 			const latestData = latest?.assets[asset];
-			const amount = latestData?.amount ?? 0;
+			const latestSnapshotData = latestSnapshotAssets?.get(asset);
+			const amount = latestSnapshotData?.amount ?? 0;
 			const eurValue = latestData?.eurValue ?? null;
-
-			let totalEurInvested = 0;
-			for (const [, assets] of snapshotsByDate) {
-				const assetData = assets.get(asset);
-				if (assetData) {
-					totalEurInvested = assetData.eurInvested;
-				}
-			}
+			const totalEurInvested = latestSnapshotData?.eurInvested ?? 0;
 
 			const positionHistory: { date: string; value: number | null }[] = [];
 			for (const [date, assets] of snapshotsByDate) {
@@ -395,8 +420,7 @@ export class PortfolioSnapshotsService {
 
 		const accountsOverview: AccountOverview[] = [];
 		const accountRepo = this.dataSource.getRepository(AccountEntity);
-		const currentHoldings = await this.getAllCurrentHoldings(userId);
-		
+
 		for (const [accountId, holdings] of currentHoldings) {
 			const account = await accountRepo.findOne({ where: { id: accountId } });
 			if (account) {
@@ -468,14 +492,14 @@ export class PortfolioSnapshotsService {
 		const stats = await qb
 			.select([
 				"transaction.asset AS asset",
-				"SUM(CASE WHEN transaction.type = :sell THEN -ABS(transaction.quantity) ELSE ABS(transaction.quantity) END) AS amount",
+				"SUM(CASE WHEN transaction.type = :sell THEN -ABS(transaction.quantity) WHEN transaction.type IN (:...transferTypes) THEN 0 ELSE ABS(transaction.quantity) END) AS amount",
 				"SUM(CASE WHEN transaction.type = :buy THEN transaction.eurValue ELSE 0 END) AS eurInvested",
 				"SUM(CASE WHEN transaction.type = :buy THEN 1 ELSE 0 END) AS buys",
 				"SUM(CASE WHEN transaction.type = :sell THEN 1 ELSE 0 END) AS sells",
 			])
 			.where(
 				"transaction.userId = :userId AND transaction.providerAccountId = :providerAccountId",
-				{ userId, providerAccountId, buy: TransactionType.buy, sell: TransactionType.sell },
+				{ userId, providerAccountId, buy: TransactionType.buy, sell: TransactionType.sell, transferTypes: [TransactionType.transfer_in, TransactionType.transfer_out] },
 			)
 			.andWhere("transaction.timestamp <= :timestampLimit", { timestampLimit })
 			.groupBy("transaction.asset")
@@ -501,13 +525,13 @@ export class PortfolioSnapshotsService {
 		const stats = await qb
 			.select([
 				"transaction.asset AS asset",
-				"SUM(CASE WHEN transaction.type = :sell THEN -ABS(transaction.quantity) ELSE ABS(transaction.quantity) END) AS amount",
+				"SUM(CASE WHEN transaction.type = :sell THEN -ABS(transaction.quantity) WHEN transaction.type IN (:...transferTypes) THEN 0 ELSE ABS(transaction.quantity) END) AS amount",
 				"SUM(CASE WHEN transaction.type = :buy THEN 1 ELSE 0 END) AS buys",
 				"SUM(CASE WHEN transaction.type = :sell THEN 1 ELSE 0 END) AS sells",
 			])
 			.where(
 				"transaction.userId = :userId AND transaction.providerAccountId = :providerAccountId",
-				{ userId, providerAccountId, buy: TransactionType.buy, sell: TransactionType.sell },
+				{ userId, providerAccountId, buy: TransactionType.buy, sell: TransactionType.sell, transferTypes: [TransactionType.transfer_in, TransactionType.transfer_out] },
 			)
 			.groupBy("transaction.asset")
 			.getRawMany();
@@ -531,11 +555,11 @@ export class PortfolioSnapshotsService {
 			.select([
 				"transaction.providerAccountId AS providerAccountId",
 				"transaction.asset AS asset",
-				"SUM(CASE WHEN transaction.type = :sell THEN -ABS(transaction.quantity) ELSE ABS(transaction.quantity) END) AS amount",
+				"SUM(CASE WHEN transaction.type = :sell THEN -ABS(transaction.quantity) WHEN transaction.type IN (:...transferTypes) THEN 0 ELSE ABS(transaction.quantity) END) AS amount",
 				"SUM(CASE WHEN transaction.type = :buy THEN 1 ELSE 0 END) AS buys",
 				"SUM(CASE WHEN transaction.type = :sell THEN 1 ELSE 0 END) AS sells",
 			])
-			.where("transaction.userId = :userId", { userId, buy: TransactionType.buy, sell: TransactionType.sell })
+			.where("transaction.userId = :userId", { userId, buy: TransactionType.buy, sell: TransactionType.sell, transferTypes: [TransactionType.transfer_in, TransactionType.transfer_out] })
 			.groupBy("transaction.providerAccountId, transaction.asset")
 			.getRawMany();
 
@@ -576,6 +600,24 @@ export class PortfolioSnapshotsService {
 
 		return results.map((r) => ({
 			userId: Number(r.userId),
+			providerAccountId: Number(r.providerAccountId),
+		}));
+	}
+
+	private async getUserAccountsWithTransactions(userId: number): Promise<{ providerAccountId: number }[]> {
+		const qb = this.dataSource
+			.getRepository(TransactionEntity)
+			.createQueryBuilder("transaction");
+
+		const results = await qb
+			.select([
+				"transaction.providerAccountId AS providerAccountId",
+			])
+			.where("transaction.userId = :userId", { userId })
+			.distinct(true)
+			.getRawMany();
+
+		return results.map((r) => ({
 			providerAccountId: Number(r.providerAccountId),
 		}));
 	}

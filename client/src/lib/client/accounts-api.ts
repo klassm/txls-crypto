@@ -139,4 +139,10 @@ export const accountsApi = {
 
   getSyncStatus: (id: number) =>
     fetchJson<{ status: SyncStatus; lastSyncAt: string | null; syncError: string | null }>(`/api/accounts/${id}/sync-status`),
+
+  addManualStaking: (id: number, data: { timestamp: string; asset: string; quantity: number; eurValue: number }) =>
+    fetchJson<{ success: boolean; imported: number }>(`/api/accounts/${id}/transactions`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
 }

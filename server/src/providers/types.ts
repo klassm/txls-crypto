@@ -28,4 +28,5 @@ export interface ProviderConfig {
   logoPath: string;
   csvImportMarkdownInstructions: string;
   apiSyncMarkdownInstructions: string;
+  supportsManualStaking: boolean;
 }

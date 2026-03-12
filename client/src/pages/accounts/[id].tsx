@@ -108,6 +108,7 @@ export default function AccountDetailPage() {
 
 	const currentSource = sources.find((s) => s.source === account?.provider);
 	const apiSyncInstructions = currentSource?.apiSyncMarkdownInstructions ?? "";
+	const supportsManualStaking = currentSource?.supportsManualStaking ?? false;
 
 	const formatValue = (value: number) =>
 		new Intl.NumberFormat("de-DE", {
@@ -174,15 +175,16 @@ export default function AccountDetailPage() {
 						) : (
 							<Grid container spacing={3}>
 								<Grid size={{ xs: 12, lg: 8 }}>
-									<TransactionsTable
-										transactions={transactions}
-										onImport={() => setImportDialogOpen(true)}
-										csvImportAllowed={csvImportAllowed}
-										apiSettings={apiSettings}
-										accountId={Number(id)}
-										onSyncComplete={handleSyncComplete}
-										onConfigureApiKey={() => setApiSyncDialogOpen(true)}
-									/>
+							<TransactionsTable
+								transactions={transactions}
+								onImport={() => setImportDialogOpen(true)}
+								csvImportAllowed={csvImportAllowed}
+								apiSettings={apiSettings}
+								accountId={Number(id)}
+								onSyncComplete={handleSyncComplete}
+								onConfigureApiKey={() => setApiSyncDialogOpen(true)}
+								supportsManualStaking={supportsManualStaking}
+							/>
 								</Grid>
 								<Grid size={{ xs: 12, lg: 4 }}>
 									<Box sx={{ position: { lg: "sticky" }, top: { lg: 16 } }}>
