@@ -166,7 +166,7 @@ When modifying database entities (e.g., AccountEntity, UserEntity):
    - Validation schemas (`shared/src/validation/schemas.ts`)
    - Integration tests (`test/integration/*.spec.ts`)
    - Unit tests (`shared/src/**/*.spec.ts`)
-4. **Run Tests**: Verify all tests pass with `npm run test`
+4. **Run Tests**: Verify all tests pass with `pnpm run test`
 
 **Important**: Database column names should use snake_case (e.g., `provider_account_id`, `created_at`) in migrations, while TypeScript properties use camelCase (e.g., `providerAccountId`, `createdAt`) in entities with `name` decorator mapping.
 
@@ -212,16 +212,16 @@ if (!validationResult.success) {
 ## Common Commands
 
 ```bash
-npm run dev                      # Start all dev servers (client + server)
-npm run build                    # Build all packages for production
-npm run lint                     # Check code with Biome
-npm run lint:fix                 # Fix linting issues
-npm run format                   # Format code with Biome
-npm run check                    # Run all checks (lint + format)
-npm run test                     # Run all tests (unit + integration)
-npm run test:unit                # Run unit tests only
-npm run test:integration         # Run integration tests only
-npm run test:e2e                 # Run Playwright e2e tests
+pnpm run dev                      # Start all dev servers (client + server)
+pnpm run build                    # Build all packages for production
+pnpm run lint                     # Check code with Biome
+pnpm run lint:fix                 # Fix linting issues
+pnpm run format                   # Format code with Biome
+pnpm run check                    # Run all checks (lint + format)
+pnpm run test                     # Run all tests (unit + integration)
+pnpm run test:unit                # Run unit tests only
+pnpm run test:integration         # Run integration tests only
+pnpm run test:e2e                 # Run Playwright e2e tests
 ```
 
 ## Database Support

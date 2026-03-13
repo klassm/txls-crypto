@@ -17,7 +17,7 @@
     "@mui/icons-material": "^7.3.8",
     "@mui/material": "^7.3.8",
     "@tanstack/react-query": "^5.90.21",
-    "@txls/shared": "*",
+    "@txls/shared": "workspace:*",
     "material-react-table": "^3.2.1",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",

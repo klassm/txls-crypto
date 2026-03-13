@@ -189,7 +189,7 @@ export class ProvidersService {
 		}
 
 		try {
-			await this.repository.delete(id);
+			await this.repository.delete(userId, id);
 
 			logger.info({
 				message: "Provider deleted successfully",

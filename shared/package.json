@@ -16,7 +16,9 @@
     "dev": "tsc --watch",
     "lint": "biome lint src",
     "lint:fix": "biome lint --write src",
-    "format": "biome format --write src"
+    "format": "biome format --write src",
+    "test": "vitest run",
+    "test:unit": "vitest run"
   },
   "dependencies": {
     "luxon": "^3.7.2"
@@ -24,6 +26,7 @@
   "devDependencies": {
     "@types/luxon": "^3.7.1",
     "@types/node": "^20.11.24",
-    "typescript": "^5.4.5"
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.1"
   }
 }

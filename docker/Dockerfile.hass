@@ -2,34 +2,38 @@
 FROM node:24-alpine AS shared-builder
 WORKDIR /app
 RUN apk add --no-cache python3 make g++
-COPY package*.json ./
+RUN corepack enable && corepack prepare pnpm@10.6.5 --activate
+COPY pnpm-lock.yaml package.json pnpm-workspace.yaml ./
 COPY shared/package.json ./shared/
-RUN npm ci -w shared
+RUN pnpm install --filter @txls/shared --frozen-lockfile
 COPY shared ./shared
-RUN npm run build -w shared
+RUN pnpm run build --filter @txls/shared
 
 # Build stage for server
 FROM node:24-alpine AS server-builder
 WORKDIR /app
 RUN apk add --no-cache python3 make g++
-COPY package*.json ./
+RUN corepack enable && corepack prepare pnpm@10.6.5 --activate
+COPY pnpm-lock.yaml package.json pnpm-workspace.yaml ./
 COPY shared/package.json ./shared/
 COPY server/package.json ./server/
-RUN npm ci -w shared -w server && npm rebuild better-sqlite3
+RUN pnpm install --filter @txls/shared --filter @txls/server --frozen-lockfile
+RUN pnpm rebuild better-sqlite3
 COPY shared ./shared
 COPY server ./server
-RUN npm run build -w shared && npm run build -w server
+RUN pnpm run build --filter @txls/shared && pnpm run build --filter @txls/server
 
 # Build stage for client
 FROM node:24-alpine AS client-builder
 WORKDIR /app
-COPY package*.json ./
+RUN corepack enable && corepack prepare pnpm@10.6.5 --activate
+COPY pnpm-lock.yaml package.json pnpm-workspace.yaml ./
 COPY shared/package.json ./shared/
 COPY client/package.json ./client/
-RUN npm ci -w shared -w client
+RUN pnpm install --filter @txls/shared --filter @txls/client --frozen-lockfile
 COPY shared ./shared
 COPY client ./client
-RUN npm run build -w shared && npm run build -w client
+RUN pnpm run build --filter @txls/shared && pnpm run build --filter @txls/client
 
 # Runtime stage
 FROM node:24-alpine
@@ -38,12 +42,14 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
+RUN corepack enable && corepack prepare pnpm@10.6.5 --activate
 RUN apk add --no-cache nginx curl sqlite jq openssl python3 make g++
 
-COPY package*.json ./
+COPY pnpm-lock.yaml package.json pnpm-workspace.yaml ./
 COPY shared/package.json ./shared/
 COPY server/package.json ./server/
-RUN npm ci --omit=dev -w shared -w server && npm rebuild better-sqlite3
+RUN pnpm install --filter @txls/shared --filter @txls/server --frozen-lockfile --prod
+RUN pnpm rebuild better-sqlite3
 
 # Copy built shared (includes migrations in dist/migrations)
 COPY --from=shared-builder /app/shared/dist ./shared/dist

@@ -194,6 +194,7 @@ describe("TransactionsService", () => {
 			expect(result.imported).toBe(1);
 			expect(result.errors).toHaveLength(0);
 			expect(mockRepository.findOneByExternalId).toHaveBeenCalledWith(
+				1,
 				"IMPORT-001",
 			);
 			expect(mockRepository.save).toHaveBeenCalled();

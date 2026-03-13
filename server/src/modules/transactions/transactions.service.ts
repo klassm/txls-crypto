@@ -113,6 +113,7 @@ async importTransactions(
 		for (const transaction of transactions) {
 			try {
 				const existing = await this.repository.findOneByExternalId(
+					userId,
 					transaction.externalId,
 				);
 

@@ -115,7 +115,7 @@ export class ApiSyncService {
     }
 
     const earliestTimestamp = this.getEarliestTimestamp(result.transactions);
-    await this.deleteAllTransactions(accountId);
+    await this.deleteAllTransactions(userId, accountId);
 
     const importResult = await this.transactionsService.importTransactions(
       userId,
@@ -123,7 +123,7 @@ export class ApiSyncService {
       result.transactions
     );
 
-    const savedTransactions = await this.getSavedTransactions(accountId, result.transactions);
+    const savedTransactions = await this.getSavedTransactions(userId, accountId, result.transactions);
 
     if (savedTransactions.length > 0) {
       await this.priceBackfillService.storePricesFromTransactions(savedTransactions);
@@ -186,24 +186,25 @@ export class ApiSyncService {
     return DateTime.fromMillis(earliest);
   }
 
-  private async deleteAllTransactions(accountId: number): Promise<void> {
+  private async deleteAllTransactions(userId: number, accountId: number): Promise<void> {
     const repo = this.dataSource.getRepository(TransactionEntity);
 
     const result = await repo
       .createQueryBuilder()
       .delete()
-      .where("provider_account_id = :accountId", { accountId })
+      .where("user_id = :userId AND provider_account_id = :accountId", { userId, accountId })
       .execute();
 
     logger.info({ accountId, deleted: result.affected }, "[ApiSyncService] Deleted all existing transactions");
   }
 
   private async getSavedTransactions(
+    userId: number,
     accountId: number,
     transactions: Transaction[]
   ): Promise<TransactionEntity[]> {
     const externalIds = transactions.map((t) => t.externalId);
-    return this.transactionsRepo.findManyByExternalIds(externalIds);
+    return this.transactionsRepo.findManyByExternalIds(userId, externalIds);
   }
 
   private async updateSyncSuccess(account: AccountEntity): Promise<void> {

@@ -117,14 +117,14 @@ describe("TransactionsRepository Integration Tests", () => {
       const entity = createBaseEntity({ externalId: "UNIQUE-001" });
       await repository.save(entity);
 
-      const found = await repository.findOneByExternalId("UNIQUE-001");
+      const found = await repository.findOneByExternalId(1, "UNIQUE-001");
 
       expect(found).toBeDefined();
       expect(found?.externalId).toBe("UNIQUE-001");
     });
 
     it("should return null for non-existent external id", async () => {
-      const found = await repository.findOneByExternalId("NON-EXISTENT");
+      const found = await repository.findOneByExternalId(1, "NON-EXISTENT");
       expect(found).toBeNull();
     });
   });
@@ -369,12 +369,12 @@ describe("TransactionsRepository Integration Tests", () => {
     });
 
     it("should return true for existing external id", async () => {
-      const exists = await repository.existsByExternalId("EXISTS-001");
+      const exists = await repository.existsByExternalId(1, "EXISTS-001");
       expect(exists).toBe(true);
     });
 
     it("should return false for non-existent external id", async () => {
-      const exists = await repository.existsByExternalId("NON-EXISTENT");
+      const exists = await repository.existsByExternalId(1, "NON-EXISTENT");
       expect(exists).toBe(false);
     });
   });
@@ -391,7 +391,7 @@ describe("TransactionsRepository Integration Tests", () => {
     });
 
     it("should find multiple transactions by external ids", async () => {
-      const transactions = await repository.findManyByExternalIds([
+      const transactions = await repository.findManyByExternalIds(1, [
         "FIND-1",
         "FIND-2",
       ]);
@@ -402,12 +402,12 @@ describe("TransactionsRepository Integration Tests", () => {
     });
 
     it("should return empty array for empty input", async () => {
-      const transactions = await repository.findManyByExternalIds([]);
+      const transactions = await repository.findManyByExternalIds(1, []);
       expect(transactions).toEqual([]);
     });
 
     it("should return only existing transactions", async () => {
-      const transactions = await repository.findManyByExternalIds([
+      const transactions = await repository.findManyByExternalIds(1, [
         "FIND-1",
         "NON-EXISTENT",
         "FIND-3",

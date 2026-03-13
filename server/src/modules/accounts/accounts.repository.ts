@@ -29,8 +29,12 @@ export class AccountsRepository {
     return this.dataSource.getRepository(AccountEntity).save(entity);
   }
 
-  async delete(id: number): Promise<void> {
-    await this.dataSource.getRepository(AccountEntity).delete(id);
+  async delete(userId: number, id: number): Promise<void> {
+    await this.dataSource.getRepository(AccountEntity)
+      .createQueryBuilder()
+      .delete()
+      .where("id = :id AND user_id = :userId", { id, userId })
+      .execute();
   }
 
   async count(): Promise<number> {

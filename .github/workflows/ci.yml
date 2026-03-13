@@ -13,20 +13,24 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
+    - uses: pnpm/action-setup@v4
+      with:
+        version: 10
+    
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '24'
-        cache: 'npm'
+        cache: 'pnpm'
     
     - name: Install dependencies
-      run: npm ci
+      run: pnpm install --frozen-lockfile
     
     - name: Rebuild native modules
-      run: npm rebuild better-sqlite3
+      run: pnpm rebuild better-sqlite3
     
     - name: Build application
-      run: npm run build
+      run: pnpm run build
       env:
         NODE_ENV: production
         JWT_SECRET: ${{ secrets.JWT_SECRET }}
@@ -48,14 +52,18 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
+    - uses: pnpm/action-setup@v4
+      with:
+        version: 10
+    
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '24'
-        cache: 'npm'
+        cache: 'pnpm'
     
     - name: Install dependencies
-      run: npm ci
+      run: pnpm install --frozen-lockfile
     
     - name: Download build artifacts
       uses: actions/download-artifact@v4
@@ -63,7 +71,7 @@ jobs:
         name: build-artifacts
     
     - name: Run linter
-      run: npm run lint
+      run: pnpm run lint
 
   test-unit:
     runs-on: ubuntu-latest
@@ -72,14 +80,18 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
+    - uses: pnpm/action-setup@v4
+      with:
+        version: 10
+    
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '24'
-        cache: 'npm'
+        cache: 'pnpm'
     
     - name: Install dependencies
-      run: npm ci
+      run: pnpm install --frozen-lockfile
     
     - name: Download build artifacts
       uses: actions/download-artifact@v4
@@ -87,10 +99,10 @@ jobs:
         name: build-artifacts
 
     - name: Rebuild native modules
-      run: npm rebuild better-sqlite3
+      run: pnpm rebuild better-sqlite3
 
     - name: Run unit tests
-      run: npm run test:unit
+      run: pnpm run test:unit
 
   test-integration:
     runs-on: ubuntu-latest
@@ -129,14 +141,18 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
+    - uses: pnpm/action-setup@v4
+      with:
+        version: 10
+    
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '24'
-        cache: 'npm'
+        cache: 'pnpm'
     
     - name: Install dependencies
-      run: npm ci
+      run: pnpm install --frozen-lockfile
     
     - name: Download build artifacts
       uses: actions/download-artifact@v4
@@ -144,18 +160,18 @@ jobs:
         name: build-artifacts
 
     - name: Rebuild native modules
-      run: npm rebuild better-sqlite3
-
+      run: pnpm rebuild better-sqlite3
+    
     - name: Run SQLite integration tests
-      run: npm run test:integration:sqlite
+      run: pnpm run test:integration:sqlite
     
     - name: Run PostgreSQL integration tests
-      run: npm run test:integration:postgres
+      run: pnpm run test:integration:postgres
       env:
         JWT_SECRET: test-secret-key-for-jwt-signing-in-tests-sufficiently-long
     
     - name: Run MySQL integration tests
-      run: npm run test:integration:mysql
+      run: pnpm run test:integration:mysql
       env:
         JWT_SECRET: test-secret-key-for-jwt-signing-in-tests-sufficiently-long
 
@@ -166,24 +182,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-
-      - name: Cache node modules
-        id: cache-npm
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.npm
-            node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
+          cache: 'pnpm'
 
       - name: Install dependencies
-        if: steps.cache-npm.outputs.cache-hit != 'true'
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Download build artifacts
         uses: actions/download-artifact@v4
@@ -191,13 +200,13 @@ jobs:
           name: build-artifacts
 
       - name: Rebuild native modules
-        run: npm rebuild better-sqlite3
+        run: pnpm rebuild better-sqlite3
 
       - name: Install Playwright Browsers
-        run: npx playwright install --with-deps chromium
+        run: pnpm exec playwright install --with-deps chromium
 
       - name: Run GUI tests (local dev)
-        run: npm run test:gui:local
+        run: pnpm run test:gui:local
 
       - name: Upload test results
         if: always()
@@ -214,24 +223,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-
-      - name: Cache node modules
-        id: cache-npm
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.npm
-            node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
+          cache: 'pnpm'
 
       - name: Install dependencies
-        if: steps.cache-npm.outputs.cache-hit != 'true'
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Download build artifacts
         uses: actions/download-artifact@v4
@@ -239,13 +241,13 @@ jobs:
           name: build-artifacts
 
       - name: Rebuild native modules
-        run: npm rebuild better-sqlite3
+        run: pnpm rebuild better-sqlite3
 
       - name: Install Playwright Browsers
-        run: npx playwright install --with-deps chromium
+        run: pnpm exec playwright install --with-deps chromium
 
       - name: Run GUI tests (Docker)
-        run: npm run test:gui:docker
+        run: pnpm run test:gui:docker
 
       - name: Upload test results
         if: always()
@@ -262,24 +264,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-
-      - name: Cache node modules
-        id: cache-npm
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.npm
-            node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
+          cache: 'pnpm'
 
       - name: Install dependencies
-        if: steps.cache-npm.outputs.cache-hit != 'true'
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Download build artifacts
         uses: actions/download-artifact@v4
@@ -287,13 +282,13 @@ jobs:
           name: build-artifacts
 
       - name: Rebuild native modules
-        run: npm rebuild better-sqlite3
+        run: pnpm rebuild better-sqlite3
 
       - name: Install Playwright Browsers
-        run: npx playwright install --with-deps chromium
+        run: pnpm exec playwright install --with-deps chromium
 
       - name: Run GUI tests (Home Assistant ingress)
-        run: npm run test:gui:hass
+        run: pnpm run test:gui:hass
 
       - name: Upload test results
         if: always()

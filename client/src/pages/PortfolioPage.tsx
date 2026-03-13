@@ -15,6 +15,7 @@ import { ChartDialog, type TimeSpan } from "../components/charts/ChartDialog";
 import { ExpandButton } from "../components/charts/ExpandButton";
 import { portfolioApi } from "../lib/client/prices-api";
 import type { PortfolioHistoryPoint, AssetOverview } from "../lib/client/prices-api";
+import { calculatePortfolioChange } from "@txls/shared";
 
 interface ChangeStats {
 	absolute: number;
@@ -25,21 +26,9 @@ function calculateChange(
 	history: PortfolioHistoryPoint[] | undefined,
 	days: number
 ): ChangeStats | null {
-	if (!history || history.length < 2) return null;
-
-	const latest = history[history.length - 1];
-	if (latest.totalEurValue === null) return null;
-
-	const pastIndex = history.length - 1 - days;
-	if (pastIndex < 0) return null;
-
-	const past = history[pastIndex];
-	if (past.totalEurValue === null) return null;
-
-	const absolute = latest.totalEurValue - past.totalEurValue;
-	const relative = (absolute / past.totalEurValue) * 100;
-
-	return { absolute, relative };
+	const result = calculatePortfolioChange(history, days);
+	if (!result) return null;
+	return result;
 }
 
 function PortfolioStats({ history, assets }: { history: PortfolioHistoryPoint[] | undefined; assets: AssetOverview[] }) {

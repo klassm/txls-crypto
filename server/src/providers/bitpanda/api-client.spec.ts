@@ -283,7 +283,7 @@ describe("BitpandaApiClient", () => {
       expect(result.transactions).toHaveLength(0);
     });
 
-    it("should fetch wallet transfers (staking, deposits, withdrawals)", async () => {
+    it("should skip stake/unstake transfers and regular transfers", async () => {
       nock(BITPANDA_API_BASE)
         .get("/trades")
         .query({ page_size: 100 })
@@ -295,7 +295,7 @@ describe("BitpandaApiClient", () => {
         .reply(200, {
           data: [
             {
-              id: "wallet-reward-1",
+              id: "wallet-unstake-1",
               type: "wallet_transaction",
               attributes: {
                 amount: "1.84379034",
@@ -318,11 +318,34 @@ describe("BitpandaApiClient", () => {
               },
             },
             {
-              id: "wallet-transfer-2",
+              id: "wallet-stake-1",
+              type: "wallet_transaction",
+              attributes: {
+                amount: "2.0",
+                time: { date_iso8601: "2024-01-14T10:00:00+01:00" },
+                in_or_out: "outgoing",
+                type: "transfer",
+                status: "finished",
+                amount_eur: "5287.40",
+                cryptocoin_symbol: "ETH",
+                fee: "0",
+                tags: [
+                  {
+                    type: "tag",
+                    attributes: {
+                      short_name: "stake",
+                      name: "Stake",
+                    },
+                  },
+                ],
+              },
+            },
+            {
+              id: "wallet-transfer-1",
               type: "wallet_transaction",
               attributes: {
                 amount: "0.5",
-                time: { date_iso8601: "2024-01-14T10:00:00+01:00" },
+                time: { date_iso8601: "2024-01-13T10:00:00+01:00" },
                 in_or_out: "incoming",
                 type: "transfer",
                 status: "finished",
@@ -333,11 +356,26 @@ describe("BitpandaApiClient", () => {
               },
             },
             {
+              id: "wallet-deposit-1",
+              type: "wallet_transaction",
+              attributes: {
+                amount: "0.1",
+                time: { date_iso8601: "2024-01-12T10:00:00+01:00" },
+                in_or_out: "incoming",
+                type: "deposit",
+                status: "finished",
+                amount_eur: "5000.00",
+                cryptocoin_symbol: "BTC",
+                fee: "0",
+                tags: [],
+              },
+            },
+            {
               id: "wallet-buy-duplicate",
               type: "wallet_transaction",
               attributes: {
                 amount: "0.06124219",
-                time: { date_iso8601: "2024-01-13T10:00:00+01:00" },
+                time: { date_iso8601: "2024-01-11T10:00:00+01:00" },
                 in_or_out: "incoming",
                 type: "buy",
                 status: "finished",
@@ -349,15 +387,15 @@ describe("BitpandaApiClient", () => {
               },
             },
           ],
-          meta: { total_count: 3, page_size: 100 },
+          meta: { total_count: 5, page_size: 100 },
         });
 
       const result = await client.fetchTransactions(API_KEY);
 
       expect(result.transactions).toHaveLength(1);
-      expect(result.transactions[0].type).toBe(TransactionType.reward);
-      expect(result.transactions[0].asset).toBe("ETH");
-      expect(result.transactions[0].quantity).toBe(1.84379034);
+      expect(result.transactions[0].type).toBe(TransactionType.deposit);
+      expect(result.transactions[0].asset).toBe("BTC");
+      expect(result.transactions[0].quantity).toBe(0.1);
     });
 
     it("should fetch all pages until no cursor", async () => {

@@ -19,7 +19,7 @@
     "test:integration:mysql": "DB_CONNECTION_STRING=mysql://testuser:testpass@localhost:3306/txls_test vitest run --config vitest.integration.config.ts"
   },
   "dependencies": {
-    "@txls/shared": "*",
+    "@txls/shared": "workspace:*",
     "bcrypt": "^6.0.0",
     "cookie": "^1.1.1",
     "cookie-parser": "^1.4.7",

@@ -15,3 +15,7 @@ data
 .idea
 *.tsbuildinfo
 test-results
+
+# pnpm
+.pnpm-store
+pnpm-lock.yaml

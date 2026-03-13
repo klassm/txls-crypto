@@ -42,15 +42,16 @@ async findByProviderAccountId(userId: number, providerAccountId: number): Promis
   }
 
   async findOneByExternalId(
+    userId: number,
     externalId: string,
   ): Promise<TransactionEntity | null> {
     return this.qb
-      .where("transaction.externalId = :externalId", { externalId })
+      .where("transaction.userId = :userId AND transaction.externalId = :externalId", { userId, externalId })
       .getOne();
   }
 
-  async findOneById(id: number): Promise<TransactionEntity | null> {
-    return this.qb.where("transaction.id = :id", { id }).getOne();
+  async findOneById(userId: number, id: number): Promise<TransactionEntity | null> {
+    return this.qb.where("transaction.userId = :userId AND transaction.id = :id", { userId, id }).getOne();
   }
 
   async save(entity: TransactionEntity): Promise<TransactionEntity> {
@@ -61,8 +62,8 @@ async findByProviderAccountId(userId: number, providerAccountId: number): Promis
     return this.dataSource.getRepository(TransactionEntity).save(entities);
   }
 
-  async delete(id: number): Promise<void> {
-    await this.qb.where("transaction.id = :id", { id }).delete();
+  async delete(userId: number, id: number): Promise<void> {
+    await this.qb.where("transaction.userId = :userId AND transaction.id = :id", { userId, id }).delete();
   }
 
   async deleteByProviderAccountId(userId: number, providerAccountId: number): Promise<void> {
@@ -217,14 +218,15 @@ async getStatsByProviderAccountIdAndYear(
     };
   }
 
-  async existsByExternalId(externalId: string): Promise<boolean> {
+  async existsByExternalId(userId: number, externalId: string): Promise<boolean> {
     const count = await this.qb
-      .where("transaction.externalId = :externalId", { externalId })
+      .where("transaction.userId = :userId AND transaction.externalId = :externalId", { userId, externalId })
       .getCount();
     return count > 0;
   }
 
   async findManyByExternalIds(
+    userId: number,
     externalIds: string[],
   ): Promise<TransactionEntity[]> {
     if (externalIds.length === 0) {
@@ -232,14 +234,14 @@ async getStatsByProviderAccountIdAndYear(
     }
 
     return this.qb
-      .where("transaction.externalId IN (:...externalIds)", { externalIds })
+      .where("transaction.userId = :userId AND transaction.externalId IN (:...externalIds)", { userId, externalIds })
       .getMany();
   }
 
-  async getExternalIdsByAccountId(accountId: number): Promise<Set<string>> {
+  async getExternalIdsByAccountId(userId: number, accountId: number): Promise<Set<string>> {
     const rows = await this.qb
       .select("transaction.externalId")
-      .where("transaction.providerAccountId = :accountId", { accountId })
+      .where("transaction.userId = :userId AND transaction.providerAccountId = :accountId", { userId, accountId })
       .getRawMany();
 
     return new Set(rows.map((row) => row.external_id));

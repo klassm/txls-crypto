@@ -42,7 +42,7 @@ Install directly in Home Assistant:
 Install dependencies:
 
 ```bash
-npm install
+pnpm install
 ```
 
 Create a `.env.local` file with required environment variables:
@@ -63,14 +63,14 @@ openssl rand -base64 64
 Run the development server:
 
 ```bash
-npm run dev
+pnpm run dev
 ```
 
 Or build and run in production:
 
 ```bash
-npm run build
-npm run start
+pnpm run build
+pnpm run start
 ```
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
@@ -106,7 +106,7 @@ DB_CONNECTION_STRING=postgresql://username:password@localhost:5432/database_name
 Setup required:
 ```bash
 # Install PostgreSQL and pg driver (if building locally)
-npm install pg
+pnpm add pg
 
 # Create database
 createdb txls
@@ -121,7 +121,7 @@ DB_CONNECTION_STRING=mysql://username:password@localhost:3306/database_name
 Setup required:
 ```bash
 # Install MySQL and mysql2 driver (if building locally)
-npm install mysql2
+pnpm add mysql2
 
 # Create database
 mysql -u root -p
@@ -166,21 +166,21 @@ Uses Home Assistant's built-in authentication:
 Run tests:
 
 ```bash
-npm test
+pnpm test
 ```
 
 Lint code:
 
 ```bash
-npm run lint
-npm run format
+pnpm run lint
+pnpm run format
 ```
 
 Build for production:
 
 ```bash
-npm run build
-npm start
+pnpm run build
+pnpm start
 ```
 
 ## Contributing

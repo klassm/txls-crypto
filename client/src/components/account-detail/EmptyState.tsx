@@ -1,7 +1,7 @@
 'use client'
 
-import { CloudUpload, Sync, Key, ArrowDropDown } from '@mui/icons-material'
-import { Button, Typography, Box, CircularProgress, Alert, Menu, MenuItem, ButtonGroup } from '@mui/material'
+import { CloudUpload, Sync, Key } from '@mui/icons-material'
+import { Button, Typography, Box, CircularProgress, Alert } from '@mui/material'
 import { useState } from 'react'
 import { StyledEmptyBox } from './EmptyState.styles'
 import { accountsApi } from '../../lib/client/accounts-api'
@@ -30,15 +30,13 @@ export function EmptyState({
   const [isSyncing, setIsSyncing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
-  const [syncMenuAnchor, setSyncMenuAnchor] = useState<null | HTMLElement>(null)
 
-  const handleSync = async (fullSync = false) => {
+  const handleSync = async () => {
     setIsSyncing(true)
     setError(null)
-    setSyncMenuAnchor(null)
 
     try {
-      const result = await accountsApi.triggerSync(accountId, fullSync)
+      const result = await accountsApi.triggerSync(accountId)
       if (result.success) {
         setSuccess(`Synced ${result.imported} transactions`)
         onSyncComplete?.()
@@ -64,22 +62,14 @@ export function EmptyState({
         {error && <Alert severity="error" sx={{ mb: 2, width: "100%" }} onClose={() => setError(null)}>{error}</Alert>}
         {success && <Alert severity="success" sx={{ mb: 2, width: "100%" }} onClose={() => setSuccess(null)}>{success}</Alert>}
         <Box sx={{ display: "flex", gap: 1 }}>
-          <ButtonGroup variant="contained">
-            <Button
-              onClick={() => handleSync(false)}
-              disabled={isSyncing}
-              startIcon={isSyncing ? <CircularProgress size={20} /> : <Sync />}
-            >
-              Sync Now
-            </Button>
-            <Button
-              size="small"
-              onClick={(e) => setSyncMenuAnchor(e.currentTarget)}
-              disabled={isSyncing}
-            >
-              <ArrowDropDown />
-            </Button>
-          </ButtonGroup>
+          <Button
+            variant="contained"
+            onClick={handleSync}
+            disabled={isSyncing}
+            startIcon={isSyncing ? <CircularProgress size={20} /> : <Sync />}
+          >
+            Sync Now
+          </Button>
           <Button
             variant="outlined"
             onClick={onConfigureApiKey}
@@ -88,18 +78,6 @@ export function EmptyState({
             Settings
           </Button>
         </Box>
-        <Menu
-          anchorEl={syncMenuAnchor}
-          open={Boolean(syncMenuAnchor)}
-          onClose={() => setSyncMenuAnchor(null)}
-        >
-          <MenuItem onClick={() => handleSync(false)}>
-            Incremental Sync
-          </MenuItem>
-          <MenuItem onClick={() => handleSync(true)}>
-            Full Sync (reimport all)
-          </MenuItem>
-        </Menu>
       </StyledEmptyBox>
     )
   }

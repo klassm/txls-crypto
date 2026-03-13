@@ -140,7 +140,7 @@ entity.provider = data.provider || entity.provider || ProviderType.Bitpanda;
     try {
       await this.transactionsRepository.deleteByProviderAccountId(userId, id);
       await this.snapshotsService.deleteByAccount(userId, id);
-      await this.repository.delete(id);
+      await this.repository.delete(userId, id);
 
       logger.info({
         message: "Account deleted successfully",

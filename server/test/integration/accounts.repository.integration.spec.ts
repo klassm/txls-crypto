@@ -135,14 +135,14 @@ describe("AccountsRepository Integration Tests", () => {
       account.updatedAt = now;
       const saved = await repository.save(account);
 
-      await repository.delete(saved.id);
+      await repository.delete(1, saved.id);
 
       const result = await repository.findById(1, saved.id);
       expect(result).toBeNull();
     });
 
     it("should not throw when deleting non-existent account", async () => {
-      await expect(repository.delete(999)).resolves.not.toThrow();
+      await expect(repository.delete(1, 999)).resolves.not.toThrow();
     });
 
     it("should delete associated transactions and portfolio snapshots when deleting an account", async () => {
