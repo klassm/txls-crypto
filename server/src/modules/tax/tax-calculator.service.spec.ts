@@ -194,6 +194,71 @@ describe("TaxCalculationService", () => {
     });
   });
 
+  describe("withdrawals", () => {
+    it("should treat unmatched withdrawal as taxable sell with cost basis from buy", () => {
+      const service = new TaxCalculationService();
+      const transactions: Transaction[] = [
+        createTransaction(1, "2024-01-01T00:00:00Z", "buy", "BTC", 0.1, 1000, 0),
+        createTransaction(2, "2024-06-01T00:00:00Z", "withdrawal", "BTC", 0.1, 1200, 5),
+      ];
+
+      const result = service.calculateTax(transactions);
+
+      expect(result.size).toBe(1);
+      const btcCalc = result.get("BTC");
+      expect(btcCalc?.transactions).toHaveLength(1);
+      expect(btcCalc?.transactions[0].type).toBe("sell");
+      expect(btcCalc?.totalGain).toBeCloseTo(195, 2);
+    });
+
+    it("should treat unmatched withdrawal without buy as fully taxable (cost basis 0)", () => {
+      const service = new TaxCalculationService();
+      const transactions: Transaction[] = [
+        createTransaction(1, "2024-06-20T00:00:00Z", "withdrawal", "BTC", 0.1, 1200, 0),
+      ];
+
+      const result = service.calculateTax(transactions);
+
+      expect(result.size).toBe(1);
+      const btcCalc = result.get("BTC");
+      expect(btcCalc?.transactions).toHaveLength(1);
+      expect(btcCalc?.transactions[0].costBasis).toBe(0);
+      expect(btcCalc?.totalGain).toBe(1200);
+    });
+
+    it("should skip withdrawal if linkedTransactionId is set (matched transfer)", () => {
+      const service = new TaxCalculationService();
+      const baseTx = createTransaction(1, "2024-01-01T00:00:00Z", "withdrawal", "BTC", 0.1, 1000, 0);
+      const withdrawalTx: Transaction = {
+        ...baseTx,
+        linkedTransactionId: 2,
+      } as Transaction;
+      const transactions: Transaction[] = [withdrawalTx];
+
+      const result = service.calculateTax(transactions);
+
+      expect(result.size).toBe(0);
+    });
+
+    it("should process withdrawal using FIFO like sells", () => {
+      const service = new TaxCalculationService();
+      const transactions: Transaction[] = [
+        createTransaction(1, "2024-01-01T00:00:00Z", "buy", "BTC", 0.1, 1000, 0),
+        createTransaction(2, "2024-02-01T00:00:00Z", "buy", "BTC", 0.1, 2000, 0),
+        createTransaction(3, "2024-06-01T00:00:00Z", "withdrawal", "BTC", 0.15, 3000, 0),
+      ];
+
+      const result = service.calculateTax(transactions);
+
+      const btcCalc = result.get("BTC");
+      expect(btcCalc?.transactions).toHaveLength(2);
+      expect(btcCalc?.transactions[0].quantity).toBeCloseTo(0.1, 5);
+      expect(btcCalc?.transactions[0].costBasis).toBeCloseTo(1000, 2);
+      expect(btcCalc?.transactions[1].quantity).toBeCloseTo(0.05, 5);
+      expect(btcCalc?.transactions[1].costBasis).toBeCloseTo(1000, 2);
+    });
+  });
+
   describe("calculateTaxForYear", () => {
     it("should only include transactions for the specified year", () => {
       const service = new TaxCalculationService();

@@ -95,6 +95,11 @@ export class TaxCalculationService {
         });
       } else if (transaction.type === "sell") {
         this.processSell(transaction, asset, accountQueues, assetCalculations);
+      } else if (transaction.type === "withdrawal") {
+        if ((transaction as any).linkedTransactionId) {
+          continue;
+        }
+        this.processSell(transaction, asset, accountQueues, assetCalculations);
       }
     }
 

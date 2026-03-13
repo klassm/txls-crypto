@@ -283,7 +283,7 @@ describe("BitpandaApiClient", () => {
       expect(result.transactions).toHaveLength(0);
     });
 
-    it("should skip stake/unstake transfers and regular transfers", async () => {
+    it("should parse transfers as deposit/withdrawal, skip stake/unstake transfers", async () => {
       nock(BITPANDA_API_BASE)
         .get("/trades")
         .query({ page_size: 100 })
@@ -341,7 +341,7 @@ describe("BitpandaApiClient", () => {
               },
             },
             {
-              id: "wallet-transfer-1",
+              id: "wallet-transfer-in",
               type: "wallet_transaction",
               attributes: {
                 amount: "0.5",
@@ -350,6 +350,21 @@ describe("BitpandaApiClient", () => {
                 type: "transfer",
                 status: "finished",
                 amount_eur: "20000",
+                cryptocoin_symbol: "BTC",
+                fee: "0",
+                tags: [],
+              },
+            },
+            {
+              id: "wallet-transfer-out",
+              type: "wallet_transaction",
+              attributes: {
+                amount: "0.3",
+                time: { date_iso8601: "2024-01-13T11:00:00+01:00" },
+                in_or_out: "outgoing",
+                type: "transfer",
+                status: "finished",
+                amount_eur: "12000",
                 cryptocoin_symbol: "BTC",
                 fee: "0",
                 tags: [],
@@ -387,15 +402,16 @@ describe("BitpandaApiClient", () => {
               },
             },
           ],
-          meta: { total_count: 5, page_size: 100 },
+          meta: { total_count: 6, page_size: 100 },
         });
 
       const result = await client.fetchTransactions(API_KEY);
 
-      expect(result.transactions).toHaveLength(1);
-      expect(result.transactions[0].type).toBe(TransactionType.deposit);
-      expect(result.transactions[0].asset).toBe("BTC");
-      expect(result.transactions[0].quantity).toBe(0.1);
+      expect(result.transactions).toHaveLength(3);
+      const depositTx = result.transactions.find(t => t.externalId === "wallet-transfer-in");
+      const withdrawalTx = result.transactions.find(t => t.externalId === "wallet-transfer-out");
+      expect(depositTx?.type).toBe(TransactionType.deposit);
+      expect(withdrawalTx?.type).toBe(TransactionType.withdrawal);
     });
 
     it("should fetch all pages until no cursor", async () => {

@@ -162,12 +162,12 @@ const csvContentWithHeader = [lines[headerRowIndex], ...dataLines].join("\n");
       return null;
     }
 
-    if (transactionType === "transfer" || transactionType.startsWith("transfer")) {
-      logger.debug({ accountId, externalId: row["Transaction ID"], type: transactionType }, "Skipping internal transfer");
+    if (transactionType === "transfer(stake)" || transactionType === "transfer(unstake)") {
+      logger.debug({ accountId, externalId: row["Transaction ID"], type: transactionType }, "Skipping stake/unstake transfer");
       return null;
     }
 
-    const type = this.mapTransactionType(transactionType);
+    const type = this.mapTransactionType(transactionType, inOut);
     if (!type) {
       throw new ImportError(`Type: ${transactionType} (${row["Transaction ID"]})`);
     }
@@ -199,7 +199,13 @@ const csvContentWithHeader = [lines[headerRowIndex], ...dataLines].join("\n");
     };
   }
 
-  private mapTransactionType(bitpandaType: string): TransactionType | null {
+  private mapTransactionType(bitpandaType: string, inOut?: string): TransactionType | null {
+    const normalisedType = bitpandaType.toLowerCase().trim();
+    
+    if (normalisedType === "transfer") {
+      return inOut === "outgoing" ? TransactionType.withdrawal : TransactionType.deposit;
+    }
+    
     const typeMap: Record<string, TransactionType> = {
       buy: TransactionType.buy,
       sell: TransactionType.sell,
@@ -208,7 +214,6 @@ const csvContentWithHeader = [lines[headerRowIndex], ...dataLines].join("\n");
       reward: TransactionType.reward,
     };
 
-    const normalisedType = bitpandaType.toLowerCase().trim();
     return typeMap[normalisedType] ?? null;
   }
 

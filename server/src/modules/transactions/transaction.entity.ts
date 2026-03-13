@@ -51,6 +51,17 @@ export class TransactionEntity {
   @Column({ type: "boolean", default: false })
   processed!: boolean;
 
+  @Column({ name: "linked_transaction_id", type: "int", isNullable: true })
+  linkedTransactionId?: number | null;
+
+  @Column({
+    name: "original_acquisition_timestamp",
+    type: "bigint",
+    isNullable: true,
+    transformer: typeOrmDateTimeTransformer,
+  })
+  originalAcquisitionTimestamp?: DateTime | null;
+
   @CreateDateColumn({
     name: "created_at",
     type: "bigint",

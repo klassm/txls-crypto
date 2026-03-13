@@ -76,6 +76,8 @@ export interface Transaction {
   eurFee: number;
   eurRate: number;
   processed: boolean;
+  linkedTransactionId?: number | null;
+  originalAcquisitionTimestamp?: DateTime | null;
 }
 
 export interface ProviderTransactionsDocument {

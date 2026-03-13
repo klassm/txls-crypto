@@ -141,15 +141,16 @@ export class PricesRepository {
 		return result.affected || 0;
 	}
 
-	async getPriceForDate(asset: string, date: DateTime): Promise<AssetPriceEntity | null> {
+	async getPriceForDate(asset: string, date: DateTime, maxAgeDays = 7): Promise<AssetPriceEntity | null> {
 		const dayEnd = date.endOf("day").toMillis();
+		const minFetchTime = date.minus({ days: maxAgeDays }).startOf("day").toMillis();
 		
 		const results = await this.dataSource.query(`
 			SELECT * FROM asset_prices 
-			WHERE asset = ? AND fetched_at <= ?
+			WHERE asset = ? AND fetched_at <= ? AND fetched_at >= ?
 			ORDER BY fetched_at DESC
 			LIMIT 1
-		`, [asset.toUpperCase(), dayEnd]);
+		`, [asset.toUpperCase(), dayEnd, minFetchTime]);
 
 		if (results.length === 0) return null;
 

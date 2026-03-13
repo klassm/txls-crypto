@@ -193,24 +193,26 @@ T22222,2026-02-19 18:00:00,sell,incoming,50,EUR,0.5,ETH,100,EUR,Cryptocurrency,E
       expect(result.validationErrors[0]).toContain("T77777");
     });
 
-    it("should skip transfer transactions (internal wallet moves)", () => {
+    it("should parse transfer outgoing as withdrawal", () => {
       const csv = `Transaction ID,Timestamp,Transaction Type,In/Out,Amount Fiat,Fiat,Amount Asset,Asset,Asset market price,Asset market price currency,Asset class,Product ID,Fee,Fee asset,Fee percent,Spread,Spread Currency,Tax Fiat
 T12345,2026-02-19 20:00:00,buy,outgoing,100,EUR,1,ETH,100,EUR,Cryptocurrency,ETH,1.00,EUR,1,EUR,EUR,0
 13333,2026-02-19 16:00:00,transfer,outgoing,100,EUR,0.1,SOL,1000,EUR,Cryptocurrency,SOL,0.00,EUR,0,EUR,EUR,0`;
 
       const result = service.parseCsv(csv, accountId);
 
-      expect(result.transactions).toHaveLength(1);
+      expect(result.transactions).toHaveLength(2);
       expect(result.transactions[0].type).toBe(TransactionType.buy);
+      expect(result.transactions[1].type).toBe(TransactionType.withdrawal);
     });
 
-    it("should skip transfer_in transactions", () => {
+    it("should parse transfer incoming as deposit", () => {
       const csv = `Transaction ID,Timestamp,Transaction Type,In/Out,Amount Fiat,Fiat,Amount Asset,Asset,Asset market price,Asset market price currency,Asset class,Product ID,Fee,Fee asset,Fee percent,Spread,Spread Currency,Tax Fiat
 13333,2026-02-19 16:00:00,transfer,incoming,100,EUR,0.1,SOL,1000,EUR,Cryptocurrency,SOL,0.00,EUR,0,EUR,EUR,0`;
 
       const result = service.parseCsv(csv, accountId);
 
-      expect(result.transactions).toHaveLength(0);
+      expect(result.transactions).toHaveLength(1);
+      expect(result.transactions[0].type).toBe(TransactionType.deposit);
     });
 
     it("should skip transfer(stake) and transfer(unstake) transactions", () => {
