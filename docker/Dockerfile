@@ -3,7 +3,7 @@ FROM node:24-alpine AS shared-builder
 WORKDIR /app
 RUN apk add --no-cache python3 make g++
 RUN corepack enable && corepack prepare pnpm@10.6.5 --activate
-COPY pnpm-lock.yaml package.json pnpm-workspace.yaml ./
+COPY pnpm-lock.yaml package.json pnpm-workspace.yaml turbo.json ./
 COPY shared/package.json ./shared/
 RUN pnpm install --filter @txls/shared --frozen-lockfile
 COPY shared ./shared
@@ -14,7 +14,7 @@ FROM node:24-alpine AS server-builder
 WORKDIR /app
 RUN apk add --no-cache python3 make g++
 RUN corepack enable && corepack prepare pnpm@10.6.5 --activate
-COPY pnpm-lock.yaml package.json pnpm-workspace.yaml ./
+COPY pnpm-lock.yaml package.json pnpm-workspace.yaml turbo.json ./
 COPY shared/package.json ./shared/
 COPY server/package.json ./server/
 RUN pnpm install --filter @txls/shared --filter @txls/server --frozen-lockfile
@@ -27,7 +27,7 @@ RUN pnpm run build --filter @txls/shared && pnpm run build --filter @txls/server
 FROM node:24-alpine AS client-builder
 WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@10.6.5 --activate
-COPY pnpm-lock.yaml package.json pnpm-workspace.yaml ./
+COPY pnpm-lock.yaml package.json pnpm-workspace.yaml turbo.json ./
 COPY shared/package.json ./shared/
 COPY client/package.json ./client/
 RUN pnpm install --filter @txls/shared --filter @txls/client --frozen-lockfile

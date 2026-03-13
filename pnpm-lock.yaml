@@ -71,12 +71,18 @@ importers:
       '@mui/material':
         specifier: ^7.3.8
         version: 7.3.9(@emotion/react@11.14.0(@types/react@18.3.28)(react@19.2.4))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@18.3.28)(react@19.2.4))(@types/react@18.3.28)(react@19.2.4))(@types/react@18.3.28)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@mui/x-date-pickers':
+        specifier: ^8.9.0
+        version: 8.27.2(@emotion/react@11.14.0(@types/react@18.3.28)(react@19.2.4))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@18.3.28)(react@19.2.4))(@types/react@18.3.28)(react@19.2.4))(@mui/material@7.3.9(@emotion/react@11.14.0(@types/react@18.3.28)(react@19.2.4))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@18.3.28)(react@19.2.4))(@types/react@18.3.28)(react@19.2.4))(@types/react@18.3.28)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(@mui/system@7.3.9(@emotion/react@11.14.0(@types/react@18.3.28)(react@19.2.4))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@18.3.28)(react@19.2.4))(@types/react@18.3.28)(react@19.2.4))(@types/react@18.3.28)(react@19.2.4))(@types/react@18.3.28)(dayjs@1.11.20)(luxon@3.7.2)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       '@tanstack/react-query':
         specifier: ^5.90.21
         version: 5.90.21(react@19.2.4)
       '@txls/shared':
         specifier: workspace:*
         version: link:../shared
+      luxon:
+        specifier: ^3.5.0
+        version: 3.7.2
       material-react-table:
         specifier: ^3.2.1
         version: 3.2.1(fd8e4bc2db49eec00d0ae00d3a60e318)
