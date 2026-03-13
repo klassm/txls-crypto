@@ -208,6 +208,89 @@ describe("Prices Integration Tests", () => {
 				expect(result.size).toBe(0);
 			});
 		});
+
+		describe("getPriceForDate", () => {
+			it("should return price when price exists on the same day", async () => {
+				const testDate = DateTime.utc(2024, 1, 15, 12, 0, 0);
+				const prices: CoinPrice[] = [
+					{ symbol: "BTC", priceEur: 50000, fetchedAt: testDate },
+				];
+
+				await repository.savePrices(prices);
+
+				const result = await repository.getPriceForDate("BTC", testDate);
+
+				expect(result).not.toBeNull();
+				expect(result?.asset).toBe("BTC");
+				expect(Number(result?.priceEur)).toBe(50000);
+			});
+
+			it("should return null when price is from a different day", async () => {
+				const priceDate = DateTime.utc(2024, 1, 14, 12, 0, 0);
+				const queryDate = DateTime.utc(2024, 1, 15, 12, 0, 0);
+				const prices: CoinPrice[] = [
+					{ symbol: "BTC", priceEur: 50000, fetchedAt: priceDate },
+				];
+
+				await repository.savePrices(prices);
+
+				const result = await repository.getPriceForDate("BTC", queryDate);
+
+				expect(result).toBeNull();
+			});
+
+			it("should return null when no price exists for asset", async () => {
+				const testDate = DateTime.utc(2024, 1, 15);
+
+				const result = await repository.getPriceForDate("UNKNOWN", testDate);
+
+				expect(result).toBeNull();
+			});
+
+			it("should return latest price when multiple prices exist on same day", async () => {
+				const testDate = DateTime.utc(2024, 1, 15, 12, 0, 0);
+				const prices: CoinPrice[] = [
+					{ symbol: "BTC", priceEur: 50000, fetchedAt: testDate.minus({ hours: 2 }) },
+					{ symbol: "BTC", priceEur: 51000, fetchedAt: testDate },
+				];
+
+				await repository.savePrices(prices);
+
+				const result = await repository.getPriceForDate("BTC", testDate);
+
+				expect(result).not.toBeNull();
+				expect(Number(result?.priceEur)).toBe(51000);
+			});
+
+			it("should return price for any time on the same day", async () => {
+				const priceTime = DateTime.utc(2024, 1, 15, 3, 0, 0);
+				const queryTime = DateTime.utc(2024, 1, 15, 20, 0, 0);
+				const prices: CoinPrice[] = [
+					{ symbol: "BTC", priceEur: 50000, fetchedAt: priceTime },
+				];
+
+				await repository.savePrices(prices);
+
+				const result = await repository.getPriceForDate("BTC", queryTime);
+
+				expect(result).not.toBeNull();
+				expect(Number(result?.priceEur)).toBe(50000);
+			});
+
+			it("should not return price from previous day even if later in time", async () => {
+				const priceTime = DateTime.utc(2024, 1, 14, 23, 0, 0);
+				const queryTime = DateTime.utc(2024, 1, 15, 1, 0, 0);
+				const prices: CoinPrice[] = [
+					{ symbol: "BTC", priceEur: 50000, fetchedAt: priceTime },
+				];
+
+				await repository.savePrices(prices);
+
+				const result = await repository.getPriceForDate("BTC", queryTime);
+
+				expect(result).toBeNull();
+			});
+		});
 	});
 
 	describe("CoinGeckoIdEntity", () => {

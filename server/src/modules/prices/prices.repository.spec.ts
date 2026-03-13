@@ -138,4 +138,73 @@ describe("PricesRepository", () => {
 			expect(result).toBe(0);
 		});
 	});
+
+	describe("getPriceForDate", () => {
+		it("should return price when price exists on the same day", async () => {
+			const testDate = DateTime.utc(2024, 1, 15, 12, 0, 0);
+			const mockPrice = {
+				id: 1,
+				asset: "BTC",
+				price_eur: 50000,
+				fetched_at: testDate.toMillis(),
+				source: "coingecko",
+				created_at: testDate.toMillis(),
+			};
+
+			mockDataSource.query.mockResolvedValue([mockPrice]);
+
+			const result = await repository.getPriceForDate("BTC", testDate);
+
+			expect(result).not.toBeNull();
+			expect(result?.asset).toBe("BTC");
+			expect(result?.priceEur).toBe(50000);
+		});
+
+		it("should return null when price is from a different day", async () => {
+			const queryDate = DateTime.utc(2024, 1, 15, 12, 0, 0);
+			mockDataSource.query.mockResolvedValue([]);
+
+			const result = await repository.getPriceForDate("BTC", queryDate);
+
+			expect(result).toBeNull();
+		});
+
+		it("should return null when no price exists for asset", async () => {
+			const testDate = DateTime.utc(2024, 1, 15);
+			mockDataSource.query.mockResolvedValue([]);
+
+			const result = await repository.getPriceForDate("UNKNOWN", testDate);
+
+			expect(result).toBeNull();
+		});
+
+		it("should return latest price when multiple prices exist on same day", async () => {
+			const testDate = DateTime.utc(2024, 1, 15, 12, 0, 0);
+			const mockPrices = [
+				{
+					id: 2,
+					asset: "BTC",
+					price_eur: 51000,
+					fetched_at: testDate.toMillis(),
+					source: "coingecko",
+					created_at: testDate.toMillis(),
+				},
+				{
+					id: 1,
+					asset: "BTC",
+					price_eur: 50000,
+					fetched_at: testDate.minus({ hours: 2 }).toMillis(),
+					source: "coingecko",
+					created_at: testDate.minus({ hours: 2 }).toMillis(),
+				},
+			];
+
+			mockDataSource.query.mockResolvedValue([mockPrices[0]]);
+
+			const result = await repository.getPriceForDate("BTC", testDate);
+
+			expect(result).not.toBeNull();
+			expect(result?.priceEur).toBe(51000);
+		});
+	});
 });

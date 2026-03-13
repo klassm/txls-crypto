@@ -289,5 +289,81 @@ describe("Transfer Flow Integration Tests", () => {
       expect(btcCalc?.transactions[0].costBasis).toBeCloseTo(1000, 2);
       expect(btcCalc?.totalGain).toBeCloseTo(500, 2);
     });
+
+    it("should preserve cost basis through chain transfer (A -> B -> C)", async () => {
+      const userId = testUserIdCounter;
+      const accountA = await createTestAccount(userId);
+      const accountB = await createTestAccount(userId);
+      const accountC = await createTestAccount(userId);
+
+      const buyTx = await createTransaction(
+        userId, accountA.id, TransactionType.buy, "BTC", 0.1, 1000,
+        DateTime.fromISO("2024-01-01T10:00:00Z")
+      );
+
+      const withdrawalA = await createTransaction(
+        userId, accountA.id, TransactionType.withdrawal, "BTC", 0.1, 1100,
+        DateTime.fromISO("2024-06-01T10:00:00Z")
+      );
+
+      const depositB = await createTransaction(
+        userId, accountB.id, TransactionType.deposit, "BTC", 0.1, 1100,
+        DateTime.fromISO("2024-06-01T10:30:00Z")
+      );
+
+      const withdrawalB = await createTransaction(
+        userId, accountB.id, TransactionType.withdrawal, "BTC", 0.1, 1200,
+        DateTime.fromISO("2024-07-01T10:00:00Z")
+      );
+
+      const depositC = await createTransaction(
+        userId, accountC.id, TransactionType.deposit, "BTC", 0.1, 1200,
+        DateTime.fromISO("2024-07-01T10:30:00Z")
+      );
+
+      await createTransaction(
+        userId, accountC.id, TransactionType.sell, "BTC", 0.1, 1500,
+        DateTime.fromISO("2024-08-01T10:00:00Z")
+      );
+
+      const dataSource = await getDataSource();
+      
+      await dataSource.getRepository(TransactionEntity).update(
+        { id: withdrawalA.id },
+        { linkedTransactionId: depositB.id }
+      );
+      await dataSource.getRepository(TransactionEntity).update(
+        { id: depositB.id },
+        { 
+          linkedTransactionId: withdrawalA.id,
+          originalAcquisitionTimestamp: buyTx.timestamp,
+          originalEurValue: 1000
+        }
+      );
+      await dataSource.getRepository(TransactionEntity).update(
+        { id: withdrawalB.id },
+        { linkedTransactionId: depositC.id }
+      );
+      await dataSource.getRepository(TransactionEntity).update(
+        { id: depositC.id },
+        { 
+          linkedTransactionId: withdrawalB.id,
+          originalAcquisitionTimestamp: buyTx.timestamp,
+          originalEurValue: 1000
+        }
+      );
+
+      const transactions = await dataSource.getRepository(TransactionEntity)
+        .find({ where: { userId } });
+
+      const taxService = new TaxCalculationService();
+      const result = taxService.calculateTax(transactions as any);
+
+      expect(result.size).toBe(1);
+      const btcCalc = result.get("BTC");
+      expect(btcCalc?.transactions).toHaveLength(1);
+      expect(btcCalc?.transactions[0].costBasis).toBeCloseTo(1000, 2);
+      expect(btcCalc?.totalGain).toBeCloseTo(500, 2);
+    });
   });
 });
