@@ -294,6 +294,36 @@ async getStatsByProviderAccountIdAndYear(
       }));
   }
 
+  async findByUserId(userId: number): Promise<TransactionEntity[]> {
+    return this.qb
+      .where("transaction.userId = :userId", { userId })
+      .orderBy("transaction.timestamp", "ASC")
+      .getMany();
+  }
+
+  async updateLinkedTransaction(
+    userId: number,
+    transactionId: number,
+    linkedTransactionId: number,
+    originalAcquisitionTimestamp?: number,
+    originalEurValue?: number
+  ): Promise<void> {
+    const updateData: Record<string, unknown> = { linkedTransactionId };
+    if (originalAcquisitionTimestamp !== undefined) {
+      updateData.originalAcquisitionTimestamp = originalAcquisitionTimestamp;
+    }
+    if (originalEurValue !== undefined) {
+      updateData.originalEurValue = originalEurValue;
+    }
+    await this.dataSource
+      .getRepository(TransactionEntity)
+      .createQueryBuilder()
+      .update()
+      .set(updateData)
+      .where("userId = :userId AND id = :transactionId", { userId, transactionId })
+      .execute();
+  }
+
   async getAllAssetSummaries(userId?: number): Promise<Map<number, AssetStat[]>> {
     let query = this.qb
       .select([

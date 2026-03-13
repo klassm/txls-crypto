@@ -22,6 +22,7 @@ import { logger } from "../../common/logger.js";
 import { encrypt } from "../../modules/api-sync/encryption.service.js";
 import { z } from "zod";
 import { createAccountSchema } from "../../validation/schemas.js";
+import { TransferMatchingService } from "../../modules/transfers/transfer-matching.service.js";
 
 const upload = multer({ storage: multer.memoryStorage() });
 const router = Router();
@@ -295,6 +296,9 @@ const repository = new TransactionsRepository(dataSource);
 				transactions.some(t => t.externalId === e.externalId)
 			);
 			await priceBackfillService.storePricesFromTransactions(newlySaved);
+
+			const transferMatchingService = new TransferMatchingService(dataSource);
+			await transferMatchingService.matchTransfersForUser(userId);
 		}
 
     if (importResult.imported > 0 && transactions.length > 0) {

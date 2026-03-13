@@ -88,7 +88,33 @@ export class TaxCalculationService {
         accountQueues.set(asset, []);
       }
 
-      if (transaction.type === "buy" || transaction.type === "deposit" || transaction.type === "reward") {
+      if (transaction.type === "buy") {
+        accountQueues.get(asset)!.push({
+          transaction,
+          remainingQuantity: transaction.quantity,
+        });
+      } else if (transaction.type === "deposit") {
+        if ((transaction as any).linkedTransactionId) {
+          const depositWithCostBasis = {
+            ...transaction,
+            eurValue: (transaction as any).originalEurValue ?? transaction.eurValue,
+          };
+          accountQueues.get(asset)!.push({
+            transaction: depositWithCostBasis,
+            remainingQuantity: transaction.quantity,
+            originalAcquisitionTimestamp: (transaction as any).originalAcquisitionTimestamp,
+          });
+        } else {
+          const zeroCostDeposit = {
+            ...transaction,
+            eurValue: 0,
+          };
+          accountQueues.get(asset)!.push({
+            transaction: zeroCostDeposit,
+            remainingQuantity: transaction.quantity,
+          });
+        }
+      } else if (transaction.type === "reward") {
         accountQueues.get(asset)!.push({
           transaction,
           remainingQuantity: transaction.quantity,

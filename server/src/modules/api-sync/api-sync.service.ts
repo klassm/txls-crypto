@@ -13,6 +13,7 @@ import type { ApiSyncClient } from "../../providers/types.js";
 import { decrypt } from "./encryption.service.js";
 import { logger } from "../../common/logger.js";
 import { broadcastSyncEvent } from "../../websocket.js";
+import { TransferMatchingService } from "../transfers/transfer-matching.service.js";
 
 export interface SyncResult {
   accountId: number;
@@ -27,6 +28,7 @@ export class ApiSyncService {
   private transactionsService: TransactionsService;
   private portfolioService: PortfolioSnapshotsService;
   private priceBackfillService: PriceBackfillService;
+  private transferMatchingService: TransferMatchingService;
   private syncingAccounts = new Set<number>();
 
   constructor(private dataSource: DataSource) {
@@ -35,6 +37,7 @@ export class ApiSyncService {
     this.transactionsService = new TransactionsService(this.transactionsRepo);
     this.portfolioService = new PortfolioSnapshotsService(dataSource);
     this.priceBackfillService = new PriceBackfillService(dataSource);
+    this.transferMatchingService = new TransferMatchingService(dataSource);
   }
 
   async syncAllAccounts(): Promise<SyncResult[]> {
@@ -127,6 +130,7 @@ export class ApiSyncService {
 
     if (savedTransactions.length > 0) {
       await this.priceBackfillService.storePricesFromTransactions(savedTransactions);
+      await this.transferMatchingService.matchTransfersForUser(userId);
       await this.portfolioService.rebuildFromDate(
         userId,
         accountId,

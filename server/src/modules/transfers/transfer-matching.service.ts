@@ -1,5 +1,8 @@
 import type { Transaction } from "@txls/shared";
 import { DateTime } from "luxon";
+import type { DataSource } from "typeorm";
+import { TransactionsRepository } from "../transactions/transactions.repository.js";
+import { TransactionEntity } from "../transactions/transaction.entity.js";
 
 export interface TransferMatch {
   withdrawalId: number;
@@ -20,6 +23,75 @@ const TIME_WINDOW_HOURS = 48;
 const QUANTITY_TOLERANCE = 0.0001;
 
 export class TransferMatchingService {
+  constructor(private dataSource: DataSource) {}
+
+  async matchTransfersForUser(userId: number): Promise<{ matched: number }> {
+    const repository = new TransactionsRepository(this.dataSource);
+    const entities = await repository.findByUserId(userId);
+    const transactions = entities.map((e) => e as unknown as Transaction);
+    const matches = this.findMatches(transactions);
+
+    for (const match of matches) {
+      await repository.updateLinkedTransaction(
+        userId,
+        match.withdrawalId,
+        match.depositId
+      );
+
+      const withdrawal = entities.find((t) => t.id === match.withdrawalId);
+      if (withdrawal) {
+        const { timestamp, eurValue } = this.getOriginalValues(withdrawal, entities);
+        
+        await repository.updateLinkedTransaction(
+          userId,
+          match.depositId,
+          match.withdrawalId,
+          timestamp,
+          eurValue
+        );
+      }
+    }
+
+    return { matched: matches.length };
+  }
+
+  private getOriginalValues(
+    withdrawal: TransactionEntity,
+    allTransactions: TransactionEntity[]
+  ): { timestamp: number; eurValue: number } {
+    if (withdrawal.originalAcquisitionTimestamp && withdrawal.originalEurValue !== undefined && withdrawal.originalEurValue !== null) {
+      const ts = withdrawal.originalAcquisitionTimestamp;
+      return {
+        timestamp: typeof ts === "number" ? ts : ts.toMillis(),
+        eurValue: withdrawal.originalEurValue,
+      };
+    }
+
+    const sourceDeposit = allTransactions.find(
+      (t) =>
+        t.type === "deposit" &&
+        t.providerAccountId === withdrawal.providerAccountId &&
+        t.asset === withdrawal.asset &&
+        t.timestamp < withdrawal.timestamp &&
+        t.originalAcquisitionTimestamp &&
+        t.originalEurValue !== undefined &&
+        t.originalEurValue !== null
+    );
+
+    if (sourceDeposit && sourceDeposit.originalAcquisitionTimestamp) {
+      const ts = sourceDeposit.originalAcquisitionTimestamp;
+      return {
+        timestamp: typeof ts === "number" ? ts : ts.toMillis(),
+        eurValue: sourceDeposit.originalEurValue ?? sourceDeposit.eurValue,
+      };
+    }
+
+    return {
+      timestamp: withdrawal.timestamp.toMillis(),
+      eurValue: withdrawal.eurValue,
+    };
+  }
+
   findMatches(transactions: Transaction[]): TransferMatch[] {
     const withdrawals = transactions.filter(
       (t) => t.type === "withdrawal" && !(t as any).linkedTransactionId

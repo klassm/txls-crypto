@@ -62,6 +62,15 @@ export class TransactionEntity {
   })
   originalAcquisitionTimestamp?: DateTime | null;
 
+  @Column({
+    name: "original_eur_value",
+    type: "decimal",
+    precision: 20,
+    scale: 8,
+    isNullable: true,
+  })
+  originalEurValue?: number | null;
+
   @CreateDateColumn({
     name: "created_at",
     type: "bigint",
