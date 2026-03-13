@@ -21,7 +21,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'docker build -t txls-docker-test -f ../docker/Dockerfile .. && docker rm -f txls-docker-test-container 2>/dev/null || true && docker run -d --name txls-docker-test-container -p 3002:3000 -e JWT_SECRET=test-secret-key-for-jwt-signing-in-tests-sufficiently-long txls-docker-test && sleep 5',
+    command: 'docker build -t txls-docker-test -f ../docker/Dockerfile .. && docker rm -f txls-docker-test-container 2>/dev/null || true && docker run -d --name txls-docker-test-container -p 3002:3000 -e JWT_SECRET=test-secret-key-for-jwt-signing-in-tests-sufficiently-long -e NODE_ENV=test txls-docker-test && sleep 5',
     url: 'http://localhost:3002',
     reuseExistingServer: !process.env.CI,
     timeout: 300000,

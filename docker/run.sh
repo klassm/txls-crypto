@@ -28,7 +28,7 @@ export JWT_SECRET
 export DB_CONNECTION_STRING="${DB_CONNECTION_STRING:-/data/txls.db}"
 export LOG_LEVEL="${LOG_LEVEL:-info}"
 export HOSTNAME="0.0.0.0"
-export NODE_ENV="production"
+export NODE_ENV="${NODE_ENV:-production}"
 
 mkdir -p /data
 
