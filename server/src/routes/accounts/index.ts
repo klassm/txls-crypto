@@ -295,7 +295,6 @@ const repository = new TransactionsRepository(dataSource);
 				transactions.some(t => t.externalId === e.externalId)
 			);
 			await priceBackfillService.storePricesFromTransactions(newlySaved);
-			await priceBackfillService.fillTransferPrices(accountId);
 		}
 
     if (importResult.imported > 0 && transactions.length > 0) {
@@ -610,7 +609,7 @@ router.patch("/:id/api-settings", async (req: Request, res: Response) => {
 
       if (wasFirstTimeSetup) {
         logger.info({ accountId }, "[ApiSettings] Triggering full sync in background");
-        syncService.syncAccount(accountId, userId, true).catch((err) => {
+        syncService.syncAccount(accountId, userId).catch((err) => {
           logger.error({ accountId, error: err.message }, "[ApiSettings] Initial sync failed");
         });
       }
@@ -658,9 +657,8 @@ router.post("/:id/sync", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Invalid account ID" });
     }
 
-    const fullSync = req.query.full === "true";
     const syncService = new ApiSyncService(dataSource);
-    const result = await syncService.syncAccount(accountId, userId, fullSync);
+    const result = await syncService.syncAccount(accountId, userId);
 
     return res.json(result);
   } catch (error) {

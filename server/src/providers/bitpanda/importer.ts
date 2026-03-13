@@ -163,40 +163,8 @@ const csvContentWithHeader = [lines[headerRowIndex], ...dataLines].join("\n");
     }
 
     if (transactionType === "transfer" || transactionType.startsWith("transfer")) {
-      if (transactionType === "transfer(stake)" || transactionType === "transfer(unstake)") {
-        logger.debug({ accountId, externalId: row["Transaction ID"], type: transactionType }, "Skipping stake/unstake transfer");
-        return null;
-      }
-      
-      if (transactionType === "transfer") {
-        const type = inOut.toLowerCase() === "outgoing" 
-          ? TransactionType.transfer_out 
-          : TransactionType.transfer_in;
-        
-        let quantity = this.parseNumber(row["Amount Asset"] ?? "") ?? 0;
-        let eurValue = this.parseNumber(row["Amount Fiat"] ?? "") ?? 0;
-        const eurFee = this.parseNumber(row["Fee"] ?? "") || 0;
-
-        if (quantity === 0 && eurValue === 0) {
-          return null;
-        }
-
-        return {
-          id: 0,
-          providerAccountId: accountId,
-          externalId: row["Transaction ID"],
-          timestamp: this.parseTimestamp(row["Timestamp"]),
-          type,
-          asset: row["Asset"],
-          quantity: Math.abs(quantity),
-          eurValue: Math.abs(eurValue),
-          eurFee: Math.abs(eurFee),
-          eurRate: this.parseNumber(row["Asset market price"] ?? "") ?? 0,
-          processed: false,
-        };
-      }
-      
-      throw new ImportError(`Unknown transfer type: ${transactionType} (${row["Transaction ID"]})`);
+      logger.debug({ accountId, externalId: row["Transaction ID"], type: transactionType }, "Skipping internal transfer");
+      return null;
     }
 
     const type = this.mapTransactionType(transactionType);
@@ -235,9 +203,8 @@ const csvContentWithHeader = [lines[headerRowIndex], ...dataLines].join("\n");
     const typeMap: Record<string, TransactionType> = {
       buy: TransactionType.buy,
       sell: TransactionType.sell,
-      stake: TransactionType.stake,
-      unstake: TransactionType.unstake,
       deposit: TransactionType.deposit,
+      withdrawal: TransactionType.withdrawal,
       reward: TransactionType.reward,
     };
 

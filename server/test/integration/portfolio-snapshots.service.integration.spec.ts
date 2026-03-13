@@ -151,7 +151,7 @@ describe("PortfolioSnapshotsService Integration Tests", () => {
 			expect(result.assets[0].amount).toBe(0.8);
 		});
 
-		it("should not double count transfer_out transactions (staking)", async () => {
+		it("should correctly account for staking rewards", async () => {
 			const today = DateTime.utc().startOf("day");
 			const yesterday = today.minus({ days: 1 });
 
@@ -164,8 +164,7 @@ describe("PortfolioSnapshotsService Integration Tests", () => {
 
 			await dataSource.getRepository(TransactionEntity).save([
 				{ userId: 1, providerAccountId: 1, externalId: "tx1", asset: "SOL", type: TransactionType.buy, quantity: 10.0, eurValue: 1000, eurFee: 0, timestamp: yesterday } as TransactionEntity,
-				{ userId: 1, providerAccountId: 1, externalId: "tx2", asset: "SOL", type: TransactionType.transfer_out, quantity: 10.0, eurValue: 1000, eurFee: 0, timestamp: yesterday } as TransactionEntity,
-				{ userId: 1, providerAccountId: 1, externalId: "tx3", asset: "SOL", type: TransactionType.reward, quantity: 0.5, eurValue: 50, eurFee: 0, timestamp: today } as TransactionEntity,
+				{ userId: 1, providerAccountId: 1, externalId: "tx2", asset: "SOL", type: TransactionType.reward, quantity: 0.5, eurValue: 50, eurFee: 0, timestamp: today } as TransactionEntity,
 			]);
 
 			await dataSource.getRepository(AssetPriceEntity).save([

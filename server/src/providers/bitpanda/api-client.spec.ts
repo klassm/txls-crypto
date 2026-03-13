@@ -295,12 +295,12 @@ describe("BitpandaApiClient", () => {
         .reply(200, {
           data: [
             {
-              id: "wallet-transfer-1",
+              id: "wallet-reward-1",
               type: "wallet_transaction",
               attributes: {
                 amount: "1.84379034",
                 time: { date_iso8601: "2024-01-15T10:00:00+01:00" },
-                in_or_out: "outgoing",
+                in_or_out: "incoming",
                 type: "transfer",
                 status: "finished",
                 amount_eur: "4871.40",
@@ -354,11 +354,10 @@ describe("BitpandaApiClient", () => {
 
       const result = await client.fetchTransactions(API_KEY);
 
-      expect(result.transactions).toHaveLength(2);
-      expect(result.transactions[0].type).toBe(TransactionType.stake);
+      expect(result.transactions).toHaveLength(1);
+      expect(result.transactions[0].type).toBe(TransactionType.reward);
       expect(result.transactions[0].asset).toBe("ETH");
       expect(result.transactions[0].quantity).toBe(1.84379034);
-      expect(result.transactions[1].type).toBe(TransactionType.transfer_in);
     });
 
     it("should fetch all pages until no cursor", async () => {
@@ -585,7 +584,7 @@ describe("BitpandaApiClient", () => {
                   amount: "0.5",
                   time: { date_iso8601: "2024-01-20T10:00:00+01:00" },
                   in_or_out: "incoming",
-                  type: "transfer",
+                  type: "deposit",
                   status: "finished",
                   amount_eur: "20000",
                   cryptocoin_symbol: "BTC",
@@ -600,7 +599,7 @@ describe("BitpandaApiClient", () => {
                   amount: "0.3",
                   time: { date_iso8601: "2024-01-15T10:00:00+01:00" },
                   in_or_out: "incoming",
-                  type: "transfer",
+                  type: "deposit",
                   status: "finished",
                   amount_eur: "12000",
                   cryptocoin_symbol: "BTC",

@@ -310,12 +310,13 @@ export class BitpandaApiClient implements ApiSyncClient {
     if (attributes.type === "deposit") {
       type = TransactionType.deposit;
     } else if (attributes.type === "withdrawal") {
-      type = TransactionType.transfer_out;
+      type = TransactionType.withdrawal;
     } else if (attributes.type === "transfer") {
-      if (isStakeTag) {
-        type = attributes.in_or_out === "incoming" ? TransactionType.reward : TransactionType.stake;
+      if (isStakeTag && attributes.in_or_out === "incoming") {
+        type = TransactionType.reward;
       } else {
-        type = attributes.in_or_out === "incoming" ? TransactionType.transfer_in : TransactionType.transfer_out;
+        logger.debug({ type: attributes.type, id: tx.id }, "[BitpandaApiClient] Skipping internal transfer");
+        return null;
       }
     } else {
       logger.debug({ type: attributes.type, id: tx.id }, "[BitpandaApiClient] Skipping unknown wallet transaction type");

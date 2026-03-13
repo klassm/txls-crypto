@@ -59,12 +59,9 @@ export interface UpdateProviderDto {
 export enum TransactionType {
   buy = "buy",
   sell = "sell",
-  stake = "stake",
-  unstake = "unstake",
   reward = "reward",
   deposit = "deposit",
-  transfer_in = "transfer_in",
-  transfer_out = "transfer_out",
+  withdrawal = "withdrawal",
 }
 
 export interface Transaction {

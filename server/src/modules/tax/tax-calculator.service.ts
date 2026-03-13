@@ -50,27 +50,6 @@ interface BuyLot {
   originalAcquisitionTimestamp?: DateTime;
 }
 
-interface PendingTransfer {
-  asset: string;
-  quantity: number;
-  lots: Array<{
-    originalTransaction: Transaction;
-    quantity: number;
-    originalAcquisitionTimestamp: DateTime;
-  }>;
-  transferOutTransaction: Transaction;
-}
-
-interface TransferMatch {
-  transferOut: Transaction;
-  transferIn: Transaction;
-  lots: Array<{
-    originalTransaction: Transaction;
-    quantity: number;
-    originalAcquisitionTimestamp: DateTime;
-  }>;
-}
-
 export class TaxCalculationService {
   private savedLossCarryover: LossCarryover | null = null;
 
@@ -92,8 +71,6 @@ export class TaxCalculationService {
     const assetCalculations = new Map<string, TaxCalculation>();
     const buyQueuesByAccount = new Map<number, Map<string, BuyLot[]>>();
 
-    const transferMatches = this.matchTransfers(transactions);
-
     const sortedTransactions = [...transactions].sort(
       (a, b) => a.timestamp.toMillis() - b.timestamp.toMillis()
     );
@@ -106,7 +83,7 @@ export class TaxCalculationService {
         buyQueuesByAccount.set(accountId, new Map());
       }
       const accountQueues = buyQueuesByAccount.get(accountId)!;
-      
+
       if (!accountQueues.has(asset)) {
         accountQueues.set(asset, []);
       }
@@ -116,13 +93,6 @@ export class TaxCalculationService {
           transaction,
           remainingQuantity: transaction.quantity,
         });
-      } else if (transaction.type === TransactionType.transfer_in) {
-        this.processTransferIn(transaction, asset, accountQueues, transferMatches);
-      } else if (transaction.type === TransactionType.transfer_out) {
-        const sourceQueues = buyQueuesByAccount.get(accountId);
-        if (sourceQueues) {
-          this.processTransferOut(transaction, asset, sourceQueues, assetCalculations, transferMatches);
-        }
       } else if (transaction.type === "sell") {
         this.processSell(transaction, asset, accountQueues, assetCalculations);
       }
@@ -133,106 +103,6 @@ export class TaxCalculationService {
     }
 
     return assetCalculations;
-  }
-
-  private matchTransfers(transactions: Transaction[]): Map<string, TransferMatch[]> {
-    const matches = new Map<string, TransferMatch[]>();
-    
-    const transferOuts = transactions.filter(t => t.type === TransactionType.transfer_out);
-    const transferIns = transactions.filter(t => t.type === TransactionType.transfer_in);
-
-    for (const transferOut of transferOuts) {
-      const asset = transferOut.asset;
-      if (!matches.has(asset)) {
-        matches.set(asset, []);
-      }
-
-      const matchingIn = transferIns.find(tIn => 
-        tIn.asset === asset &&
-        Math.abs(tIn.quantity - transferOut.quantity) < 0.0001 &&
-        Math.abs(tIn.timestamp.toMillis() - transferOut.timestamp.toMillis()) < 72 * 60 * 60 * 1000 &&
-        !matches.get(asset)!.some(m => m.transferIn.id === tIn.id)
-      );
-
-      if (matchingIn) {
-        matches.get(asset)!.push({
-          transferOut,
-          transferIn: matchingIn,
-          lots: [],
-        });
-      }
-    }
-
-    return matches;
-  }
-
-  private processTransferIn(
-    transaction: Transaction,
-    asset: string,
-    buyQueues: Map<string, BuyLot[]>,
-    transferMatches: Map<string, TransferMatch[]>,
-  ): void {
-    const matches = transferMatches.get(asset) || [];
-    const match = matches.find(m => m.transferIn.id === transaction.id);
-
-    if (match && match.lots.length > 0) {
-      for (const lot of match.lots) {
-        buyQueues.get(asset)!.push({
-          transaction: {
-            ...transaction,
-            quantity: lot.quantity,
-            eurValue: lot.originalTransaction.eurValue * (lot.quantity / lot.originalTransaction.quantity),
-            eurFee: lot.originalTransaction.eurFee * (lot.quantity / lot.originalTransaction.quantity),
-          },
-          remainingQuantity: lot.quantity,
-          originalAcquisitionTimestamp: lot.originalAcquisitionTimestamp,
-        });
-      }
-    } else {
-      buyQueues.get(asset)!.push({
-        transaction,
-        remainingQuantity: transaction.quantity,
-      });
-    }
-  }
-
-  private processTransferOut(
-    transaction: Transaction,
-    asset: string,
-    buyQueues: Map<string, BuyLot[]>,
-    assetCalculations: Map<string, TaxCalculation>,
-    transferMatches: Map<string, TransferMatch[]>,
-  ): void {
-    const matches = transferMatches.get(asset) || [];
-    const match = matches.find(m => m.transferOut.id === transaction.id);
-
-    if (match) {
-      let remainingQuantity = transaction.quantity;
-      const buyQueue = buyQueues.get(asset)!;
-
-      while (remainingQuantity > 0 && buyQueue.length > 0) {
-        const lot = buyQueue[0];
-        if (lot.remainingQuantity <= 0) {
-          buyQueue.shift();
-          continue;
-        }
-
-        const consumedQuantity = Math.min(remainingQuantity, lot.remainingQuantity);
-        
-        match.lots.push({
-          originalTransaction: lot.transaction,
-          quantity: consumedQuantity,
-          originalAcquisitionTimestamp: lot.originalAcquisitionTimestamp || lot.transaction.timestamp,
-        });
-
-        lot.remainingQuantity -= consumedQuantity;
-        remainingQuantity -= consumedQuantity;
-
-        if (lot.remainingQuantity <= 0) {
-          buyQueue.shift();
-        }
-      }
-    }
   }
 
   private processSell(

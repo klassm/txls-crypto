@@ -49,7 +49,7 @@ export class ApiSyncService {
     return results;
   }
 
-  async syncAccount(accountId: number, userId: number, fullSync = false): Promise<SyncResult> {
+  async syncAccount(accountId: number, userId: number): Promise<SyncResult> {
     if (this.syncingAccounts.has(accountId)) {
       logger.warn({ accountId }, "[ApiSyncService] Account already syncing, skipping");
       return { accountId, success: false, imported: 0, error: "Already syncing" };
@@ -75,23 +75,16 @@ export class ApiSyncService {
 
       const apiKey = decrypt(account.apiKeyEncrypted);
 
-      const shouldDoFullSync = fullSync || !account.lastSyncAt;
+      const shouldDoFullSync = true;
 
       logger.info({ 
         accountId, 
         provider: account.provider, 
         fullSync: shouldDoFullSync,
-        requestedFullSync: fullSync,
         hasLastSyncAt: !!account.lastSyncAt
       }, "[ApiSyncService] Starting sync");
 
-      if (shouldDoFullSync) {
-        logger.info({ accountId }, "[ApiSyncService] Performing FULL sync");
-        return await this.performFullSync(account, apiKey, providerConfig.apiClient);
-      } else {
-        logger.info({ accountId }, "[ApiSyncService] Performing INCREMENTAL sync");
-        return await this.performIncrementalSync(account, apiKey, providerConfig.apiClient);
-      }
+      return await this.performFullSync(account, apiKey, providerConfig.apiClient);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       logger.error({ accountId, error: errorMessage }, "[ApiSyncService] Sync failed");
@@ -103,55 +96,6 @@ export class ApiSyncService {
     } finally {
       this.syncingAccounts.delete(accountId);
     }
-  }
-
-  private async performIncrementalSync(
-    account: AccountEntity,
-    apiKey: string,
-    apiClient: ApiSyncClient
-  ): Promise<SyncResult> {
-    const { accountId, userId } = { accountId: account.id, userId: account.userId };
-
-    const knownExternalIds = await this.transactionsRepo.getExternalIdsByAccountId(accountId);
-    const result = await apiClient.fetchTransactions(apiKey, knownExternalIds);
-
-    if (result.transactions.length === 0) {
-      logger.info({ accountId }, "[ApiSyncService] No new transactions to import");
-      await this.updateSyncSuccess(account);
-      broadcastSyncEvent(userId, accountId, "sync-complete", { imported: 0 });
-      return { accountId, success: true, imported: 0 };
-    }
-
-    const earliestTimestamp = this.getEarliestTimestamp(result.transactions);
-
-    const importResult = await this.transactionsService.importTransactions(
-      userId,
-      accountId,
-      result.transactions
-    );
-
-    const savedTransactions = await this.getSavedTransactions(accountId, result.transactions);
-
-    if (savedTransactions.length > 0) {
-      await this.priceBackfillService.storePricesFromTransactions(savedTransactions);
-      await this.priceBackfillService.fillTransferPrices(accountId);
-      await this.portfolioService.rebuildFromDate(
-        userId,
-        accountId,
-        earliestTimestamp.startOf("day")
-      );
-    }
-
-    await this.updateSyncSuccess(account);
-
-    logger.info(
-      { accountId, imported: importResult.imported, errors: importResult.errors.length, wasIncremental: result.wasIncremental },
-      "[ApiSyncService] Incremental sync completed"
-    );
-
-    broadcastSyncEvent(userId, accountId, "sync-complete", { imported: importResult.imported });
-
-    return { accountId, success: true, imported: importResult.imported };
   }
 
   private async performFullSync(
@@ -183,7 +127,6 @@ export class ApiSyncService {
 
     if (savedTransactions.length > 0) {
       await this.priceBackfillService.storePricesFromTransactions(savedTransactions);
-      await this.priceBackfillService.fillTransferPrices(accountId);
       await this.portfolioService.rebuildFromDate(
         userId,
         accountId,
