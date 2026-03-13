@@ -86,6 +86,46 @@ export class TransferMatchingService {
       };
     }
 
+    const buyTransactions = allTransactions.filter(
+      (t) =>
+        (t.type === "buy" || t.type === "deposit" || t.type === "reward") &&
+        t.providerAccountId === withdrawal.providerAccountId &&
+        t.asset === withdrawal.asset &&
+        t.timestamp < withdrawal.timestamp
+    );
+
+    const sellTransactions = allTransactions.filter(
+      (t) =>
+        (t.type === "sell" || t.type === "withdrawal") &&
+        t.providerAccountId === withdrawal.providerAccountId &&
+        t.asset === withdrawal.asset &&
+        t.timestamp < withdrawal.timestamp
+    );
+
+    let totalAcquired = 0;
+    let totalCost = 0;
+    let earliestTimestamp: DateTime | null = null;
+
+    for (const tx of buyTransactions) {
+      totalAcquired += Math.abs(tx.quantity);
+      totalCost += Math.abs(tx.eurValue);
+      if (!earliestTimestamp || tx.timestamp < earliestTimestamp) {
+        earliestTimestamp = tx.timestamp;
+      }
+    }
+
+    for (const tx of sellTransactions) {
+      totalAcquired -= Math.abs(tx.quantity);
+    }
+
+    if (totalAcquired >= withdrawal.quantity && totalCost > 0 && earliestTimestamp) {
+      const avgCostPerUnit = totalCost / totalAcquired;
+      return {
+        timestamp: earliestTimestamp.toMillis(),
+        eurValue: avgCostPerUnit * withdrawal.quantity,
+      };
+    }
+
     return {
       timestamp: withdrawal.timestamp.toMillis(),
       eurValue: withdrawal.eurValue,

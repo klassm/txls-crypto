@@ -148,11 +148,27 @@ if (!validationResult.success) {
 - All environment variables are centralized in `shared/src/server/config/env.ts`
 - Never commit `.env` files or database files
 
-
 ## Development Flow
 
 ### Implementation
 
 - Implement the change request in a minimal possible way, do not try to foresee future requirements
 - Keep the code clean, according to `Clean Code` best practices
-- Prefer 
+- Prefer map-reduce like functions over for loops
+- Split arrow functions into separate functions, to keep things readable
+- Make sure every single change is properly tested.
+  - For backend this usually means writing unit and integration tests.
+  - For frontend code this probably means extracting logic to testable files and writing unit tests. Maybe this also involves gui tests.
+- Before comitting any change:
+  - Run all tests - this includes all GUI tests (all three variants!), integration tests (start the respective Docker containers for databases first), and unit tests
+  - Review your implementation
+  - Only if ALL of those requirements match, you may commit. If you do a change in between, start the checks over.
+
+### Review
+
+- Does the code fulfill the given requirements? Are you sure it does?
+- Does the code build? Run the build!
+- Is the code properly formatted? Run the formatter!
+- Is the code properly tested? Do we really have everything covered? Do we have the right test level? Are we missing tests - think twice! Make sure those tests pass!
+- Is the code fine from security perspective? Is the input properly validated? Are database queries properly restricted to the given user? ...
+- Is the code fine from architecture perspective?

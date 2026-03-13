@@ -365,5 +365,146 @@ describe("Transfer Flow Integration Tests", () => {
       expect(btcCalc?.transactions[0].costBasis).toBeCloseTo(1000, 2);
       expect(btcCalc?.totalGain).toBeCloseTo(500, 2);
     });
+
+    it("should compute cost basis from buys when matching transfers via service", async () => {
+      const userId = testUserIdCounter;
+      const accountA = await createTestAccount(userId);
+      const accountB = await createTestAccount(userId);
+
+      await createTransaction(
+        userId, accountA.id, TransactionType.buy, "BTC", 0.1, 1000,
+        DateTime.fromISO("2024-01-01T10:00:00Z")
+      );
+
+      await createTransaction(
+        userId, accountA.id, TransactionType.withdrawal, "BTC", 0.1, 1200,
+        DateTime.fromISO("2024-06-01T10:00:00Z")
+      );
+
+      await createTransaction(
+        userId, accountB.id, TransactionType.deposit, "BTC", 0.1, 1200,
+        DateTime.fromISO("2024-06-01T10:30:00Z")
+      );
+
+      await createTransaction(
+        userId, accountB.id, TransactionType.sell, "BTC", 0.1, 1500,
+        DateTime.fromISO("2024-07-01T10:00:00Z")
+      );
+
+      const dataSource = await getDataSource();
+      const matchingService = new TransferMatchingService(dataSource);
+      const result = await matchingService.matchTransfersForUser(userId);
+      
+      expect(result.matched).toBe(1);
+
+      const transactions = await dataSource.getRepository(TransactionEntity)
+        .find({ where: { userId } });
+
+      const taxService = new TaxCalculationService();
+      const taxResult = taxService.calculateTax(transactions as any);
+
+      expect(taxResult.size).toBe(1);
+      const btcCalc = taxResult.get("BTC");
+      expect(btcCalc?.transactions).toHaveLength(1);
+      expect(btcCalc?.transactions[0].costBasis).toBeCloseTo(1000, 2);
+      expect(btcCalc?.totalGain).toBeCloseTo(500, 2);
+    });
+
+    it("should handle partial transfer with remaining holdings", async () => {
+      const userId = testUserIdCounter;
+      const accountA = await createTestAccount(userId);
+      const accountB = await createTestAccount(userId);
+
+      await createTransaction(
+        userId, accountA.id, TransactionType.buy, "BTC", 0.2, 2000,
+        DateTime.fromISO("2024-01-01T10:00:00Z")
+      );
+
+      await createTransaction(
+        userId, accountA.id, TransactionType.withdrawal, "BTC", 0.1, 1200,
+        DateTime.fromISO("2024-06-01T10:00:00Z")
+      );
+
+      await createTransaction(
+        userId, accountB.id, TransactionType.deposit, "BTC", 0.1, 1200,
+        DateTime.fromISO("2024-06-01T10:30:00Z")
+      );
+
+      await createTransaction(
+        userId, accountB.id, TransactionType.sell, "BTC", 0.1, 1500,
+        DateTime.fromISO("2024-07-01T10:00:00Z")
+      );
+
+      await createTransaction(
+        userId, accountA.id, TransactionType.sell, "BTC", 0.1, 1600,
+        DateTime.fromISO("2024-08-01T10:00:00Z")
+      );
+
+      const dataSource = await getDataSource();
+      const matchingService = new TransferMatchingService(dataSource);
+      await matchingService.matchTransfersForUser(userId);
+
+      const transactions = await dataSource.getRepository(TransactionEntity)
+        .find({ where: { userId } });
+
+      const taxService = new TaxCalculationService();
+      const taxResult = taxService.calculateTax(transactions as any);
+
+      expect(taxResult.size).toBe(1);
+      const btcCalc = taxResult.get("BTC");
+      expect(btcCalc?.transactions).toHaveLength(2);
+      
+      const sellB = btcCalc!.transactions.find(t => t.proceeds === 1500);
+      const sellA = btcCalc!.transactions.find(t => t.proceeds === 1600);
+      
+      expect(sellB?.costBasis).toBeCloseTo(1000, 2);
+      expect(sellA?.costBasis).toBeCloseTo(1000, 2);
+    });
+
+    it("should compute average cost basis from multiple buys", async () => {
+      const userId = testUserIdCounter;
+      const accountA = await createTestAccount(userId);
+      const accountB = await createTestAccount(userId);
+
+      await createTransaction(
+        userId, accountA.id, TransactionType.buy, "BTC", 0.1, 1000,
+        DateTime.fromISO("2024-01-01T10:00:00Z")
+      );
+
+      await createTransaction(
+        userId, accountA.id, TransactionType.buy, "BTC", 0.1, 2000,
+        DateTime.fromISO("2024-02-01T10:00:00Z")
+      );
+
+      await createTransaction(
+        userId, accountA.id, TransactionType.withdrawal, "BTC", 0.15, 3000,
+        DateTime.fromISO("2024-06-01T10:00:00Z")
+      );
+
+      await createTransaction(
+        userId, accountB.id, TransactionType.deposit, "BTC", 0.15, 3000,
+        DateTime.fromISO("2024-06-01T10:30:00Z")
+      );
+
+      await createTransaction(
+        userId, accountB.id, TransactionType.sell, "BTC", 0.15, 4500,
+        DateTime.fromISO("2024-07-01T10:00:00Z")
+      );
+
+      const dataSource = await getDataSource();
+      const matchingService = new TransferMatchingService(dataSource);
+      await matchingService.matchTransfersForUser(userId);
+
+      const transactions = await dataSource.getRepository(TransactionEntity)
+        .find({ where: { userId } });
+
+      const taxService = new TaxCalculationService();
+      const taxResult = taxService.calculateTax(transactions as any);
+
+      expect(taxResult.size).toBe(1);
+      const btcCalc = taxResult.get("BTC");
+      expect(btcCalc?.transactions).toHaveLength(1);
+      expect(btcCalc?.transactions[0].costBasis).toBeCloseTo(2250, 2);
+    });
   });
 });

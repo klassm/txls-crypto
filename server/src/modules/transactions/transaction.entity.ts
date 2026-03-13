@@ -51,13 +51,13 @@ export class TransactionEntity {
   @Column({ type: "boolean", default: false })
   processed!: boolean;
 
-  @Column({ name: "linked_transaction_id", type: "int", isNullable: true })
+  @Column({ name: "linked_transaction_id", type: "int", nullable: true })
   linkedTransactionId?: number | null;
 
   @Column({
     name: "original_acquisition_timestamp",
     type: "bigint",
-    isNullable: true,
+    nullable: true,
     transformer: typeOrmDateTimeTransformer,
   })
   originalAcquisitionTimestamp?: DateTime | null;
@@ -67,7 +67,7 @@ export class TransactionEntity {
     type: "decimal",
     precision: 20,
     scale: 8,
-    isNullable: true,
+    nullable: true,
   })
   originalEurValue?: number | null;
 
