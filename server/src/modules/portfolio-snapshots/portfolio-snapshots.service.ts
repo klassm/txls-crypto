@@ -49,12 +49,17 @@ export interface AccountOverview {
 	eurValue: number | null;
 }
 
+export interface StakingStats {
+  eurValue: number;
+  count: number;
+}
+
 export interface PortfolioOverview {
-	portfolioHistory: PortfolioHistoryPoint[];
-	assets: AssetOverview[];
-	accounts: AccountOverview[];
-	totalStakingRewards: number;
-	stakingRewardCount: number;
+  portfolioHistory: PortfolioHistoryPoint[];
+  assets: AssetOverview[];
+  accounts: AccountOverview[];
+  currentYearStakingRewards: StakingStats;
+  totalStakingRewards: StakingStats;
 }
 
 export class PortfolioSnapshotsService {
@@ -421,14 +426,16 @@ export class PortfolioSnapshotsService {
 		}
 
 		const transactionsRepo = new TransactionsRepository(this.dataSource);
-		const stakingStats = await transactionsRepo.getTotalStakingRewards(userId);
+		const currentYear = DateTime.utc().year;
+		const currentYearStaking = await transactionsRepo.getStakingRewardsByYear(userId, currentYear);
+		const totalStaking = await transactionsRepo.getTotalStakingRewards(userId);
 
 		return {
 			portfolioHistory,
 			assets: assetsOverview,
 			accounts: accountsOverview,
-			totalStakingRewards: stakingStats.eurValue,
-			stakingRewardCount: stakingStats.count,
+			currentYearStakingRewards: currentYearStaking,
+			totalStakingRewards: totalStaking,
 		};
 	}
 

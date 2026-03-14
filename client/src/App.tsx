@@ -1,4 +1,6 @@
 import { Routes, Route, Navigate } from "react-router-dom";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { AdapterLuxon } from "@mui/x-date-pickers/AdapterLuxon";
 import { AuthProvider } from "./contexts/AuthContext";
 import { SnackbarProvider } from "./contexts/SnackbarContext";
 import { AuthGuard } from "./components/AuthGuard";
@@ -15,7 +17,8 @@ import { TaxRulesContent } from "./pages/tax/TaxRulesContent";
 export default function App() {
   return (
     <SnackbarProvider>
-      <AuthProvider>
+      <LocalizationProvider dateAdapter={AdapterLuxon}>
+        <AuthProvider>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/onboard" element={<OnboardPage />} />
@@ -78,6 +81,7 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>
+      </LocalizationProvider>
     </SnackbarProvider>
   );
 }

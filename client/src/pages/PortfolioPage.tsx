@@ -14,7 +14,7 @@ import { PositionChart } from "../components/charts/PositionChart";
 import { ChartDialog, type TimeSpan } from "../components/charts/ChartDialog";
 import { ExpandButton } from "../components/charts/ExpandButton";
 import { portfolioApi } from "../lib/client/prices-api";
-import type { PortfolioHistoryPoint, AssetOverview } from "../lib/client/prices-api";
+import type { PortfolioHistoryPoint, AssetOverview, StakingStats } from "../lib/client/prices-api";
 import { calculatePortfolioChange } from "@txls/shared";
 
 interface ChangeStats {
@@ -31,7 +31,7 @@ function calculateChange(
 	return result;
 }
 
-function PortfolioStats({ history, assets, totalStakingRewards, stakingRewardCount }: { history: PortfolioHistoryPoint[] | undefined; assets: AssetOverview[]; totalStakingRewards: number; stakingRewardCount: number }) {
+function PortfolioStats({ history, assets, currentYearStakingRewards, totalStakingRewards }: { history: PortfolioHistoryPoint[] | undefined; assets: AssetOverview[]; currentYearStakingRewards: StakingStats; totalStakingRewards: StakingStats }) {
 	if (!history || history.length === 0) return null;
 
 	const latest = history[history.length - 1];
@@ -45,6 +45,7 @@ function PortfolioStats({ history, assets, totalStakingRewards, stakingRewardCou
 	const overallProfit = latest.totalEurValue - totalEurInvested;
 	const overallProfitPercent = totalEurInvested > 0 ? (overallProfit / totalEurInvested) * 100 : 0;
 	const overallColor = overallProfit >= 0 ? "success.main" : "error.main";
+	const currentYear = new Date().getFullYear();
 
 	const formatValue = (value: number) =>
 		new Intl.NumberFormat("de-DE", {
@@ -69,9 +70,11 @@ function PortfolioStats({ history, assets, totalStakingRewards, stakingRewardCou
 	const weekFormatted = formatChange(weekChange);
 	const monthFormatted = formatChange(monthChange);
 
+	const hasStakingRewards = totalStakingRewards.eurValue > 0;
+
 	return (
 		<Grid container spacing={2} sx={{ mb: 4 }}>
-			<Grid size={{ xs: 12, sm: 6, md: totalStakingRewards > 0 ? 4 : 6 }}>
+			<Grid size={{ xs: 12, sm: 6, md: hasStakingRewards ? 4 : 6 }}>
 				<Card sx={{ p: 2, height: "100%" }}>
 					<Typography variant="body2" color="text.secondary">
 						Total Value
@@ -84,22 +87,27 @@ function PortfolioStats({ history, assets, totalStakingRewards, stakingRewardCou
 					</Typography>
 				</Card>
 			</Grid>
-			{totalStakingRewards > 0 && (
+			{hasStakingRewards && (
 				<Grid size={{ xs: 12, sm: 6, md: 4 }}>
 					<Card sx={{ p: 2, height: "100%" }}>
 						<Typography variant="body2" color="text.secondary">
-							Staking Rewards
+							Staking Rewards ({currentYear})
 						</Typography>
 						<Typography variant="h5" fontWeight={600} color="success.main">
-							{formatValue(totalStakingRewards)}
+							{formatValue(currentYearStakingRewards.eurValue)}
 						</Typography>
 						<Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-							{stakingRewardCount} transaction{stakingRewardCount !== 1 ? 's' : ''}
+							{currentYearStakingRewards.count} transaction{currentYearStakingRewards.count !== 1 ? 's' : ''}
 						</Typography>
+						{totalStakingRewards.eurValue !== currentYearStakingRewards.eurValue && (
+							<Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5 }}>
+								Overall: {formatValue(totalStakingRewards.eurValue)} ({totalStakingRewards.count} total)
+							</Typography>
+						)}
 					</Card>
 				</Grid>
 			)}
-			<Grid size={{ xs: 12, sm: 6, md: totalStakingRewards > 0 ? 4 : 6 }}>
+			<Grid size={{ xs: 12, sm: 6, md: hasStakingRewards ? 4 : 6 }}>
 				<Card sx={{ p: { xs: 1.5, sm: 2 }, height: "100%" }}>
 					<Grid container spacing={{ xs: 1, sm: 2 }}>
 						<Grid size={{ xs: 6, sm: 3 }}>
@@ -164,8 +172,8 @@ export default function PortfolioPage() {
 	const portfolioHistory = overview?.portfolioHistory;
 	const assets = overview?.assets || [];
 	const accounts = overview?.accounts || [];
-	const totalStakingRewards = overview?.totalStakingRewards || 0;
-	const stakingRewardCount = overview?.stakingRewardCount || 0;
+	const currentYearStakingRewards = overview?.currentYearStakingRewards || { eurValue: 0, count: 0 };
+	const totalStakingRewards = overview?.totalStakingRewards || { eurValue: 0, count: 0 };
 
 	const getProviderName = (provider: string) => {
 		const source = sources.find(s => s.source === provider);
@@ -190,7 +198,7 @@ export default function PortfolioPage() {
 				</Typography>
 			) : (
 				<>
-					<PortfolioStats history={portfolioHistory} assets={assets} totalStakingRewards={totalStakingRewards} stakingRewardCount={stakingRewardCount} />
+					<PortfolioStats history={portfolioHistory} assets={assets} currentYearStakingRewards={currentYearStakingRewards} totalStakingRewards={totalStakingRewards} />
 
 				{portfolioHistory.length > 0 && (
 					<Box sx={{ mb: 4 }}>

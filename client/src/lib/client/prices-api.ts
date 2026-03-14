@@ -52,12 +52,17 @@ export interface AccountOverview {
 	eurValue: number | null;
 }
 
+export interface StakingStats {
+  eurValue: number;
+  count: number;
+}
+
 export interface PortfolioOverview {
-	portfolioHistory: PortfolioHistoryPoint[];
-	assets: AssetOverview[];
-	accounts: AccountOverview[];
-	totalStakingRewards: number;
-	stakingRewardCount: number;
+  portfolioHistory: PortfolioHistoryPoint[];
+  assets: AssetOverview[];
+  accounts: AccountOverview[];
+  currentYearStakingRewards: StakingStats;
+  totalStakingRewards: StakingStats;
 }
 
 export const portfolioApi = {

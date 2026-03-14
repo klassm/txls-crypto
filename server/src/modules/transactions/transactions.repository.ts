@@ -317,6 +317,29 @@ async getStatsByProviderAccountIdAndYear(
     };
   }
 
+  async getStakingRewardsByYear(userId: number, year: number): Promise<{ eurValue: number; count: number }> {
+    const startDate = toMillis(DateTime.utc(year, 1, 1, 0, 0, 0, 0));
+    const endDate = toMillis(DateTime.utc(year, 12, 31, 23, 59, 59, 999));
+
+    const result = await this.qb
+      .select([
+        "COALESCE(SUM(ABS(transaction.eurValue)), 0) AS totalEurValue",
+        "COUNT(transaction.id) AS count",
+      ])
+      .where("transaction.userId = :userId", { userId })
+      .andWhere("transaction.type = :type", { type: TransactionType.reward })
+      .andWhere("transaction.timestamp BETWEEN :startDate AND :endDate", {
+        startDate,
+        endDate,
+      })
+      .getRawOne();
+
+    return {
+      eurValue: Number(result?.totalEurValue) || 0,
+      count: Number(result?.count) || 0,
+    };
+  }
+
   async updateLinkedTransaction(
     userId: number,
     transactionId: number,

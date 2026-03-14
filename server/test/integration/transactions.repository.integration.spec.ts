@@ -764,4 +764,66 @@ describe("TransactionsRepository Integration Tests", () => {
       expect(result.count).toBe(2);
     });
   });
+
+  describe("getStakingRewardsByYear", () => {
+    beforeEach(async () => {
+      const transactions = [
+        createBaseEntity({
+          externalId: "STAKING-YEAR-1",
+          type: TransactionType.reward,
+          asset: "SOL",
+          quantity: 0.5,
+          eurValue: 75,
+          timestamp: DateTime.fromISO("2024-06-15T10:00:00Z"),
+        }),
+        createBaseEntity({
+          externalId: "STAKING-YEAR-2",
+          type: TransactionType.reward,
+          asset: "ETH",
+          quantity: 0.1,
+          eurValue: 300,
+          timestamp: DateTime.fromISO("2024-07-20T14:00:00Z"),
+        }),
+        createBaseEntity({
+          externalId: "STAKING-YEAR-3",
+          type: TransactionType.reward,
+          asset: "BTC",
+          quantity: 0.01,
+          eurValue: 500,
+          timestamp: DateTime.fromISO("2026-02-19T09:00:00Z"),
+        }),
+        createBaseEntity({
+          externalId: "STAKING-YEAR-4",
+          type: TransactionType.buy,
+          asset: "BTC",
+          quantity: 1.0,
+          eurValue: 50000,
+          timestamp: DateTime.fromISO("2024-08-10T09:00:00Z"),
+        }),
+      ];
+
+      await repository.saveMany(transactions);
+    });
+
+    it("should return staking rewards for specific year", async () => {
+      const result = await repository.getStakingRewardsByYear(1, 2024);
+
+      expect(result.eurValue).toBe(375);
+      expect(result.count).toBe(2);
+    });
+
+    it("should return correct values for different year", async () => {
+      const result = await repository.getStakingRewardsByYear(1, 2026);
+
+      expect(result.eurValue).toBe(500);
+      expect(result.count).toBe(1);
+    });
+
+    it("should return zero for year with no rewards", async () => {
+      const result = await repository.getStakingRewardsByYear(1, 2020);
+
+      expect(result.eurValue).toBe(0);
+      expect(result.count).toBe(0);
+    });
+  });
 });
