@@ -16,7 +16,7 @@ jobs:
       ci-passed: ${{ steps.check.outputs.ci-passed }}
     
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
       
@@ -61,7 +61,7 @@ jobs:
       has-commits: ${{ steps.check.outputs.has-commits }}
     
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
       
@@ -94,7 +94,7 @@ jobs:
       version: ${{ steps.version.outputs.version }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Calculate new version
         id: version
@@ -140,12 +140,12 @@ jobs:
     if: needs.check-ci.outputs.ci-passed == 'true' && needs.check-commits.outputs.has-commits == 'true'
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: pnpm/action-setup@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '24'
           cache: 'pnpm'
@@ -173,7 +173,7 @@ jobs:
       packages: write
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
