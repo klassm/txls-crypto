@@ -1,4 +1,4 @@
-import { describe, it, expect, afterAll, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import express from "express";
 import request from "supertest";
 import cookieParser from "cookie-parser";
@@ -20,11 +20,6 @@ let testUserIdCounter = 1;
 describe("Transfer Flow Integration Tests", () => {
   let app: express.Application;
 
-  afterAll(async () => {
-    vi.restoreAllMocks();
-    await destroyTestDataSource();
-  });
-
   beforeEach(async () => {
     await createTestDataSource();
     const dataSource = await getDataSource();
@@ -36,6 +31,11 @@ describe("Transfer Flow Integration Tests", () => {
     app.use("/api/tax", taxRouter);
     
     testUserIdCounter++;
+  });
+
+  afterEach(async () => {
+    vi.restoreAllMocks();
+    await destroyTestDataSource();
   });
 
   const createTestUser = (userId: number): string => {

@@ -1,4 +1,4 @@
-import { describe, it, expect, afterAll, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import express from "express";
 import request from "supertest";
 import cookieParser from "cookie-parser";
@@ -16,11 +16,6 @@ import { createTestDataSource, destroyTestDataSource } from "../test-helpers.js"
 describe("Tax API Integration Tests", () => {
   let app: express.Application;
 
-  afterAll(async () => {
-    vi.restoreAllMocks();
-    await destroyTestDataSource();
-  });
-
   beforeEach(async () => {
     await createTestDataSource();
     const dataSource = await getDataSource();
@@ -30,6 +25,11 @@ describe("Tax API Integration Tests", () => {
     app = express();
     app.use(cookieParser());
     app.use("/api/tax", taxRouter);
+  });
+
+  afterEach(async () => {
+    vi.restoreAllMocks();
+    await destroyTestDataSource();
   });
 
   const createTestUser = async (userId: number): Promise<string> => {

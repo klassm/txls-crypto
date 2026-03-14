@@ -1,4 +1,4 @@
-import { describe, it, expect, afterAll, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { getDataSource } from "../../src/database.js";
 import { PortfolioSnapshotsService } from "../../src/modules/portfolio-snapshots/portfolio-snapshots.service.js";
 import { PortfolioSnapshotsRepository } from "../../src/modules/portfolio-snapshots/portfolio-snapshots.repository.js";
@@ -14,10 +14,6 @@ describe("PortfolioSnapshotsService Integration Tests", () => {
 	let service: PortfolioSnapshotsService;
 	let dataSource: Awaited<ReturnType<typeof getDataSource>>;
 
-	afterAll(async () => {
-		await destroyTestDataSource();
-	});
-
 	beforeEach(async () => {
 		await createTestDataSource();
 		dataSource = await getDataSource();
@@ -30,6 +26,10 @@ describe("PortfolioSnapshotsService Integration Tests", () => {
 		await dataSource.getRepository(TransactionEntity).clear();
 		await dataSource.getRepository(AccountEntity).clear();
 		await dataSource.getRepository(AssetPriceEntity).clear();
+	});
+
+	afterEach(async () => {
+		await destroyTestDataSource();
 	});
 
 	describe("getPortfolioOverview", () => {

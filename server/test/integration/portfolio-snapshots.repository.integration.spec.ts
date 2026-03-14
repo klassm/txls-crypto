@@ -1,4 +1,4 @@
-import { describe, it, expect, afterAll, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { getDataSource } from "../../src/database.js";
 import { PortfolioSnapshotEntity } from "../../src/modules/portfolio-snapshots/portfolio-snapshot.entity.js";
 import { PortfolioSnapshotsRepository } from "../../src/modules/portfolio-snapshots/portfolio-snapshots.repository.js";
@@ -8,14 +8,14 @@ import { createTestDataSource, destroyTestDataSource } from "../test-helpers.js"
 describe("PortfolioSnapshotsRepository Integration Tests", () => {
 	let repository: PortfolioSnapshotsRepository;
 
-	afterAll(async () => {
-		await destroyTestDataSource();
-	});
-
 	beforeEach(async () => {
 		await createTestDataSource();
 		const dataSource = await getDataSource();
 		repository = new PortfolioSnapshotsRepository(dataSource);
+	});
+
+	afterEach(async () => {
+		await destroyTestDataSource();
 	});
 
 	const createBaseData = (overrides: Partial<{ userId: number; providerAccountId: number; asset: string; date: DateTime; amount: number; eurInvested: number; buyCount: number; sellCount: number }> = {}) => ({

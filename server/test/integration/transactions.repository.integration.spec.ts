@@ -1,4 +1,4 @@
-import { describe, it, expect, afterAll, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { getDataSource } from "../../src/database.js";
 import { TransactionEntity } from "../../src/modules/transactions/transaction.entity.js";
 import { AccountEntity } from "../../src/modules/accounts/account.entity.js";
@@ -11,14 +11,14 @@ import { createTestDataSource, destroyTestDataSource } from "../test-helpers.js"
 describe("TransactionsRepository Integration Tests", () => {
   let repository: TransactionsRepository;
 
-  afterAll(async () => {
-    await destroyTestDataSource();
-  });
-
   beforeEach(async () => {
     await createTestDataSource();
     const dataSource = await getDataSource();
     repository = new TransactionsRepository(dataSource);
+  });
+
+  afterEach(async () => {
+    await destroyTestDataSource();
   });
 
   const createBaseEntity = (overrides: Partial<TransactionEntity> = {}) => {

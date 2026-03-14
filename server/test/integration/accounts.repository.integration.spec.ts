@@ -1,4 +1,4 @@
-import { describe, it, expect, afterAll, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { getDataSource } from "../../src/database.js";
 import { AccountEntity } from "../../src/modules/accounts/account.entity.js";
 import { AccountsRepository } from "../../src/modules/accounts/accounts.repository.js";
@@ -14,14 +14,14 @@ import { createTestDataSource, destroyTestDataSource } from "../test-helpers.js"
 describe("AccountsRepository Integration Tests", () => {
   let repository: AccountsRepository;
 
-  afterAll(async () => {
-    await destroyTestDataSource();
-  });
-
   beforeEach(async () => {
     await createTestDataSource();
     const dataSource = await getDataSource();
     repository = new AccountsRepository(dataSource);
+  });
+
+  afterEach(async () => {
+    await destroyTestDataSource();
   });
 
   describe("save", () => {

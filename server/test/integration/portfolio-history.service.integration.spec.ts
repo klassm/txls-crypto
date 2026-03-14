@@ -1,4 +1,4 @@
-import { describe, it, expect, afterAll, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { getDataSource } from "../../src/database.js";
 import { PortfolioSnapshotsService } from "../../src/modules/portfolio-snapshots/portfolio-snapshots.service.js";
 import { PortfolioSnapshotsRepository } from "../../src/modules/portfolio-snapshots/portfolio-snapshots.repository.js";
@@ -16,16 +16,16 @@ describe("PortfolioSnapshotsService Integration Tests - getPortfolioHistoryWithP
 	let pricesRepository: PricesRepository;
 	let dataSource: any;
 
-	afterAll(async () => {
-		await destroyTestDataSource();
-	});
-
 	beforeEach(async () => {
 		await createTestDataSource();
 		dataSource = await getDataSource();
 		snapshotsRepository = new PortfolioSnapshotsRepository(dataSource);
 		pricesRepository = new PricesRepository(dataSource);
 		service = new PortfolioSnapshotsService(dataSource, snapshotsRepository, pricesRepository);
+	});
+
+	afterEach(async () => {
+		await destroyTestDataSource();
 	});
 
 	const createSnapshot = async (overrides: Partial<{
