@@ -45,10 +45,10 @@ ENV NODE_ENV=production
 RUN corepack enable && corepack prepare pnpm@10.6.5 --activate
 RUN apk add --no-cache nginx curl sqlite jq openssl python3 make g++
 
-COPY pnpm-lock.yaml package.json pnpm-workspace.yaml ./
+COPY pnpm-lock.yaml package.json pnpm-workspace.yaml turbo.json ./
 COPY shared/package.json ./shared/
 COPY server/package.json ./server/
-RUN pnpm install --filter @txls/shared --filter @txls/server --frozen-lockfile --prod
+RUN pnpm install --filter @txls/shared --filter @txls/server --frozen-lockfile
 RUN cd node_modules/.pnpm/better-sqlite3@*/node_modules/better-sqlite3 && npx node-gyp rebuild --release
 
 # Copy built shared (includes migrations in dist/migrations)
