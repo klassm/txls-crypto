@@ -41,6 +41,9 @@ You can import your TradeRepublic transactions using the [pytr](https://github.c
 
  ## Import
  
- Upload the \`account_transactions.csv\` file to import your TradeRepublic transactions.`,
+ Upload the \`account_transactions.csv\` file to import your TradeRepublic transactions.
+
+**Important:** Staking rewards are not included in the CSV export. Add them manually using the "Add Staking" button.`,
   apiSyncMarkdownInstructions: "",
+  supportsManualStaking: true,
 };

@@ -7,6 +7,7 @@ import { PortfolioSnapshotEntity } from "./portfolio-snapshot.entity.js";
 import { TransactionEntity } from "../transactions/transaction.entity.js";
 import { AccountEntity } from "../accounts/account.entity.js";
 import { PricesRepository } from "../prices/prices.repository.js";
+import { TransactionsRepository } from "../transactions/transactions.repository.js";
 import { logger } from "../../common/logger.js";
 
 interface DailyAssetData {
@@ -52,6 +53,8 @@ export interface PortfolioOverview {
 	portfolioHistory: PortfolioHistoryPoint[];
 	assets: AssetOverview[];
 	accounts: AccountOverview[];
+	totalStakingRewards: number;
+	stakingRewardCount: number;
 }
 
 export class PortfolioSnapshotsService {
@@ -417,10 +420,15 @@ export class PortfolioSnapshotsService {
 			}
 		}
 
+		const transactionsRepo = new TransactionsRepository(this.dataSource);
+		const stakingStats = await transactionsRepo.getTotalStakingRewards(userId);
+
 		return {
 			portfolioHistory,
 			assets: assetsOverview,
 			accounts: accountsOverview,
+			totalStakingRewards: stakingStats.eurValue,
+			stakingRewardCount: stakingStats.count,
 		};
 	}
 

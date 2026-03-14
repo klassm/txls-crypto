@@ -1,12 +1,14 @@
 "use client";
 
-import { Box, Typography, Grid, Card } from "@mui/material";
+import { Box, Typography, Grid, Card, Button } from "@mui/material";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { Add as AddIcon } from "@mui/icons-material";
 import { PageHeader } from "../../components/common/PageHeader";
 import { EmptyState } from "../../components/account-detail/EmptyState";
 import { ImportCsvDialog } from "../../components/account-detail/ImportCsvDialog";
 import { ApiSyncDialog } from "../../components/account-detail/ApiSyncDialog";
+import { AddStakingDialog } from "../../components/account-detail/AddStakingDialog";
 import { TransactionsTable } from "../../components/account-detail/TransactionsTable";
 import { PortfolioValueChart } from "../../components/charts/PortfolioValueChart";
 import { AccountStats } from "../../components/account-detail/AccountStats";
@@ -34,6 +36,7 @@ export default function AccountDetailPage() {
 
 	const [importDialogOpen, setImportDialogOpen] = useState(false);
 	const [apiSyncDialogOpen, setApiSyncDialogOpen] = useState(false);
+	const [stakingDialogOpen, setStakingDialogOpen] = useState(false);
 	const [apiSyncError, setApiSyncError] = useState<string | null>(null);
 	const [isSavingApiKey, setIsSavingApiKey] = useState(false);
 	const [isDeletingApiKey, setIsDeletingApiKey] = useState(false);
@@ -101,6 +104,7 @@ export default function AccountDetailPage() {
 
 	const transactions = transactionsData?.transactions || [];
 	const yearOptions = transactionsData?.availableYears ?? [currentYear];
+	const stats = transactionsData?.stats;
 
 	const isApiSyncEnabled = apiSettings?.apiEnabled ?? false;
 	const hasApiKey = apiSettings?.hasApiKey ?? false;
@@ -108,6 +112,7 @@ export default function AccountDetailPage() {
 
 	const currentSource = sources.find((s) => s.source === account?.provider);
 	const apiSyncInstructions = currentSource?.apiSyncMarkdownInstructions ?? "";
+	const supportsManualStaking = currentSource?.supportsManualStaking ?? false;
 
 	const formatValue = (value: number) =>
 		new Intl.NumberFormat("de-DE", {
@@ -188,11 +193,45 @@ export default function AccountDetailPage() {
 							</Card>
 						)}
 
-										<Box sx={{ mb: 2 }}>
-											<AccountStats history={portfolioHistory} />
-										</Box>
+							<Box sx={{ mb: 2 }}>
+								<AccountStats history={portfolioHistory} />
+							</Box>
 
-										<AssetDistributionSummary history={portfolioHistory} />
+						{supportsManualStaking && (
+							<Card sx={{ p: 2, mb: 2 }}>
+								<Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+									<Box>
+										<Typography variant="body2" color="text.secondary">
+											Staking Rewards ({selectedYear})
+										</Typography>
+										{stats && stats.staking.count > 0 ? (
+											<>
+												<Typography variant="h6" fontWeight={600}>
+													{formatValue(stats.staking.fiatAmount)}
+												</Typography>
+												<Typography variant="caption" color="text.secondary">
+													{stats.staking.count} transaction{stats.staking.count !== 1 ? 's' : ''}
+												</Typography>
+											</>
+										) : (
+											<Typography variant="body2" color="text.secondary">
+												No staking rewards recorded
+											</Typography>
+										)}
+									</Box>
+									<Button
+										variant="outlined"
+										size="small"
+										startIcon={<AddIcon />}
+										onClick={() => setStakingDialogOpen(true)}
+									>
+										Add
+									</Button>
+								</Box>
+							</Card>
+						)}
+
+							<AssetDistributionSummary history={portfolioHistory} />
 									</Box>
 								</Grid>
 								<Grid size={{ xs: 12, lg: 8 }} sx={{ order: { xs: 2, lg: 1 } }}>
@@ -218,20 +257,37 @@ export default function AccountDetailPage() {
 						onImport={handleImport}
 						isImporting={importMutation.isPending}
 					/>
-					<ApiSyncDialog
-						open={apiSyncDialogOpen}
-						onClose={() => {
-							setApiSyncDialogOpen(false);
-							setApiSyncError(null);
-						}}
-						onSave={handleSaveApiKey}
-						onDelete={handleDeleteApiKey}
-						isSaving={isSavingApiKey}
-						isDeleting={isDeletingApiKey}
-						error={apiSyncError}
-						instructions={apiSyncInstructions}
-						hasExistingKey={hasApiKey}
-					/>
+				<ApiSyncDialog
+					open={apiSyncDialogOpen}
+					onClose={() => {
+						setApiSyncDialogOpen(false);
+						setApiSyncError(null);
+					}}
+					onSave={handleSaveApiKey}
+					onDelete={handleDeleteApiKey}
+					isSaving={isSavingApiKey}
+					isDeleting={isDeletingApiKey}
+					error={apiSyncError}
+					instructions={apiSyncInstructions}
+					hasExistingKey={hasApiKey}
+				/>
+				<AddStakingDialog
+					open={stakingDialogOpen}
+					onClose={() => setStakingDialogOpen(false)}
+					onSubmit={async (data) => {
+						try {
+							const result = await accountsApi.addStakingReward(Number(id), data);
+							if (result.success) {
+								refetchTransactions();
+								return { success: true };
+							}
+							return { success: false, error: "Failed to add staking reward" };
+						} catch (err) {
+							return { success: false, error: err instanceof Error ? err.message : "Failed to add staking reward" };
+						}
+					}}
+					isLoading={false}
+				/>
 				</>
 			)}
 		</PageLayout>

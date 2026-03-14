@@ -64,6 +64,7 @@ describe("PortfolioSnapshotsService", () => {
 						groupBy: vi.fn().mockReturnThis(),
 						orderBy: vi.fn().mockReturnThis(),
 						getRawMany: vi.fn().mockResolvedValue([]),
+						getRawOne: vi.fn().mockResolvedValue({ totalEurValue: 0, count: 0 }),
 						getOne: vi.fn().mockResolvedValue(null),
 					}),
 					findOne: vi.fn().mockResolvedValue(null),

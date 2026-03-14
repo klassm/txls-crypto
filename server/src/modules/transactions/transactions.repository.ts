@@ -301,6 +301,22 @@ async getStatsByProviderAccountIdAndYear(
       .getMany();
   }
 
+  async getTotalStakingRewards(userId: number): Promise<{ eurValue: number; count: number }> {
+    const result = await this.qb
+      .select([
+        "COALESCE(SUM(ABS(transaction.eurValue)), 0) AS totalEurValue",
+        "COUNT(transaction.id) AS count",
+      ])
+      .where("transaction.userId = :userId", { userId })
+      .andWhere("transaction.type = :type", { type: TransactionType.reward })
+      .getRawOne();
+
+    return {
+      eurValue: Number(result?.totalEurValue) || 0,
+      count: Number(result?.count) || 0,
+    };
+  }
+
   async updateLinkedTransaction(
     userId: number,
     transactionId: number,

@@ -31,7 +31,7 @@ function calculateChange(
 	return result;
 }
 
-function PortfolioStats({ history, assets }: { history: PortfolioHistoryPoint[] | undefined; assets: AssetOverview[] }) {
+function PortfolioStats({ history, assets, totalStakingRewards, stakingRewardCount }: { history: PortfolioHistoryPoint[] | undefined; assets: AssetOverview[]; totalStakingRewards: number; stakingRewardCount: number }) {
 	if (!history || history.length === 0) return null;
 
 	const latest = history[history.length - 1];
@@ -71,7 +71,7 @@ function PortfolioStats({ history, assets }: { history: PortfolioHistoryPoint[] 
 
 	return (
 		<Grid container spacing={2} sx={{ mb: 4 }}>
-			<Grid size={{ xs: 12, sm: 6, md: 6 }}>
+			<Grid size={{ xs: 12, sm: 6, md: totalStakingRewards > 0 ? 4 : 6 }}>
 				<Card sx={{ p: 2, height: "100%" }}>
 					<Typography variant="body2" color="text.secondary">
 						Total Value
@@ -84,7 +84,22 @@ function PortfolioStats({ history, assets }: { history: PortfolioHistoryPoint[] 
 					</Typography>
 				</Card>
 			</Grid>
-			<Grid size={{ xs: 12, sm: 6, md: 6 }}>
+			{totalStakingRewards > 0 && (
+				<Grid size={{ xs: 12, sm: 6, md: 4 }}>
+					<Card sx={{ p: 2, height: "100%" }}>
+						<Typography variant="body2" color="text.secondary">
+							Staking Rewards
+						</Typography>
+						<Typography variant="h5" fontWeight={600} color="success.main">
+							{formatValue(totalStakingRewards)}
+						</Typography>
+						<Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+							{stakingRewardCount} transaction{stakingRewardCount !== 1 ? 's' : ''}
+						</Typography>
+					</Card>
+				</Grid>
+			)}
+			<Grid size={{ xs: 12, sm: 6, md: totalStakingRewards > 0 ? 4 : 6 }}>
 				<Card sx={{ p: { xs: 1.5, sm: 2 }, height: "100%" }}>
 					<Grid container spacing={{ xs: 1, sm: 2 }}>
 						<Grid size={{ xs: 6, sm: 3 }}>
@@ -149,6 +164,8 @@ export default function PortfolioPage() {
 	const portfolioHistory = overview?.portfolioHistory;
 	const assets = overview?.assets || [];
 	const accounts = overview?.accounts || [];
+	const totalStakingRewards = overview?.totalStakingRewards || 0;
+	const stakingRewardCount = overview?.stakingRewardCount || 0;
 
 	const getProviderName = (provider: string) => {
 		const source = sources.find(s => s.source === provider);
@@ -173,7 +190,7 @@ export default function PortfolioPage() {
 				</Typography>
 			) : (
 				<>
-					<PortfolioStats history={portfolioHistory} assets={assets} />
+					<PortfolioStats history={portfolioHistory} assets={assets} totalStakingRewards={totalStakingRewards} stakingRewardCount={stakingRewardCount} />
 
 				{portfolioHistory.length > 0 && (
 					<Box sx={{ mb: 4 }}>

@@ -15,6 +15,7 @@ router.get("/config", (_req: Request, res: Response) => {
 			csvImportMarkdownInstructions: value.csvImportMarkdownInstructions,
 			apiSyncMarkdownInstructions: value.apiSyncMarkdownInstructions,
 			csvImportAllowed: value.csvImporter !== undefined,
+			supportsManualStaking: value.supportsManualStaking,
 		})),
 	);
 });

@@ -56,6 +56,8 @@ export interface PortfolioOverview {
 	portfolioHistory: PortfolioHistoryPoint[];
 	assets: AssetOverview[];
 	accounts: AccountOverview[];
+	totalStakingRewards: number;
+	stakingRewardCount: number;
 }
 
 export const portfolioApi = {

@@ -30,5 +30,7 @@ export const bitpandaConfig: ProviderConfig = {
 **What gets synced:**
 - All trades (buys, sells)
 - Crypto deposits and withdrawals
-- Staking operations`,
+
+**Important:** Staking rewards are not included in API sync. Use CSV import or add them manually.`,
+  supportsManualStaking: true,
 };

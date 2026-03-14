@@ -700,4 +700,68 @@ describe("TransactionsRepository Integration Tests", () => {
       expect(summaries.size).toBe(0);
     });
   });
+
+  describe("getTotalStakingRewards", () => {
+    beforeEach(async () => {
+      const transactions = [
+        createBaseEntity({
+          externalId: "STAKING-1",
+          type: TransactionType.reward,
+          asset: "SOL",
+          quantity: 0.5,
+          eurValue: 75,
+          timestamp: DateTime.fromISO("2024-06-15T10:00:00Z"),
+        }),
+        createBaseEntity({
+          externalId: "STAKING-2",
+          type: TransactionType.reward,
+          asset: "ETH",
+          quantity: 0.1,
+          eurValue: 300,
+          timestamp: DateTime.fromISO("2024-07-20T14:00:00Z"),
+        }),
+        createBaseEntity({
+          externalId: "STAKING-3",
+          type: TransactionType.buy,
+          asset: "BTC",
+          quantity: 1.0,
+          eurValue: 50000,
+          timestamp: DateTime.fromISO("2024-08-10T09:00:00Z"),
+        }),
+        createBaseEntity({
+          userId: 2,
+          providerAccountId: 2,
+          externalId: "STAKING-4",
+          type: TransactionType.reward,
+          asset: "BTC",
+          quantity: 0.01,
+          eurValue: 500,
+          timestamp: DateTime.fromISO("2024-09-05T11:00:00Z"),
+        }),
+      ];
+
+      await repository.saveMany(transactions);
+    });
+
+    it("should return total staking rewards for user", async () => {
+      const result = await repository.getTotalStakingRewards(1);
+
+      expect(result.eurValue).toBe(375);
+      expect(result.count).toBe(2);
+    });
+
+    it("should return zero for user with no staking rewards", async () => {
+      const result = await repository.getTotalStakingRewards(999);
+
+      expect(result.eurValue).toBe(0);
+      expect(result.count).toBe(0);
+    });
+
+    it("should not include transactions from other users", async () => {
+      const result = await repository.getTotalStakingRewards(1);
+
+      expect(result.eurValue).toBe(375);
+      expect(result.count).toBe(2);
+    });
+  });
 });
