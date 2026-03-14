@@ -96,28 +96,33 @@ const csvContentWithHeader = [lines[headerRowIndex], ...dataLines].join("\n");
       );
     }
 
-    const { transactions, validationErrors } = Array.from(
-      records.entries(),
-    ).reduce<{
+    const parsedRows: { row: BitpandaRow; index: number }[] = [];
+    const stakeUnstakeKeys = new Set<string>();
+
+    for (const [index, record] of records.entries()) {
+      const parsedRow = BitpandaRowSchema.safeParse(record);
+      if (parsedRow.success) {
+        const row = parsedRow.data;
+        parsedRows.push({ row, index });
+        
+        const txType = row["Transaction Type"].toLowerCase();
+        if (txType === "transfer(stake)" || txType === "transfer(unstake)") {
+          const key = this.buildStakeUnstakeKey(row);
+          stakeUnstakeKeys.add(key);
+        }
+      }
+    }
+
+    const { transactions, validationErrors } = parsedRows.reduce<{
       transactions: Transaction[];
       validationErrors: string[];
     }>(
-      (acc, [index, record]) => {
-        const parsedRow = BitpandaRowSchema.safeParse(record);
-
-        if (!parsedRow.success) {
-          const errorMsg = `Row ${index + 2}: ${parsedRow.error.issues
-            .map((e) => `${e.path.join(".")}: ${e.message}`)
-            .join(", ")}`;
-          acc.validationErrors.push(errorMsg);
-          logger.warn({ accountId, rowIndex: index + 2 }, errorMsg);
-          return acc;
-        }
-
+      (acc, { row, index }) => {
         try {
           const transaction = this.createTransaction(
-            parsedRow.data,
+            row,
             accountId,
+            stakeUnstakeKeys,
           );
           if (transaction) {
             acc.transactions.push(transaction);
@@ -132,6 +137,17 @@ const csvContentWithHeader = [lines[headerRowIndex], ...dataLines].join("\n");
       },
       { transactions: [], validationErrors: [] }
     );
+
+    for (const [index, record] of records.entries()) {
+      const parsedRow = BitpandaRowSchema.safeParse(record);
+      if (!parsedRow.success) {
+        const errorMsg = `Row ${index + 2}: ${parsedRow.error.issues
+          .map((e) => `${e.path.join(".")}: ${e.message}`)
+          .join(", ")}`;
+        validationErrors.push(errorMsg);
+        logger.warn({ accountId, rowIndex: index + 2 }, errorMsg);
+      }
+    }
 
     
 
@@ -151,6 +167,7 @@ const csvContentWithHeader = [lines[headerRowIndex], ...dataLines].join("\n");
   private createTransaction(
     row: BitpandaRow,
     accountId: number,
+    stakeUnstakeKeys: Set<string>,
   ): Transaction | null {
     const transactionType = row["Transaction Type"];
     const asset = row["Asset"];
@@ -167,6 +184,14 @@ const csvContentWithHeader = [lines[headerRowIndex], ...dataLines].join("\n");
       return null;
     }
 
+    if (transactionType.toLowerCase() === "transfer" && inOut === "outgoing") {
+      const key = this.buildStakeUnstakeKey(row);
+      if (stakeUnstakeKeys.has(key)) {
+        logger.debug({ accountId, externalId: row["Transaction ID"] }, "Skipping transfer outgoing for staking");
+        return null;
+      }
+    }
+
     const type = this.mapTransactionType(transactionType, inOut);
     if (!type) {
       throw new ImportError(`Type: ${transactionType} (${row["Transaction ID"]})`);
@@ -178,10 +203,6 @@ const csvContentWithHeader = [lines[headerRowIndex], ...dataLines].join("\n");
 
     if (quantity === 0 && eurValue === 0) {
       return null;
-    }
-
-    if (type === TransactionType.deposit) {
-      quantity = eurValue;
     }
 
     return {
@@ -197,6 +218,13 @@ const csvContentWithHeader = [lines[headerRowIndex], ...dataLines].join("\n");
       eurRate: this.parseNumber(row["Asset market price"] ?? "") ?? 0,
       processed: false,
     };
+  }
+
+  private buildStakeUnstakeKey(row: BitpandaRow): string {
+    const timestamp = row["Timestamp"].substring(0, 16);
+    const asset = row["Asset"];
+    const amount = row["Amount Asset"];
+    return `${timestamp}-${asset}-${amount}`;
   }
 
   private mapTransactionType(bitpandaType: string, inOut?: string): TransactionType | null {

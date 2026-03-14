@@ -27,23 +27,21 @@ You can import your TradeRepublic transactions using the [pytr](https://github.c
    pip install pytr
    \`\`\`
 
-2. Configure pytr with your TradeRepublic credentials:
-   \`\`\`bash
-   pytr --init
-   \`\`\`
-
-3. Export your transactions to CSV:
+2. Export your transactions to CSV:
    \`\`\`bash
    pytr export_transactions
    \`\`\`
 
-4. This will generate an \`account_transactions.csv\` file in your current directory.
+3. This will generate an \`account_transactions.csv\` file in your current directory.
 
  ## Import
  
  Upload the \`account_transactions.csv\` file to import your TradeRepublic transactions.
 
-**Important:** Staking rewards are not included in the CSV export. Add them manually using the "Add Staking" button.`,
+**Important:** 
+- Staking rewards are not included in the CSV export. Add them manually using the "Add Staking" button.
+- Crypto transfers do not have a proper amount and will not show up properly!
+`,
   apiSyncMarkdownInstructions: "",
   supportsManualStaking: true,
 };

@@ -8,6 +8,8 @@ interface ImportDeduplicationResult {
   shouldSkip: boolean;
   existingSum?: number;
   newSum?: number;
+  existingQuantitySum?: number;
+  newQuantitySum?: number;
   count: number;
 }
 
@@ -58,6 +60,14 @@ export class ImportDeduplicationService {
       (sum, tx) => sum + Math.abs(tx.eurValue),
       0,
     );
+    const existingQuantitySum = existingTransactions.reduce(
+      (sum, tx) => sum + Math.abs(Number(tx.quantity)),
+      0,
+    );
+    const newQuantitySum = transactions.reduce(
+      (sum, tx) => sum + Math.abs(tx.quantity),
+      0,
+    );
     const existingCount = existingTransactions.length;
 
     logger.info({
@@ -67,10 +77,12 @@ export class ImportDeduplicationService {
       newCount: transactions.length,
       existingSum,
       newSum,
-      sumsMatch: existingSum === newSum,
+      existingQuantitySum,
+      newQuantitySum,
+      sumsMatch: existingSum === newSum && existingQuantitySum === newQuantitySum,
     });
 
-    if (existingSum === newSum && existingCount === transactions.length) {
+    if (existingSum === newSum && existingQuantitySum === newQuantitySum && existingCount === transactions.length) {
       logger.info({
         accountId,
         message: "Skipping import - data matches existing records",
@@ -79,6 +91,8 @@ export class ImportDeduplicationService {
         shouldSkip: true,
         existingSum,
         newSum,
+        existingQuantitySum,
+        newQuantitySum,
         count: existingCount,
       };
     }
@@ -101,6 +115,8 @@ export class ImportDeduplicationService {
       shouldSkip: false,
       existingSum,
       newSum,
+      existingQuantitySum,
+      newQuantitySum,
       count: existingCount,
     };
   }

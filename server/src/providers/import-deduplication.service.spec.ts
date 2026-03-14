@@ -382,5 +382,56 @@ describe("ImportDeduplicationService", () => {
       expect(result.existingSum).toBeCloseTo(0.000002, 8);
       expect(result.newSum).toBeCloseTo(0.000002, 8);
     });
+
+    it("should replace when eurValue matches but quantity differs", async () => {
+      const existingTransactions: Transaction[] = [
+        {
+          id: 0,
+          providerAccountId: 1,
+          externalId: "DEPOSIT-001",
+          timestamp: DateTime.fromISO("2026-03-14T10:00:00.000Z"),
+          type: TransactionType.deposit,
+          asset: "BTC",
+          quantity: 6187.28,
+          eurValue: 6187.28,
+          eurFee: 0,
+          eurRate: 61872.75,
+          processed: false,
+        },
+      ];
+
+      const repository = (await getDataSource()).getRepository(TransactionEntity);
+      await repository.save(toEntities(existingTransactions));
+
+      const newTransactions: Transaction[] = [
+        {
+          id: 0,
+          providerAccountId: 1,
+          externalId: "DEPOSIT-001",
+          timestamp: DateTime.fromISO("2026-03-14T10:00:00.000Z"),
+          type: TransactionType.deposit,
+          asset: "BTC",
+          quantity: 0.1,
+          eurValue: 6187.28,
+          eurFee: 0,
+          eurRate: 61872.75,
+          processed: false,
+        },
+      ];
+
+      const result = await deduplicationService.shouldSkipOrReplace(
+        1,
+        newTransactions,
+      );
+
+      expect(result.shouldSkip).toBe(false);
+      expect(result.existingSum).toBe(6187.28);
+      expect(result.newSum).toBe(6187.28);
+      expect(result.existingQuantitySum).toBe(6187.28);
+      expect(result.newQuantitySum).toBe(0.1);
+
+      const remaining = await repository.count({ where: { providerAccountId: 1 } });
+      expect(remaining).toBe(0);
+    });
   });
 });

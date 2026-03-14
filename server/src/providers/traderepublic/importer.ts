@@ -38,15 +38,6 @@ const CRYPTO_ISIN_MAP: Record<string, string> = {
   "XF000SOL0012": "SOL",
 };
 
-const CRYPTO_ASSET_NAMES = new Set([
-  "Bitcoin",
-  "XRP",
-  "Solana",
-  "BTC",
-  "XRP",
-  "SOL",
-]);
-
 export class TradeRepublicImporter implements CsvImporter {
   parseCsv(csvContent: string, accountId: number): CsvImportResult {
     logger.info({
@@ -162,7 +153,6 @@ const csvContentWithHeader = [lines[headerRowIndex], ...dataLines].join("\n");
     accountId: number,
   ): Transaction | null {
     const type = row.Type;
-    const note = row.Note;
     const value = this.parseNumber(row.Value);
     const shares = this.parseNumber(row.Shares);
     const fees = this.parseNumber(row.Fees) || 0;
@@ -174,22 +164,16 @@ const csvContentWithHeader = [lines[headerRowIndex], ...dataLines].join("\n");
     let quantity: number | null = null;
     let eurValue: number | null = null;
 
-    if (type === "Deposit" && !isin) {
-      asset = this.getAssetFromNote(note);
-      if (!CRYPTO_ASSET_NAMES.has(asset)) {
-        return null;
-      }
-      transactionType = TransactionType.reward;
-      quantity = value;
-      eurValue = value;
-    } else if (type === "Buy") {
-      transactionType = TransactionType.buy;
+    if (type === "Buy") {
       asset = CRYPTO_ISIN_MAP[isin];
+      if (!asset) return null;
+      transactionType = TransactionType.buy;
       quantity = shares;
       eurValue = value !== null ? Math.abs(value) : 0;
     } else if (type === "Sell") {
-      transactionType = TransactionType.sell;
       asset = CRYPTO_ISIN_MAP[isin];
+      if (!asset) return null;
+      transactionType = TransactionType.sell;
       quantity = shares;
       eurValue = value;
     }
@@ -217,17 +201,6 @@ const csvContentWithHeader = [lines[headerRowIndex], ...dataLines].join("\n");
       eurRate,
       processed: false,
     };
-  }
-
-  private getAssetFromNote(note: string): string {
-    const assetName = note.split(" ")[0];
-    if (assetName === "Bitcoin") return "BTC";
-    if (assetName === "XRP") return "XRP";
-    if (assetName === "Solana") return "SOL";
-    if (assetName === "BTC") return "BTC";
-    if (assetName === "XRP") return "XRP";
-    if (assetName === "SOL") return "SOL";
-    return assetName;
   }
 
   private parseNumber(value: string): number | null {

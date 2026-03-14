@@ -82,7 +82,7 @@ export function AccountStats({ history, variant = "full" }: AccountStatsProps) {
 
 	return (
 		<Grid container spacing={2}>
-			<Grid size={{ xs: 6, sm: 3 }}>
+			<Grid size={{ xs: 6 }}>
 				<Card sx={{ p: 2, height: "100%", minHeight: 90 }}>
 					<Typography variant="body2" color="text.secondary">
 						24h
@@ -95,7 +95,7 @@ export function AccountStats({ history, variant = "full" }: AccountStatsProps) {
 					</Typography>
 				</Card>
 			</Grid>
-			<Grid size={{ xs: 6, sm: 3 }}>
+			<Grid size={{ xs: 6 }}>
 				<Card sx={{ p: 2, height: "100%", minHeight: 90 }}>
 					<Typography variant="body2" color="text.secondary">
 						7d
@@ -108,7 +108,7 @@ export function AccountStats({ history, variant = "full" }: AccountStatsProps) {
 					</Typography>
 				</Card>
 			</Grid>
-			<Grid size={{ xs: 6, sm: 3 }}>
+			<Grid size={{ xs: 6 }}>
 				<Card sx={{ p: 2, height: "100%", minHeight: 90 }}>
 					<Typography variant="body2" color="text.secondary">
 						30d
@@ -121,7 +121,7 @@ export function AccountStats({ history, variant = "full" }: AccountStatsProps) {
 					</Typography>
 				</Card>
 			</Grid>
-			<Grid size={{ xs: 6, sm: 3 }}>
+			<Grid size={{ xs: 6 }}>
 				<Card sx={{ p: 2, height: "100%", minHeight: 90 }}>
 					<Typography variant="body2" color="text.secondary">
 						90d

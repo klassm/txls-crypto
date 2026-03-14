@@ -74,7 +74,7 @@ function PortfolioStats({ history, assets, currentYearStakingRewards, totalStaki
 
 	return (
 		<Grid container spacing={2} sx={{ mb: 4 }}>
-			<Grid size={{ xs: 12, sm: 6, md: hasStakingRewards ? 4 : 6 }}>
+			<Grid size={{ xs: 12, sm: hasStakingRewards ? 6 : 12 }}>
 				<Card sx={{ p: 2, height: "100%" }}>
 					<Typography variant="body2" color="text.secondary">
 						Total Value
@@ -88,7 +88,7 @@ function PortfolioStats({ history, assets, currentYearStakingRewards, totalStaki
 				</Card>
 			</Grid>
 			{hasStakingRewards && (
-				<Grid size={{ xs: 12, sm: 6, md: 4 }}>
+				<Grid size={{ xs: 12, sm: 6 }}>
 					<Card sx={{ p: 2, height: "100%" }}>
 						<Typography variant="body2" color="text.secondary">
 							Staking Rewards ({currentYear})
@@ -107,54 +107,56 @@ function PortfolioStats({ history, assets, currentYearStakingRewards, totalStaki
 					</Card>
 				</Grid>
 			)}
-			<Grid size={{ xs: 12, sm: 6, md: hasStakingRewards ? 4 : 6 }}>
-				<Card sx={{ p: { xs: 1.5, sm: 2 }, height: "100%" }}>
-					<Grid container spacing={{ xs: 1, sm: 2 }}>
-						<Grid size={{ xs: 6, sm: 3 }}>
-							<Typography variant="body2" color="text.secondary">
-								Overall
-							</Typography>
-							<Typography variant="body1" sx={{ color: overallColor, fontWeight: 600, fontSize: { xs: "0.875rem", sm: "1rem" } }}>
-								{overallProfit >= 0 ? "+" : ""}{formatValue(overallProfit)}
-							</Typography>
-							<Typography variant="body2" sx={{ color: overallColor, fontSize: { xs: "0.75rem", sm: "0.875rem" } }}>
-								{overallProfitPercent >= 0 ? "+" : ""}{overallProfitPercent.toFixed(2)}%
-							</Typography>
-						</Grid>
-						<Grid size={{ xs: 6, sm: 3 }}>
-							<Typography variant="body2" color="text.secondary">
-								24h
-							</Typography>
-							<Typography variant="body1" sx={{ color: dayFormatted.color, fontWeight: 600, fontSize: { xs: "0.875rem", sm: "1rem" } }}>
-								{dayFormatted.value}
-							</Typography>
-							<Typography variant="body2" sx={{ color: dayFormatted.color, fontSize: { xs: "0.75rem", sm: "0.875rem" } }}>
-								{dayFormatted.percent}
-							</Typography>
-						</Grid>
-						<Grid size={{ xs: 6, sm: 3 }}>
-							<Typography variant="body2" color="text.secondary">
-								7d
-							</Typography>
-							<Typography variant="body1" sx={{ color: weekFormatted.color, fontWeight: 600, fontSize: { xs: "0.875rem", sm: "1rem" } }}>
-								{weekFormatted.value}
-							</Typography>
-							<Typography variant="body2" sx={{ color: weekFormatted.color, fontSize: { xs: "0.75rem", sm: "0.875rem" } }}>
-								{weekFormatted.percent}
-							</Typography>
-						</Grid>
-						<Grid size={{ xs: 6, sm: 3 }}>
-							<Typography variant="body2" color="text.secondary">
-								30d
-							</Typography>
-							<Typography variant="body1" sx={{ color: monthFormatted.color, fontWeight: 600, fontSize: { xs: "0.875rem", sm: "1rem" } }}>
-								{monthFormatted.value}
-							</Typography>
-							<Typography variant="body2" sx={{ color: monthFormatted.color, fontSize: { xs: "0.75rem", sm: "0.875rem" } }}>
-								{monthFormatted.percent}
-							</Typography>
-						</Grid>
-					</Grid>
+			<Grid size={{ xs: 6, sm: 3 }}>
+				<Card sx={{ p: 2, height: "100%", minHeight: 90 }}>
+					<Typography variant="body2" color="text.secondary">
+						Overall
+					</Typography>
+					<Typography variant="h6" fontWeight={600} sx={{ color: overallColor }}>
+						{overallProfit >= 0 ? "+" : ""}{formatValue(overallProfit)}
+					</Typography>
+					<Typography variant="body2" sx={{ color: overallColor }}>
+						{overallProfitPercent >= 0 ? "+" : ""}{overallProfitPercent.toFixed(2)}%
+					</Typography>
+				</Card>
+			</Grid>
+			<Grid size={{ xs: 6, sm: 3 }}>
+				<Card sx={{ p: 2, height: "100%", minHeight: 90 }}>
+					<Typography variant="body2" color="text.secondary">
+						24h
+					</Typography>
+					<Typography variant="h6" fontWeight={600} sx={{ color: dayFormatted.color }}>
+						{dayFormatted.value}
+					</Typography>
+					<Typography variant="body2" sx={{ color: dayFormatted.color }}>
+						{dayFormatted.percent}
+					</Typography>
+				</Card>
+			</Grid>
+			<Grid size={{ xs: 6, sm: 3 }}>
+				<Card sx={{ p: 2, height: "100%", minHeight: 90 }}>
+					<Typography variant="body2" color="text.secondary">
+						7d
+					</Typography>
+					<Typography variant="h6" fontWeight={600} sx={{ color: weekFormatted.color }}>
+						{weekFormatted.value}
+					</Typography>
+					<Typography variant="body2" sx={{ color: weekFormatted.color }}>
+						{weekFormatted.percent}
+					</Typography>
+				</Card>
+			</Grid>
+			<Grid size={{ xs: 6, sm: 3 }}>
+				<Card sx={{ p: 2, height: "100%", minHeight: 90 }}>
+					<Typography variant="body2" color="text.secondary">
+						30d
+					</Typography>
+					<Typography variant="h6" fontWeight={600} sx={{ color: monthFormatted.color }}>
+						{monthFormatted.value}
+					</Typography>
+					<Typography variant="body2" sx={{ color: monthFormatted.color }}>
+						{monthFormatted.percent}
+					</Typography>
 				</Card>
 			</Grid>
 		</Grid>
@@ -223,30 +225,30 @@ export default function PortfolioPage() {
 				)}
 
 			{portfolioHistory.length > 0 && portfolioHistory[portfolioHistory.length - 1].totalEurValue !== null && (
-					<Grid container spacing={{ xs: 1.5, sm: 2 }} sx={{ mb: 4 }}>
-						<Grid size={{ xs: 12, md: 6 }}>
-							<Card sx={{ p: { xs: 1.5, sm: 2 }, height: "100%" }}>
-								<Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
-									Asset Distribution
-								</Typography>
-								<AssetDistributionChart
-									data={Object.entries(portfolioHistory[portfolioHistory.length - 1].assets)
-										.map(([asset, data]) => ({
-											asset,
-											value: data.eurValue || 0,
-											percentage: 0,
-										}))
-										.sort((a, b) => b.value - a.value)}
-									height={300}
-								/>
-							</Card>
-						</Grid>
+				<Grid container spacing={{ xs: 1.5, sm: 2 }} sx={{ mb: 4 }}>
+					<Grid size={{ xs: 12, md: accounts.length > 1 ? 6 : 12 }}>
+						<Card sx={{ p: { xs: 1.5, sm: 2 }, height: "100%" }}>
+							<Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
+								Asset Distribution
+							</Typography>
+							<AssetDistributionChart
+								data={Object.entries(portfolioHistory[portfolioHistory.length - 1].assets)
+									.map(([asset, data]) => ({
+										asset,
+										value: data.eurValue || 0,
+										percentage: 0,
+									}))
+									.sort((a, b) => b.value - a.value)}
+								height={300}
+							/>
+						</Card>
+					</Grid>
+					{accounts.length > 1 && (
 						<Grid size={{ xs: 12, md: 6 }}>
 							<Card sx={{ p: { xs: 1.5, sm: 2 }, height: "100%" }}>
 								<Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
 									Account Distribution
 								</Typography>
-								{accounts.length > 1 ? (
 								<AccountDistributionChart
 									data={accounts
 										.filter(a => a.eurValue !== null)
@@ -260,17 +262,11 @@ export default function PortfolioPage() {
 									height={300}
 									onAccountClick={handleAccountClick}
 								/>
-								) : (
-									<Box sx={{ height: 300, display: "flex", alignItems: "center", justifyContent: "center" }}>
-										<Typography color="text.secondary">
-											Only one account
-										</Typography>
-									</Box>
-								)}
 							</Card>
 						</Grid>
-					</Grid>
-				)}
+					)}
+				</Grid>
+			)}
 
 					{assets.length > 0 && (
 						<Box sx={{ mb: 4 }}>

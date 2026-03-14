@@ -13,12 +13,14 @@ import {
   IconButton,
 } from "@mui/material";
 import React, { useRef, useState, useEffect } from "react";
+import ReactMarkdown from "react-markdown";
 
 interface ImportCsvDialogProps {
   open: boolean;
   onClose: () => void;
   onImport: (file: File) => Promise<void>;
   isImporting: boolean;
+  instructions: string;
 }
 
 export function ImportCsvDialog({
@@ -26,6 +28,7 @@ export function ImportCsvDialog({
   onClose,
   onImport,
   isImporting,
+  instructions,
 }: ImportCsvDialogProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -84,6 +87,16 @@ export function ImportCsvDialog({
           </Box>
         ) : (
           <Box sx={{ py: 2 }}>
+            <Box sx={{ 
+              "& h1": { typography: "h6", mb: 2, mt: 2 },
+              "& h2": { typography: "subtitle1", mb: 1, mt: 2 },
+              "& p": { typography: "body2", mb: 1 },
+              "& ol": { pl: 2, mb: 2 },
+              "& ul": { pl: 2, mb: 2 },
+              "& li": { typography: "body2", mb: 0.5 },
+            }}>
+              <ReactMarkdown>{instructions}</ReactMarkdown>
+            </Box>
             <Box
               sx={{
                 border: "2px dashed",

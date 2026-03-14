@@ -224,6 +224,54 @@ T12345,2026-02-19 20:00:00,buy,outgoing,100,EUR,1,ETH,100,EUR,Cryptocurrency,ETH
 
       expect(result.transactions).toHaveLength(0);
     });
+
+    it("should use Amount Asset for crypto deposits, not EUR value", () => {
+      const csv = `Transaction ID,Timestamp,Transaction Type,In/Out,Amount Fiat,Fiat,Amount Asset,Asset,Asset market price,Asset market price currency,Asset class,Product ID,Fee,Fee asset,Fee percent,Spread,Spread Currency,Tax Fiat
+C1f11f7a7-ff67-6d36-a9f4-960d8b60452c,2026-03-14T08:50:43+01:00,deposit,incoming,15.30,EUR,0.20000000,SOL,76.51,EUR,Cryptocurrency,135,0.00000000,SOL,-,-,-,-`;
+
+      const result = service.parseCsv(csv, accountId);
+
+      expect(result.transactions).toHaveLength(1);
+      expect(result.transactions[0].type).toBe(TransactionType.deposit);
+      expect(result.transactions[0].asset).toBe("SOL");
+      expect(result.transactions[0].quantity).toBe(0.2);
+      expect(result.transactions[0].eurValue).toBe(15.30);
+    });
+
+    it("should use Amount Asset for BTC crypto deposits", () => {
+      const csv = `Transaction ID,Timestamp,Transaction Type,In/Out,Amount Fiat,Fiat,Amount Asset,Asset,Asset market price,Asset market price currency,Asset class,Product ID,Fee,Fee asset,Fee percent,Spread,Spread Currency,Tax Fiat
+C1f11f895-8971-6ad7-9d0f-86c38c488853,2026-03-14T10:36:59+01:00,deposit,incoming,6187.28,EUR,0.10000000,BTC,61872.75,EUR,Cryptocurrency,1,0.00000000,BTC,-,-,-,-`;
+
+      const result = service.parseCsv(csv, accountId);
+
+      expect(result.transactions).toHaveLength(1);
+      expect(result.transactions[0].type).toBe(TransactionType.deposit);
+      expect(result.transactions[0].asset).toBe("BTC");
+      expect(result.transactions[0].quantity).toBe(0.1);
+      expect(result.transactions[0].eurValue).toBe(6187.28);
+    });
+
+    it("should skip transfer outgoing for staking (paired with transfer(stake))", () => {
+      const csv = `Transaction ID,Timestamp,Transaction Type,In/Out,Amount Fiat,Fiat,Amount Asset,Asset,Asset market price,Asset market price currency,Asset class,Product ID,Fee,Fee asset,Fee percent,Spread,Spread Currency,Tax Fiat
+1f11fa82-2412-6ee0-4f2b-539eac4236e1,2026-03-14T14:17:21+01:00,transfer(stake),incoming,15.29,EUR,0.20003902,SOL,76.44,EUR,Cryptocurrency,135,-,-,-,-,-
+1f11fa82-25e2-64c8-9fd9-497b33ae85c8,2026-03-14T14:17:22+01:00,transfer,outgoing,15.29,EUR,0.20003902,SOL,76.41,EUR,Cryptocurrency,135,-,-,-,-,-,-`;
+
+      const result = service.parseCsv(csv, accountId);
+
+      expect(result.transactions).toHaveLength(0);
+    });
+
+    it("should keep legitimate transfer outgoing as withdrawal", () => {
+      const csv = `Transaction ID,Timestamp,Transaction Type,In/Out,Amount Fiat,Fiat,Amount Asset,Asset,Asset market price,Asset market price currency,Asset class,Product ID,Fee,Fee asset,Fee percent,Spread,Spread Currency,Tax Fiat
+13333,2026-02-19T16:00:00+01:00,transfer,outgoing,100,EUR,0.1,SOL,1000,EUR,Cryptocurrency,135,0.00,EUR,0,EUR,EUR,0`;
+
+      const result = service.parseCsv(csv, accountId);
+
+      expect(result.transactions).toHaveLength(1);
+      expect(result.transactions[0].type).toBe(TransactionType.withdrawal);
+      expect(result.transactions[0].asset).toBe("SOL");
+      expect(result.transactions[0].quantity).toBe(0.1);
+    });
   });
 
   describe("mapTransactionType", () => {

@@ -72,11 +72,11 @@ export function TransactionsTable({
   const columns: MRT_ColumnDef<Transaction>[] = [
     {
       accessorKey: "timestamp",
-      header: "Date",
-      size: 120,
+      header: "Date/Time",
+      size: 150,
       Cell: ({ cell }) => {
         const dt = DateTime.fromISO(cell.getValue<string>());
-        return dt.isValid ? dt.toLocaleString() : "-";
+        return dt.isValid ? dt.toLocaleString(DateTime.DATETIME_SHORT) : "-";
       },
     },
     {

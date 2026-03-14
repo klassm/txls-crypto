@@ -60,7 +60,7 @@ export function useExportTaxCsv(accountId?: number) {
   });
 }
 
-export function useImportCsv(accountId?: number, onSuccess?: () => void) {
+export function useImportCsv(accountId?: number) {
   const queryClient = useQueryClient();
   const { showSuccess, showError, showInfo } = useSnackbar();
 
@@ -71,6 +71,8 @@ export function useImportCsv(accountId?: number, onSuccess?: () => void) {
     },
     onSuccess: (result: { imported: number; skipped?: number; errors?: string[]; validationErrors?: string[] }) => {
       queryClient.invalidateQueries({ queryKey: ["transactions", accountId] });
+      queryClient.invalidateQueries({ queryKey: ["portfolio", "history", accountId] });
+      queryClient.invalidateQueries({ queryKey: ["account", accountId] });
 
       if (result.skipped && result.skipped > 0) {
         showInfo(
@@ -92,10 +94,6 @@ export function useImportCsv(accountId?: number, onSuccess?: () => void) {
         showInfo(
           `${result.validationErrors.length} validation warning(s) - some transactions were skipped`,
         );
-      }
-
-      if (result.imported > 0) {
-        onSuccess?.();
       }
     },
     onError: (err: any) => {

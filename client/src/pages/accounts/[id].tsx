@@ -54,11 +54,7 @@ export default function AccountDetailPage() {
 	const chartDays = chartTimeSpan === "all" ? 3650 : chartTimeSpan;
 	const { data: portfolioHistory } = usePortfolioHistory(Number(id), chartDays);
 
-	const importMutation = useImportCsv(Number(id), () => {
-		setTimeout(() => {
-			location.reload();
-		}, 500);
-	});
+	const importMutation = useImportCsv(Number(id));
 
 	const handleImport = async (file: File) => {
 		importMutation.mutate(file);
@@ -112,6 +108,7 @@ export default function AccountDetailPage() {
 
 	const currentSource = sources.find((s) => s.source === account?.provider);
 	const apiSyncInstructions = currentSource?.apiSyncMarkdownInstructions ?? "";
+	const csvImportInstructions = currentSource?.csvImportMarkdownInstructions ?? "";
 	const supportsManualStaking = currentSource?.supportsManualStaking ?? false;
 
 	const formatValue = (value: number) =>
@@ -251,12 +248,13 @@ export default function AccountDetailPage() {
 							</Grid>
 						)}
 					</Box>
-					<ImportCsvDialog
-						open={importDialogOpen}
-						onClose={() => setImportDialogOpen(false)}
-						onImport={handleImport}
-						isImporting={importMutation.isPending}
-					/>
+				<ImportCsvDialog
+					open={importDialogOpen}
+					onClose={() => setImportDialogOpen(false)}
+					onImport={handleImport}
+					isImporting={importMutation.isPending}
+					instructions={csvImportInstructions}
+				/>
 				<ApiSyncDialog
 					open={apiSyncDialogOpen}
 					onClose={() => {
