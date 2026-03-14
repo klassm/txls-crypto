@@ -3,7 +3,7 @@ name: Release
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 0 1 * *'  # First day of each month at 00:00 UTC
+    - cron: '0 0 * * 1'  # Every Monday at 00:00 UTC
 
 env:
   REGISTRY: ghcr.io
