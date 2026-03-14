@@ -2,14 +2,49 @@ name: Release
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '0 0 1 * *'  # First day of each month at 00:00 UTC
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  check-commits:
+    runs-on: ubuntu-latest
+    outputs:
+      has-commits: ${{ steps.check.outputs.has-commits }}
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Check for new commits since last release
+        id: check
+        run: |
+          LAST_RELEASE=$(gh release list --limit 1 --json tagName --jq '.[0].tagName' 2>/dev/null || echo "")
+          
+          if [ -z "$LAST_RELEASE" ]; then
+            echo "No previous release found, proceeding with release"
+            echo "has-commits=true" >> $GITHUB_OUTPUT
+          else
+            COMMITS_SINCE=$(git rev-list $LAST_RELEASE..HEAD --count 2>/dev/null || echo "0")
+            if [ "$COMMITS_SINCE" -gt 0 ]; then
+              echo "Found $COMMITS_SINCE commits since last release ($LAST_RELEASE)"
+              echo "has-commits=true" >> $GITHUB_OUTPUT
+            else
+              echo "No commits since last release ($LAST_RELEASE), skipping"
+              echo "has-commits=false" >> $GITHUB_OUTPUT
+            fi
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   calculate-version:
     runs-on: ubuntu-latest
+    needs: check-commits
+    if: needs.check-commits.outputs.has-commits == 'true'
     outputs:
       version: ${{ steps.version.outputs.version }}
 
@@ -56,7 +91,8 @@ jobs:
 
   build-and-test:
     runs-on: ubuntu-latest
-    needs: calculate-version
+    needs: [check-commits, calculate-version]
+    if: needs.check-commits.outputs.has-commits == 'true'
 
     steps:
       - uses: actions/checkout@v4
@@ -85,7 +121,8 @@ jobs:
 
   release:
     runs-on: ubuntu-latest
-    needs: [calculate-version, build-and-test]
+    needs: [check-commits, calculate-version, build-and-test]
+    if: needs.check-commits.outputs.has-commits == 'true'
     permissions:
       contents: write
       packages: write
@@ -139,3 +176,10 @@ jobs:
           git commit -m "chore: release $VERSION"
           git push origin HEAD:main
           echo "Released version $VERSION"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.calculate-version.outputs.version }}
+          name: Release ${{ needs.calculate-version.outputs.version }}
+          generate_release_notes: true
