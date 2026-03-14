@@ -131,9 +131,6 @@ export default function AccountDetailPage() {
 				<>
 					<PageHeader
 						title={currentSource?.name ?? "Account"}
-						selectedYear={selectedYear}
-						onYearChange={handleYearChange}
-						yearOptions={yearOptions}
 					/>
 					<Box>
 						{portfolioHistory && portfolioHistory.length > 0 && (
@@ -173,7 +170,32 @@ export default function AccountDetailPage() {
 							/>
 						) : (
 							<Grid container spacing={3}>
-								<Grid size={{ xs: 12, lg: 8 }}>
+								<Grid size={{ xs: 12, lg: 4 }} sx={{ order: { xs: 1, lg: 2 } }}>
+									<Box sx={{ position: { lg: "sticky" }, top: { lg: 16 } }}>
+						{latestPortfolioValue !== null && (
+							<Card sx={{ p: 2, mb: 2 }}>
+								<Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+									<Box>
+										<Typography variant="body2" color="text.secondary">
+											Total Value
+										</Typography>
+										<Typography variant="h4" fontWeight={600}>
+											{formatValue(latestPortfolioValue)}
+										</Typography>
+									</Box>
+									<AccountStats history={portfolioHistory} variant="overall" />
+								</Box>
+							</Card>
+						)}
+
+										<Box sx={{ mb: 2 }}>
+											<AccountStats history={portfolioHistory} />
+										</Box>
+
+										<AssetDistributionSummary history={portfolioHistory} />
+									</Box>
+								</Grid>
+								<Grid size={{ xs: 12, lg: 8 }} sx={{ order: { xs: 2, lg: 1 } }}>
 									<TransactionsTable
 										transactions={transactions}
 										onImport={() => setImportDialogOpen(true)}
@@ -182,32 +204,10 @@ export default function AccountDetailPage() {
 										accountId={Number(id)}
 										onSyncComplete={handleSyncComplete}
 										onConfigureApiKey={() => setApiSyncDialogOpen(true)}
+										selectedYear={selectedYear}
+										onYearChange={handleYearChange}
+										yearOptions={yearOptions}
 									/>
-								</Grid>
-								<Grid size={{ xs: 12, lg: 4 }}>
-									<Box sx={{ position: { lg: "sticky" }, top: { lg: 16 } }}>
-							{latestPortfolioValue !== null && (
-								<Card sx={{ p: 2, mb: 2 }}>
-									<Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-										<Box>
-											<Typography variant="body2" color="text.secondary">
-												Total Value
-											</Typography>
-											<Typography variant="h4" fontWeight={600}>
-												{formatValue(latestPortfolioValue)}
-											</Typography>
-										</Box>
-										<AccountStats history={portfolioHistory} variant="overall" />
-									</Box>
-								</Card>
-							)}
-
-										<Box sx={{ mb: 2 }}>
-											<AccountStats history={portfolioHistory} />
-										</Box>
-
-										<AssetDistributionSummary history={portfolioHistory} />
-									</Box>
 								</Grid>
 							</Grid>
 						)}

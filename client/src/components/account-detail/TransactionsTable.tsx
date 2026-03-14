@@ -1,5 +1,5 @@
 import { CloudUpload, Sync, Key } from "@mui/icons-material";
-import { Box, Button, Chip, CircularProgress, Typography, Alert } from "@mui/material";
+import { Box, Button, Chip, CircularProgress, Typography, Alert, FormControl, InputLabel, MenuItem, Select } from "@mui/material";
 import { type MRT_ColumnDef, MaterialReactTable } from "material-react-table";
 import type { Transaction, ApiSettings } from "@txls/shared";
 import { TransactionType } from "@txls/shared";
@@ -16,6 +16,9 @@ interface TransactionsTableProps {
   accountId: number;
   onSyncComplete?: () => void;
   onConfigureApiKey: () => void;
+  selectedYear?: number;
+  onYearChange?: (year: number) => void;
+  yearOptions?: number[];
 }
 
 export function TransactionsTable({
@@ -26,6 +29,9 @@ export function TransactionsTable({
   accountId,
   onSyncComplete,
   onConfigureApiKey,
+  selectedYear,
+  onYearChange,
+  yearOptions,
 }: TransactionsTableProps) {
   const [isSyncing, setIsSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -123,7 +129,26 @@ export function TransactionsTable({
 
   return (
     <Box>
-      <StyledSectionTitle variant="h5">Transactions</StyledSectionTitle>
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+        <StyledSectionTitle variant="h5">Transactions</StyledSectionTitle>
+        {selectedYear !== undefined && onYearChange && yearOptions && (
+          <FormControl sx={{ minWidth: 120 }} size="small">
+            <InputLabel shrink>Year</InputLabel>
+            <Select
+              value={selectedYear}
+              label="Year"
+              onChange={(e) => onYearChange(Number(e.target.value))}
+              notched
+            >
+              {yearOptions.map((year) => (
+                <MenuItem key={year} value={year}>
+                  {year}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        )}
+      </Box>
       <MaterialReactTable
         columns={columns}
         data={transactions}

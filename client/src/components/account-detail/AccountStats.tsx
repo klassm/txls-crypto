@@ -30,6 +30,7 @@ export function AccountStats({ history, variant = "full" }: AccountStatsProps) {
 	const dayChange = calculateChange(history, 1);
 	const weekChange = calculateChange(history, 7);
 	const monthChange = calculateChange(history, 30);
+	const quarterChange = calculateChange(history, 90);
 
 	const overallChange = history.length >= 2 && history[0].totalEurValue !== null
 		? {
@@ -60,6 +61,7 @@ export function AccountStats({ history, variant = "full" }: AccountStatsProps) {
 	const dayFormatted = formatChange(dayChange);
 	const weekFormatted = formatChange(weekChange);
 	const monthFormatted = formatChange(monthChange);
+	const quarterFormatted = formatChange(quarterChange);
 	const overallFormatted = formatChange(overallChange);
 
 	if (variant === "overall") {
@@ -80,7 +82,7 @@ export function AccountStats({ history, variant = "full" }: AccountStatsProps) {
 
 	return (
 		<Grid container spacing={2}>
-			<Grid size={{ xs: 4 }}>
+			<Grid size={{ xs: 6, sm: 3 }}>
 				<Card sx={{ p: 2, height: "100%", minHeight: 90 }}>
 					<Typography variant="body2" color="text.secondary">
 						24h
@@ -93,7 +95,7 @@ export function AccountStats({ history, variant = "full" }: AccountStatsProps) {
 					</Typography>
 				</Card>
 			</Grid>
-			<Grid size={{ xs: 4 }}>
+			<Grid size={{ xs: 6, sm: 3 }}>
 				<Card sx={{ p: 2, height: "100%", minHeight: 90 }}>
 					<Typography variant="body2" color="text.secondary">
 						7d
@@ -106,7 +108,7 @@ export function AccountStats({ history, variant = "full" }: AccountStatsProps) {
 					</Typography>
 				</Card>
 			</Grid>
-			<Grid size={{ xs: 4 }}>
+			<Grid size={{ xs: 6, sm: 3 }}>
 				<Card sx={{ p: 2, height: "100%", minHeight: 90 }}>
 					<Typography variant="body2" color="text.secondary">
 						30d
@@ -116,6 +118,19 @@ export function AccountStats({ history, variant = "full" }: AccountStatsProps) {
 					</Typography>
 					<Typography variant="body2" sx={{ color: monthFormatted.color }}>
 						{monthFormatted.sub}
+					</Typography>
+				</Card>
+			</Grid>
+			<Grid size={{ xs: 6, sm: 3 }}>
+				<Card sx={{ p: 2, height: "100%", minHeight: 90 }}>
+					<Typography variant="body2" color="text.secondary">
+						90d
+					</Typography>
+					<Typography variant="h6" fontWeight={600} sx={{ color: quarterFormatted.color }}>
+						{quarterFormatted.value}
+					</Typography>
+					<Typography variant="body2" sx={{ color: quarterFormatted.color }}>
+						{quarterFormatted.sub}
 					</Typography>
 				</Card>
 			</Grid>
