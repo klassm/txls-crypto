@@ -10,8 +10,53 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  check-ci:
+    runs-on: ubuntu-latest
+    outputs:
+      ci-passed: ${{ steps.check.outputs.ci-passed }}
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Check CI status for current commit
+        id: check
+        run: |
+          COMMIT_SHA=$(git rev-parse HEAD)
+          
+          # Get the CI workflow run status for this commit
+          CI_STATUS=$(gh run list \
+            --workflow=ci.yml \
+            --commit=$COMMIT_SHA \
+            --json conclusion,status \
+            --jq '.[0] // empty')
+          
+          if [ -z "$CI_STATUS" ]; then
+            echo "No CI run found for commit $COMMIT_SHA"
+            echo "ci-passed=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+          
+          STATUS=$(echo "$CI_STATUS" | jq -r '.status')
+          CONCLUSION=$(echo "$CI_STATUS" | jq -r '.conclusion')
+          
+          echo "CI Status: $STATUS, Conclusion: $CONCLUSION"
+          
+          if [ "$STATUS" = "completed" ] && [ "$CONCLUSION" = "success" ]; then
+            echo "CI passed for commit $COMMIT_SHA"
+            echo "ci-passed=true" >> $GITHUB_OUTPUT
+          else
+            echo "CI did not pass for commit $COMMIT_SHA (status: $STATUS, conclusion: $CONCLUSION)"
+            echo "ci-passed=false" >> $GITHUB_OUTPUT
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   check-commits:
     runs-on: ubuntu-latest
+    needs: check-ci
+    if: needs.check-ci.outputs.ci-passed == 'true'
     outputs:
       has-commits: ${{ steps.check.outputs.has-commits }}
     
@@ -43,8 +88,8 @@ jobs:
 
   calculate-version:
     runs-on: ubuntu-latest
-    needs: check-commits
-    if: needs.check-commits.outputs.has-commits == 'true'
+    needs: [check-ci, check-commits]
+    if: needs.check-ci.outputs.ci-passed == 'true' && needs.check-commits.outputs.has-commits == 'true'
     outputs:
       version: ${{ steps.version.outputs.version }}
 
@@ -91,8 +136,8 @@ jobs:
 
   build-and-test:
     runs-on: ubuntu-latest
-    needs: [check-commits, calculate-version]
-    if: needs.check-commits.outputs.has-commits == 'true'
+    needs: [check-ci, check-commits, calculate-version]
+    if: needs.check-ci.outputs.ci-passed == 'true' && needs.check-commits.outputs.has-commits == 'true'
 
     steps:
       - uses: actions/checkout@v4
@@ -121,8 +166,8 @@ jobs:
 
   release:
     runs-on: ubuntu-latest
-    needs: [check-commits, calculate-version, build-and-test]
-    if: needs.check-commits.outputs.has-commits == 'true'
+    needs: [check-ci, check-commits, calculate-version, build-and-test]
+    if: needs.check-ci.outputs.ci-passed == 'true' && needs.check-commits.outputs.has-commits == 'true'
     permissions:
       contents: write
       packages: write
