@@ -58,7 +58,7 @@ router.post("/", async (req: Request, res: Response) => {
 
   const validationResult = createAccountSchema.safeParse(req.body);
   if (!validationResult.success) {
-    return res.status(400).json({ error: validationResult.error.errors[0].message });
+    return res.status(400).json({ error: validationResult.error.issues[0].message });
   }
 
   const dataSource = await getDataSource();
@@ -353,7 +353,7 @@ router.post("/:id/transactions", async (req: Request, res: Response) => {
 
     const validationResult = manualStakingSchema.safeParse(req.body);
     if (!validationResult.success) {
-      return res.status(400).json({ error: validationResult.error.errors[0].message });
+      return res.status(400).json({ error: validationResult.error.issues[0].message });
     }
 
     const { timestamp, asset, quantity, eurValue } = validationResult.data;
@@ -652,7 +652,7 @@ router.patch("/:id/api-settings", async (req: Request, res: Response) => {
 
     const validationResult = apiSettingsSchema.safeParse(req.body);
     if (!validationResult.success) {
-      return res.status(400).json({ error: validationResult.error.errors[0].message });
+      return res.status(400).json({ error: validationResult.error.issues[0].message });
     }
 
     const { apiEnabled, apiKey } = validationResult.data;

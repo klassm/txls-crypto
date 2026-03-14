@@ -27,11 +27,14 @@ vi.mock("../database.js", () => ({
   getDataSource: vi.fn(),
 }));
 
+const mockFindByUsername = vi.fn();
+const mockCreateUser = vi.fn();
+
 vi.mock("../modules/users/users.service.js", () => ({
-  UsersService: vi.fn().mockImplementation(() => ({
-    findByUsername: vi.fn(),
-    createUser: vi.fn(),
-  })),
+  UsersService: vi.fn(function(this: any) {
+    this.findByUsername = mockFindByUsername;
+    this.createUser = mockCreateUser;
+  }),
 }));
 
 vi.mock("./password.js", () => ({
@@ -103,23 +106,9 @@ describe("session", () => {
           }),
         });
 
-        const mockFindByUsername = vi.fn().mockResolvedValue(mockUserEntity);
-        const mockCreateUser = vi.fn();
-        
-        vi.doMock("../modules/users/users.service.js", () => ({
-          UsersService: vi.fn().mockImplementation(() => ({
-            findByUsername: mockFindByUsername,
-            createUser: mockCreateUser,
-          })),
-        }));
-
         const mockDataSource = {};
         (getDataSource as any).mockResolvedValue(mockDataSource);
-
-        const { UsersService } = await import("../modules/users/users.service.js");
-        const usersService = new UsersService(undefined, mockDataSource as any);
-        (usersService.findByUsername as any) = mockFindByUsername;
-        (usersService.createUser as any) = mockCreateUser;
+        mockFindByUsername.mockResolvedValue(mockUserEntity);
 
         const req = {
           headers: {
@@ -150,23 +139,9 @@ describe("session", () => {
       it("should use x-remote-user-id header when present", async () => {
         const mockUserEntity = { id: 789, username: "hassuser123", name: "hassuser123", email: "hassuser123@hass.local", password: "hash", salt: "", isAdmin: false };
         
-        const mockFindByUsername = vi.fn().mockResolvedValue(mockUserEntity);
-        const mockCreateUser = vi.fn();
-        
-        vi.doMock("../modules/users/users.service.js", () => ({
-          UsersService: vi.fn().mockImplementation(() => ({
-            findByUsername: mockFindByUsername,
-            createUser: mockCreateUser,
-          })),
-        }));
-
         const mockDataSource = {};
         (getDataSource as any).mockResolvedValue(mockDataSource);
-
-        const { UsersService } = await import("../modules/users/users.service.js");
-        const usersService = new UsersService(undefined, mockDataSource as any);
-        (usersService.findByUsername as any) = mockFindByUsername;
-        (usersService.createUser as any) = mockCreateUser;
+        mockFindByUsername.mockResolvedValue(mockUserEntity);
 
         const req = {
           headers: {
@@ -183,23 +158,9 @@ describe("session", () => {
       it("should use x-remote-user-name header when present", async () => {
         const mockUserEntity = { id: 890, username: "remoteuser", name: "remoteuser", email: "remoteuser@hass.local", password: "hash", salt: "", isAdmin: false };
         
-        const mockFindByUsername = vi.fn().mockResolvedValue(mockUserEntity);
-        const mockCreateUser = vi.fn();
-        
-        vi.doMock("../modules/users/users.service.js", () => ({
-          UsersService: vi.fn().mockImplementation(() => ({
-            findByUsername: mockFindByUsername,
-            createUser: mockCreateUser,
-          })),
-        }));
-
         const mockDataSource = {};
         (getDataSource as any).mockResolvedValue(mockDataSource);
-
-        const { UsersService } = await import("../modules/users/users.service.js");
-        const usersService = new UsersService(undefined, mockDataSource as any);
-        (usersService.findByUsername as any) = mockFindByUsername;
-        (usersService.createUser as any) = mockCreateUser;
+        mockFindByUsername.mockResolvedValue(mockUserEntity);
 
         const req = {
           headers: {
@@ -216,23 +177,9 @@ describe("session", () => {
       it("should prefer x-remote-user-name over x-remote-user-id", async () => {
         const mockUserEntity = { id: 999, username: "preferreduser", name: "preferreduser", email: "preferreduser@hass.local", password: "hash", salt: "", isAdmin: false };
         
-        const mockFindByUsername = vi.fn().mockResolvedValue(mockUserEntity);
-        const mockCreateUser = vi.fn();
-        
-        vi.doMock("../modules/users/users.service.js", () => ({
-          UsersService: vi.fn().mockImplementation(() => ({
-            findByUsername: mockFindByUsername,
-            createUser: mockCreateUser,
-          })),
-        }));
-
         const mockDataSource = {};
         (getDataSource as any).mockResolvedValue(mockDataSource);
-
-        const { UsersService } = await import("../modules/users/users.service.js");
-        const usersService = new UsersService(undefined, mockDataSource as any);
-        (usersService.findByUsername as any) = mockFindByUsername;
-        (usersService.createUser as any) = mockCreateUser;
+        mockFindByUsername.mockResolvedValue(mockUserEntity);
 
         const req = {
           headers: {
@@ -250,23 +197,9 @@ describe("session", () => {
       it("should use x-remote-user-display-name as fallback", async () => {
         const mockUserEntity = { id: 111, username: "Display Name", name: "Display Name", email: "display.name@hass.local", password: "hash", salt: "", isAdmin: false };
         
-        const mockFindByUsername = vi.fn().mockResolvedValue(mockUserEntity);
-        const mockCreateUser = vi.fn();
-        
-        vi.doMock("../modules/users/users.service.js", () => ({
-          UsersService: vi.fn().mockImplementation(() => ({
-            findByUsername: mockFindByUsername,
-            createUser: mockCreateUser,
-          })),
-        }));
-
         const mockDataSource = {};
         (getDataSource as any).mockResolvedValue(mockDataSource);
-
-        const { UsersService } = await import("../modules/users/users.service.js");
-        const usersService = new UsersService(undefined, mockDataSource as any);
-        (usersService.findByUsername as any) = mockFindByUsername;
-        (usersService.createUser as any) = mockCreateUser;
+        mockFindByUsername.mockResolvedValue(mockUserEntity);
 
         const req = {
           headers: {
@@ -283,23 +216,10 @@ describe("session", () => {
       it("should create user from HASS header if not exists", async () => {
         const mockUserEntity = { id: 222, username: "newhassuser", name: "newhassuser", email: "newhassuser@hass.local", password: "hash", salt: "", isAdmin: false };
         
-        const mockFindByUsername = vi.fn().mockResolvedValue(null);
-        const mockCreateUser = vi.fn().mockResolvedValue(mockUserEntity);
-        
-        vi.doMock("../modules/users/users.service.js", () => ({
-          UsersService: vi.fn().mockImplementation(() => ({
-            findByUsername: mockFindByUsername,
-            createUser: mockCreateUser,
-          })),
-        }));
-
         const mockDataSource = {};
         (getDataSource as any).mockResolvedValue(mockDataSource);
-
-        const { UsersService } = await import("../modules/users/users.service.js");
-        const usersService = new UsersService(undefined, mockDataSource as any);
-        (usersService.findByUsername as any) = mockFindByUsername;
-        (usersService.createUser as any) = mockCreateUser;
+        mockFindByUsername.mockResolvedValue(null);
+        mockCreateUser.mockResolvedValue(mockUserEntity);
 
         const req = {
           headers: {

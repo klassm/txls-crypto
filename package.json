@@ -30,20 +30,19 @@
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
     "@types/better-sqlite3": "^7.6.13",
-    "@types/cookie": "^0.6.0",
-    "@types/express": "^5.0.0",
+    "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/luxon": "^3.7.1",
-    "@types/node": "^20.11.24",
-    "@types/react": "^18.3.28",
-    "@types/react-dom": "^18.3.7",
-    "@types/supertest": "^6.0.3",
-    "better-sqlite3": "^12.6.2",
-    "biome": "latest",
+    "@types/node": "^25.5.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@types/supertest": "^7.2.0",
+    "better-sqlite3": "^12.8.0",
+    "biome": "^0.3.3",
     "supertest": "^7.2.2",
-    "turbo": "^2.4.4",
-    "typescript": "^5.4.5",
-    "vitest": "^1.5.0"
+    "turbo": "^2.8.17",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.0"
   },
   "engines": {
     "node": ">=20.9.0"

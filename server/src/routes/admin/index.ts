@@ -44,7 +44,7 @@ router.post("/users", async (req: Request, res: Response) => {
     const parsed = userSchema.safeParse(req.body);
 
     if (!parsed.success) {
-      return res.status(400).json({ error: "Invalid input", details: parsed.error.errors });
+      return res.status(400).json({ error: "Invalid input", details: parsed.error.issues });
     }
 
     const dataSource = await getDataSource();
@@ -117,7 +117,7 @@ router.put("/users/:id", async (req: Request, res: Response) => {
     const parsed = updateUserSchema.safeParse(req.body);
 
     if (!parsed.success) {
-      return res.status(400).json({ error: "Invalid input", details: parsed.error.errors });
+      return res.status(400).json({ error: "Invalid input", details: parsed.error.issues });
     }
 
     const dataSource = await getDataSource();
@@ -198,7 +198,7 @@ router.post("/users/:id/password", async (req: Request, res: Response) => {
     const parsed = resetPasswordSchema.safeParse(req.body);
 
     if (!parsed.success) {
-      return res.status(400).json({ error: parsed.error.errors[0].message });
+      return res.status(400).json({ error: parsed.error.issues[0].message });
     }
 
     await service.updatePassword(Number.parseInt(req.params.id as string, 10), parsed.data.newPassword);

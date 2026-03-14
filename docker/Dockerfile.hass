@@ -1,39 +1,28 @@
-# Build stage for shared
-FROM node:24-alpine AS shared-builder
+# Build stage - single stage for all builds
+FROM node:24-alpine AS builder
 WORKDIR /app
-RUN apk add --no-cache python3 make g++
-RUN corepack enable && corepack prepare pnpm@10.6.5 --activate
-COPY pnpm-lock.yaml package.json pnpm-workspace.yaml turbo.json ./
-COPY shared/package.json ./shared/
-RUN pnpm install --filter @txls/shared --frozen-lockfile
-COPY shared ./shared
-RUN pnpm run build --filter @txls/shared
 
-# Build stage for server
-FROM node:24-alpine AS server-builder
-WORKDIR /app
 RUN apk add --no-cache python3 make g++
 RUN corepack enable && corepack prepare pnpm@10.6.5 --activate
+
 COPY pnpm-lock.yaml package.json pnpm-workspace.yaml turbo.json ./
 COPY shared/package.json ./shared/
 COPY server/package.json ./server/
-RUN pnpm install --filter @txls/shared --filter @txls/server --frozen-lockfile
+COPY client/package.json ./client/
+
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile
+
 RUN cd node_modules/.pnpm/better-sqlite3@*/node_modules/better-sqlite3 && npx node-gyp rebuild --release
+
 COPY shared ./shared
 COPY server ./server
-RUN pnpm run build --filter @txls/shared && pnpm run build --filter @txls/server
-
-# Build stage for client
-FROM node:24-alpine AS client-builder
-WORKDIR /app
-RUN corepack enable && corepack prepare pnpm@10.6.5 --activate
-COPY pnpm-lock.yaml package.json pnpm-workspace.yaml turbo.json ./
-COPY shared/package.json ./shared/
-COPY client/package.json ./client/
-RUN pnpm install --filter @txls/shared --filter @txls/client --frozen-lockfile
-COPY shared ./shared
 COPY client ./client
-RUN pnpm run build --filter @txls/shared && pnpm run build --filter @txls/client
+
+RUN pnpm run build --filter @txls/shared --filter @txls/server --filter @txls/client
+
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
+    pnpm prune --prod
 
 # Runtime stage
 FROM node:24-alpine
@@ -43,27 +32,16 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 RUN corepack enable && corepack prepare pnpm@10.6.5 --activate
-RUN apk add --no-cache nginx curl sqlite jq openssl python3 make g++
+RUN apk add --no-cache nginx curl sqlite jq openssl
 
-COPY pnpm-lock.yaml package.json pnpm-workspace.yaml turbo.json ./
-COPY shared/package.json ./shared/
-COPY server/package.json ./server/
-RUN pnpm install --filter @txls/shared --filter @txls/server --frozen-lockfile
-RUN cd node_modules/.pnpm/better-sqlite3@*/node_modules/better-sqlite3 && npx node-gyp rebuild --release
-
-# Copy built shared (includes migrations in dist/migrations)
-COPY --from=shared-builder /app/shared/dist ./shared/dist
-
-# Copy built server
-COPY --from=server-builder /app/server/dist ./server/dist
-
-# Copy built client
-COPY --from=client-builder /app/client/dist ./client/dist
-
-# Copy public assets for provider logos
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/shared/node_modules ./shared/node_modules
+COPY --from=builder /app/server/node_modules ./server/node_modules
+COPY --from=builder /app/shared/dist ./shared/dist
+COPY --from=builder /app/server/dist ./server/dist
+COPY --from=builder /app/client/dist ./client/dist
 COPY public ./public
 
-# Use HASS-only nginx config (no direct access)
 COPY docker/nginx.hass.conf /etc/nginx/nginx.conf
 COPY docker/run.sh /run.sh
 RUN chmod a+x /run.sh

@@ -120,7 +120,7 @@ router.post("/onboard", async (req: Request, res: Response) => {
 
   const validationResult = onboardingUserSchema.safeParse(req.body);
   if (!validationResult.success) {
-    return res.status(400).json({ error: validationResult.error.errors[0].message });
+    return res.status(400).json({ error: validationResult.error.issues[0].message });
   }
 
   const user = await usersService.createOnboardingUser(validationResult.data);

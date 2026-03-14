@@ -25,7 +25,7 @@ router.post("/login", loginRateLimiter, async (req: Request, res: Response) => {
     const parsed = loginSchema.safeParse(req.body);
 
     if (!parsed.success) {
-      return res.status(400).json({ error: "Invalid input", details: parsed.error.errors });
+      return res.status(400).json({ error: "Invalid input", details: parsed.error.issues });
     }
 
     const { username, password } = parsed.data;
@@ -83,7 +83,7 @@ router.post("/change-password", async (req: Request, res: Response) => {
 
   const validationResult = changePasswordSchema.safeParse(req.body);
   if (!validationResult.success) {
-    return res.status(400).json({ error: validationResult.error.errors[0].message });
+    return res.status(400).json({ error: validationResult.error.issues[0].message });
   }
 
   const { currentPassword, newPassword } = validationResult.data;

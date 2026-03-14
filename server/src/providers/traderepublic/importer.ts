@@ -110,7 +110,7 @@ const csvContentWithHeader = [lines[headerRowIndex], ...dataLines].join("\n");
         const parsedRow = TradeRepublicRowSchema.safeParse(record);
 
         if (!parsedRow.success) {
-          const errorMsg = `Row ${index + 2}: ${parsedRow.error.errors
+          const errorMsg = `Row ${index + 2}: ${parsedRow.error.issues
             .map((e) => `${e.path.join(".")}: ${e.message}`)
             .join(", ")}`;
           acc.validationErrors.push(errorMsg);

@@ -25,8 +25,8 @@
   },
   "devDependencies": {
     "@types/luxon": "^3.7.1",
-    "@types/node": "^20.11.24",
-    "typescript": "^5.4.5",
-    "vitest": "^1.6.1"
+    "@types/node": "^25.5.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.0"
   }
 }
