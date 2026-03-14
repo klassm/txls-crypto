@@ -1,4 +1,4 @@
-FROM ghcr.io/klassm/txls-crypto:2026.3.18
+FROM ghcr.io/klassm/txls-crypto:2026.3.19
 
 COPY run-hass.sh /run-hass.sh
 RUN chmod a+x /run-hass.sh
