@@ -21,9 +21,6 @@ COPY client ./client
 
 RUN pnpm run build --filter @txls/shared --filter @txls/server --filter @txls/client
 
-RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
-    pnpm prune --prod
-
 # Runtime stage
 FROM node:24-alpine
 
@@ -32,11 +29,17 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 RUN corepack enable && corepack prepare pnpm@10.6.5 --activate
-RUN apk add --no-cache nginx curl sqlite jq openssl
+RUN apk add --no-cache nginx curl sqlite jq openssl python3 make g++
 
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/shared/node_modules ./shared/node_modules
-COPY --from=builder /app/server/node_modules ./server/node_modules
+COPY pnpm-lock.yaml package.json pnpm-workspace.yaml turbo.json ./
+COPY shared/package.json ./shared/
+COPY server/package.json ./server/
+
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
+    pnpm install --filter @txls/shared --filter @txls/server --frozen-lockfile --prod
+
+RUN cd node_modules/.pnpm/better-sqlite3@*/node_modules/better-sqlite3 && npx node-gyp rebuild --release
+
 COPY --from=builder /app/shared/dist ./shared/dist
 COPY --from=builder /app/server/dist ./server/dist
 COPY --from=builder /app/client/dist ./client/dist
