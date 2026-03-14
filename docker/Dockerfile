@@ -18,7 +18,7 @@ COPY pnpm-lock.yaml package.json pnpm-workspace.yaml turbo.json ./
 COPY shared/package.json ./shared/
 COPY server/package.json ./server/
 RUN pnpm install --filter @txls/shared --filter @txls/server --frozen-lockfile
-RUN pnpm rebuild better-sqlite3
+RUN cd node_modules/.pnpm/better-sqlite3@*/node_modules/better-sqlite3 && npx node-gyp rebuild --release
 COPY shared ./shared
 COPY server ./server
 RUN pnpm run build --filter @txls/shared && pnpm run build --filter @txls/server
@@ -49,7 +49,7 @@ COPY pnpm-lock.yaml package.json pnpm-workspace.yaml ./
 COPY shared/package.json ./shared/
 COPY server/package.json ./server/
 RUN pnpm install --filter @txls/shared --filter @txls/server --frozen-lockfile --prod
-RUN pnpm rebuild better-sqlite3
+RUN cd node_modules/.pnpm/better-sqlite3@*/node_modules/better-sqlite3 && npx node-gyp rebuild --release
 
 # Copy built shared (includes migrations in dist/migrations)
 COPY --from=shared-builder /app/shared/dist ./shared/dist
