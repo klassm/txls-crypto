@@ -25,7 +25,7 @@ jobs:
       run: pnpm install --frozen-lockfile
     
     - name: Rebuild native modules
-      run: pnpm rebuild better-sqlite3
+      run: cd node_modules/.pnpm/better-sqlite3@*/node_modules/better-sqlite3 && npx node-gyp rebuild --release
     
     - name: Build application
       run: pnpm run build
@@ -93,7 +93,7 @@ jobs:
         name: build-artifacts
 
     - name: Rebuild native modules
-      run: pnpm rebuild better-sqlite3
+      run: cd node_modules/.pnpm/better-sqlite3@*/node_modules/better-sqlite3 && npx node-gyp rebuild --release
 
     - name: Run unit tests
       run: pnpm run test:unit
@@ -152,7 +152,7 @@ jobs:
         name: build-artifacts
 
     - name: Rebuild native modules
-      run: pnpm rebuild better-sqlite3
+      run: cd node_modules/.pnpm/better-sqlite3@*/node_modules/better-sqlite3 && npx node-gyp rebuild --release
     
     - name: Run SQLite integration tests
       run: pnpm run test:integration:sqlite
@@ -190,7 +190,7 @@ jobs:
           name: build-artifacts
 
       - name: Rebuild native modules
-        run: pnpm rebuild better-sqlite3
+        run: cd node_modules/.pnpm/better-sqlite3@*/node_modules/better-sqlite3 && npx node-gyp rebuild --release
 
       - name: Install Playwright Browsers
         run: pnpm exec playwright install --with-deps chromium
@@ -229,7 +229,7 @@ jobs:
           name: build-artifacts
 
       - name: Rebuild native modules
-        run: pnpm rebuild better-sqlite3
+        run: cd node_modules/.pnpm/better-sqlite3@*/node_modules/better-sqlite3 && npx node-gyp rebuild --release
 
       - name: Install Playwright Browsers
         run: pnpm exec playwright install --with-deps chromium
@@ -268,7 +268,7 @@ jobs:
           name: build-artifacts
 
       - name: Rebuild native modules
-        run: pnpm rebuild better-sqlite3
+        run: cd node_modules/.pnpm/better-sqlite3@*/node_modules/better-sqlite3 && npx node-gyp rebuild --release
 
       - name: Install Playwright Browsers
         run: pnpm exec playwright install --with-deps chromium
