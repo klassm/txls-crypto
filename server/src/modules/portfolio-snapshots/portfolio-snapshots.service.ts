@@ -21,6 +21,7 @@ interface DailyAssetData {
 export interface PortfolioHistoryPoint {
 	date: string;
 	totalEurValue: number | null;
+	totalEurInvested: number;
 	assets: Record<string, { amount: number; eurValue: number | null }>;
 }
 
@@ -192,32 +193,29 @@ export class PortfolioSnapshotsService {
 		const snapshots = await this.getPortfolioHistory(userId, providerAccountId, startDate, endDate);
 		const pricesRepo = this.pricesRepository || new PricesRepository(this.dataSource);
 
-		const snapshotsByDate = new Map<string, Map<string, { amount: number; eurValue: number | null }>>();
+		const allAssets = new Set<string>();
+		const snapshotsByDate = new Map<string, Map<string, { amount: number; eurInvested: number }>>();
 
 		for (const snapshot of snapshots) {
+			allAssets.add(snapshot.asset);
 			const dateKey = snapshot.date.toISODate() || "";
 			if (!snapshotsByDate.has(dateKey)) {
 				snapshotsByDate.set(dateKey, new Map());
 			}
 
 			if (providerAccountId) {
-				const pricesForDate = await pricesRepo.getPriceForDate(snapshot.asset, snapshot.date);
-				const eurValue = pricesForDate ? Number(snapshot.amount) * Number(pricesForDate.priceEur) : null;
-
 				snapshotsByDate.get(dateKey)!.set(snapshot.asset, {
 					amount: Number(snapshot.amount),
-					eurValue,
+					eurInvested: Number(snapshot.eurInvested),
 				});
 			} else {
 				const existing = snapshotsByDate.get(dateKey)!.get(snapshot.asset);
 				const newAmount = (existing?.amount || 0) + Number(snapshot.amount);
-
-				const pricesForDate = await pricesRepo.getPriceForDate(snapshot.asset, snapshot.date);
-				const eurValue = pricesForDate ? newAmount * Number(pricesForDate.priceEur) : null;
+				const newEurInvested = (existing?.eurInvested || 0) + Number(snapshot.eurInvested);
 
 				snapshotsByDate.get(dateKey)!.set(snapshot.asset, {
 					amount: newAmount,
-					eurValue,
+					eurInvested: newEurInvested,
 				});
 			}
 		}
@@ -228,19 +226,18 @@ export class PortfolioSnapshotsService {
 				? new Map([[providerAccountId, await this.getCurrentHoldings(userId, providerAccountId)]])
 				: await this.getAllCurrentHoldings(userId);
 
-			const todayAssets = new Map<string, { amount: number; eurValue: number | null }>();
+			const todayAssets = new Map<string, { amount: number; eurInvested: number }>();
 
 			for (const [_accountId, holdings] of currentHoldings) {
 				for (const holding of holdings) {
+					allAssets.add(holding.asset);
 					const existing = todayAssets.get(holding.asset);
 					const newAmount = (existing?.amount || 0) + holding.amount;
-
-					const latestPrice = await pricesRepo.getLatestPrice(holding.asset);
-					const eurValue = latestPrice ? newAmount * Number(latestPrice.priceEur) : null;
+					const newEurInvested = (existing?.eurInvested || 0) + holding.eurInvested;
 
 					todayAssets.set(holding.asset, {
 						amount: newAmount,
-						eurValue,
+						eurInvested: newEurInvested,
 					});
 				}
 			}
@@ -250,23 +247,57 @@ export class PortfolioSnapshotsService {
 			}
 		}
 
+		const assetList = Array.from(allAssets);
+		const priceHistories = await pricesRepo.getPriceHistoryBatch(assetList, startDate, endDate);
+		const latestPrices = await pricesRepo.getLatestPrices(assetList);
+
+		const assetPriceCache = new Map<string, Map<string, number>>();
+		for (const asset of assetList) {
+			assetPriceCache.set(asset, new Map());
+		}
+
+		const sortedDates = Array.from(snapshotsByDate.keys()).sort();
+		const todayIsoDate = DateTime.utc().startOf("day").toISODate() || "";
+
+		for (const date of sortedDates) {
+			const isToday = date === todayIsoDate;
+			for (const asset of assetList) {
+				const cache = assetPriceCache.get(asset)!;
+				this.findPriceForDate(
+					date,
+					asset,
+					isToday,
+					priceHistories,
+					latestPrices,
+					cache,
+					sortedDates,
+					todayIsoDate,
+				);
+			}
+		}
+
 		const result: PortfolioHistoryPoint[] = [];
 
 		for (const [date, assets] of snapshotsByDate) {
 			let totalEurValue: number | null = 0;
+			let totalEurInvested = 0;
 			const assetsObj: Record<string, { amount: number; eurValue: number | null }> = {};
 
 			for (const [asset, data] of assets) {
-				assetsObj[asset] = data;
-				if (data.eurValue !== null) {
-					totalEurValue = (totalEurValue || 0) + data.eurValue;
+				const priceEur = assetPriceCache.get(asset)?.get(date) ?? null;
+				const eurValue = priceEur !== null ? data.amount * priceEur : null;
+				
+				assetsObj[asset] = { amount: data.amount, eurValue };
+				totalEurInvested += data.eurInvested;
+				if (eurValue !== null) {
+					totalEurValue = (totalEurValue || 0) + eurValue;
 				} else {
 					totalEurValue = null;
 				}
 			}
 
 			if (totalEurValue !== null) {
-				result.push({ date, totalEurValue, assets: assetsObj });
+				result.push({ date, totalEurValue, totalEurInvested, assets: assetsObj });
 			}
 		}
 
@@ -330,19 +361,41 @@ export class PortfolioSnapshotsService {
 
 		const assetList = Array.from(allAssets);
 		const priceHistories = await pricesRepo.getPriceHistoryBatch(assetList, startDate, endDate);
+		const latestPrices = await pricesRepo.getLatestPrices(assetList);
+
+		const assetPriceCache = new Map<string, Map<string, number>>();
+		for (const asset of assetList) {
+			assetPriceCache.set(asset, new Map());
+		}
 
 		const portfolioHistory: PortfolioHistoryPoint[] = [];
+		const sortedDates = Array.from(snapshotsByDate.keys()).sort();
+		const todayIsoDate = DateTime.utc().startOf("day").toISODate() || "";
 
-		for (const [date, assets] of snapshotsByDate) {
+		for (const date of sortedDates) {
+			const assets = snapshotsByDate.get(date)!;
+			const isToday = date === todayIsoDate;
 			let totalEurValue: number | null = 0;
+			let totalEurInvested = 0;
 			const assetsObj: Record<string, { amount: number; eurValue: number | null }> = {};
 
 			for (const [asset, data] of assets) {
-				const assetHistory = priceHistories.get(asset);
-				const priceForDate = assetHistory?.find(p => p.date.toISODate() === date);
-				const eurValue = priceForDate ? data.amount * priceForDate.priceEur : null;
+				const cache = assetPriceCache.get(asset)!;
+				const priceEur = this.findPriceForDate(
+					date,
+					asset,
+					isToday,
+					priceHistories,
+					latestPrices,
+					cache,
+					sortedDates,
+					todayIsoDate,
+				);
+
+				const eurValue = priceEur !== null ? data.amount * priceEur : null;
 
 				assetsObj[asset] = { amount: data.amount, eurValue };
+				totalEurInvested += data.eurInvested;
 				
 				if (eurValue !== null) {
 					totalEurValue = (totalEurValue || 0) + eurValue;
@@ -352,7 +405,7 @@ export class PortfolioSnapshotsService {
 			}
 
 			if (totalEurValue !== null) {
-				portfolioHistory.push({ date, totalEurValue, assets: assetsObj });
+				portfolioHistory.push({ date, totalEurValue, totalEurInvested, assets: assetsObj });
 			}
 		}
 
@@ -366,6 +419,7 @@ export class PortfolioSnapshotsService {
 			const latestData = latest?.assets[asset];
 			const amount = latestData?.amount ?? 0;
 			const eurValue = latestData?.eurValue ?? null;
+			const priceCache = assetPriceCache.get(asset)!;
 
 			let totalEurInvested = 0;
 			for (const [, assets] of snapshotsByDate) {
@@ -379,8 +433,8 @@ export class PortfolioSnapshotsService {
 			for (const [date, assets] of snapshotsByDate) {
 				const assetData = assets.get(asset);
 				if (assetData) {
-					const priceForDate = assetHistory.find(p => p.date.toISODate() === date);
-					const value = priceForDate ? assetData.amount * priceForDate.priceEur : null;
+					const priceEur = priceCache.get(date) ?? null;
+					const value = priceEur !== null ? assetData.amount * priceEur : null;
 					positionHistory.push({ date, value });
 				}
 			}
@@ -517,6 +571,7 @@ export class PortfolioSnapshotsService {
 			.select([
 				"transaction.asset AS asset",
 				"SUM(CASE WHEN transaction.type IN (:sell, :withdrawal) THEN -ABS(transaction.quantity) ELSE ABS(transaction.quantity) END) AS amount",
+				"SUM(CASE WHEN transaction.type = :buy THEN transaction.eurValue ELSE 0 END) AS eurInvested",
 				"SUM(CASE WHEN transaction.type = :buy THEN 1 ELSE 0 END) AS buys",
 				"SUM(CASE WHEN transaction.type = :sell THEN 1 ELSE 0 END) AS sells",
 			])
@@ -532,6 +587,7 @@ export class PortfolioSnapshotsService {
 			.map((stat) => ({
 				asset: stat.asset,
 				amount: Number(stat.amount) || 0,
+				eurInvested: Number(stat.eurInvested) || 0,
 				buys: Number(stat.buys) || 0,
 				sells: Number(stat.sells) || 0,
 			}));
@@ -547,6 +603,7 @@ export class PortfolioSnapshotsService {
 				"transaction.providerAccountId AS providerAccountId",
 				"transaction.asset AS asset",
 				"SUM(CASE WHEN transaction.type IN (:sell, :withdrawal) THEN -ABS(transaction.quantity) ELSE ABS(transaction.quantity) END) AS amount",
+				"SUM(CASE WHEN transaction.type = :buy THEN transaction.eurValue ELSE 0 END) AS eurInvested",
 				"SUM(CASE WHEN transaction.type = :buy THEN 1 ELSE 0 END) AS buys",
 				"SUM(CASE WHEN transaction.type = :sell THEN 1 ELSE 0 END) AS sells",
 			])
@@ -568,6 +625,7 @@ export class PortfolioSnapshotsService {
 			result.get(providerAccountId)!.push({
 				asset: stat.asset,
 				amount,
+				eurInvested: Number(stat.eurInvested) || 0,
 				buys: Number(stat.buys) || 0,
 				sells: Number(stat.sells) || 0,
 			});
@@ -632,8 +690,56 @@ export class PortfolioSnapshotsService {
 		return snapshots.map((s) => ({
 			asset: s.asset,
 			amount: s.amount,
+			eurInvested: s.eurInvested,
 			buys: s.buyCount,
 			sells: s.sellCount,
 		}));
+	}
+
+	private findPriceForDate(
+		date: string,
+		asset: string,
+		isToday: boolean,
+		priceHistories: Map<string, { date: DateTime; priceEur: number }[]>,
+		latestPrices: Map<string, { priceEur: number }>,
+		cache: Map<string, number>,
+		sortedDates: string[],
+		todayIsoDate: string,
+	): number | null {
+		if (cache.has(date)) {
+			return cache.get(date)!;
+		}
+
+		const assetHistory = priceHistories.get(asset);
+		const exactPrice = assetHistory?.find(p => p.date.toISODate() === date);
+		
+		if (exactPrice) {
+			cache.set(date, exactPrice.priceEur);
+			return exactPrice.priceEur;
+		}
+		
+		if (isToday) {
+			const latest = latestPrices.get(asset);
+			if (latest) {
+				const priceEur = Number(latest.priceEur);
+				cache.set(date, priceEur);
+				return priceEur;
+			}
+			return null;
+		}
+		
+		const previousPrices = assetHistory
+			?.filter(p => p.date.toISODate()! <= date)
+			.sort((a, b) => b.date.toMillis() - a.date.toMillis());
+		
+		if (previousPrices && previousPrices.length > 0) {
+			const priceEur = previousPrices[0].priceEur;
+			for (const futureDate of sortedDates.filter(d => d >= date && d !== todayIsoDate)) {
+				cache.set(futureDate, priceEur);
+			}
+			return priceEur;
+		}
+		
+		return null;
 	}
 }

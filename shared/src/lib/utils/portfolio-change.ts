@@ -3,6 +3,7 @@ import { DateTime } from "luxon";
 export interface PortfolioHistoryPoint {
 	date: string;
 	totalEurValue: number | null;
+	totalEurInvested: number;
 	assets: Record<string, { amount: number; eurValue: number | null }>;
 }
 

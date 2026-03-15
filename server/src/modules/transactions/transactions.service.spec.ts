@@ -111,6 +111,7 @@ describe("TransactionsService", () => {
           {
             asset: "BTC",
             amount: 0.5,
+            eurInvested: 2000,
             buys: 1,
             sells: 0,
           },

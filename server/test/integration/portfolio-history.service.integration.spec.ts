@@ -194,6 +194,56 @@ describe("PortfolioSnapshotsService Integration Tests - getPortfolioHistoryWithP
 			expect(result.find((r) => r.date === oldDate.toISODate())).toBeUndefined();
 			expect(result.find((r) => r.date === today.toISODate())).toBeDefined();
 		});
+
+		it("should include totalEurInvested in history points", async () => {
+			const today = DateTime.utc().startOf("day");
+
+			await createSnapshot({ date: today, asset: "BTC", amount: 1.0, eurInvested: 50000 });
+			await createPrice("BTC", 55000, today);
+
+			const result = await service.getPortfolioHistoryWithPrices(1, undefined, { days: 30 });
+
+			const todayEntry = result.find((r) => r.date === today.toISODate());
+			expect(todayEntry).toBeDefined();
+			expect(todayEntry?.totalEurInvested).toBe(50000);
+			expect(todayEntry?.totalEurValue).toBe(55000);
+		});
+
+		it("should calculate totalEurInvested from transactions when no snapshot exists for today", async () => {
+			const today = DateTime.utc().startOf("day");
+
+			await createTransaction({
+				asset: "BTC",
+				type: TransactionType.buy,
+				quantity: 1.0,
+				eurValue: 50000,
+				timestamp: today
+			});
+			await createPrice("BTC", 55000, today);
+
+			const result = await service.getPortfolioHistoryWithPrices(1, undefined, { days: 30 });
+
+			const todayEntry = result.find((r) => r.date === today.toISODate());
+			expect(todayEntry).toBeDefined();
+			expect(todayEntry?.totalEurInvested).toBe(50000);
+			expect(todayEntry?.totalEurValue).toBe(55000);
+		});
+
+		it("should aggregate eurInvested from multiple assets", async () => {
+			const today = DateTime.utc().startOf("day");
+
+			await createSnapshot({ date: today, asset: "BTC", amount: 1.0, eurInvested: 50000 });
+			await createSnapshot({ date: today, asset: "ETH", amount: 10.0, eurInvested: 30000 });
+			await createPrice("BTC", 55000, today);
+			await createPrice("ETH", 3500, today);
+
+			const result = await service.getPortfolioHistoryWithPrices(1, undefined, { days: 30 });
+
+			const todayEntry = result.find((r) => r.date === today.toISODate());
+			expect(todayEntry).toBeDefined();
+			expect(todayEntry?.totalEurInvested).toBe(80000);
+			expect(todayEntry?.totalEurValue).toBe(55000 + 35000);
+		});
 	});
 
 	describe("getPortfolioOverview", () => {

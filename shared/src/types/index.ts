@@ -90,6 +90,7 @@ export interface ProviderTransactionsDocument {
 export interface AssetStat {
   asset: string;
   amount: number;
+  eurInvested: number;
   buys: number;
   sells: number;
 }

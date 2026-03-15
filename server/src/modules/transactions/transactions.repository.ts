@@ -159,7 +159,7 @@ async getStatsByProviderAccountIdAndYear(
 
     const assetStatsMap = new Map<
       string,
-      { amount: number; buys: number; sells: number }
+      { amount: number; eurInvested: number; buys: number; sells: number }
     >();
 
     const staking = { cryptoAmount: 0, fiatAmount: 0, count: 0 };
@@ -189,12 +189,14 @@ async getStatsByProviderAccountIdAndYear(
 
       const existing = assetStatsMap.get(asset) || {
         amount: 0,
+        eurInvested: 0,
         buys: 0,
         sells: 0,
       };
 
       if (type === TransactionType.buy) {
         existing.amount += totalQuantity;
+        existing.eurInvested += totalEurValue;
         existing.buys += count;
       } else if (type === TransactionType.sell) {
         existing.amount -= Math.abs(totalQuantity);
@@ -271,6 +273,7 @@ async getStatsByProviderAccountIdAndYear(
       .select([
         "transaction.asset AS asset",
         "SUM(CASE WHEN transaction.type IN (:sell, :withdrawal) THEN -ABS(transaction.quantity) ELSE ABS(transaction.quantity) END) AS amount",
+        "SUM(CASE WHEN transaction.type = :buy THEN transaction.eurValue ELSE 0 END) AS eurInvested",
         "SUM(CASE WHEN transaction.type = :buy THEN 1 ELSE 0 END) AS buys",
         "SUM(CASE WHEN transaction.type = :sell THEN 1 ELSE 0 END) AS sells",
       ])
@@ -289,6 +292,7 @@ async getStatsByProviderAccountIdAndYear(
       .map((stat) => ({
         asset: stat.asset,
         amount: Number(stat.amount) || 0,
+        eurInvested: Number(stat.eurInvested) || 0,
         buys: Number(stat.buys) || 0,
         sells: Number(stat.sells) || 0,
       }));
@@ -369,6 +373,7 @@ async getStatsByProviderAccountIdAndYear(
         "transaction.providerAccountId AS providerAccountId",
         "transaction.asset AS asset",
         "SUM(CASE WHEN transaction.type IN (:sell, :withdrawal) THEN -ABS(transaction.quantity) ELSE ABS(transaction.quantity) END) AS amount",
+        "SUM(CASE WHEN transaction.type = :buy THEN transaction.eurValue ELSE 0 END) AS eurInvested",
         "SUM(CASE WHEN transaction.type = :buy THEN 1 ELSE 0 END) AS buys",
         "SUM(CASE WHEN transaction.type = :sell THEN 1 ELSE 0 END) AS sells",
       ])
@@ -398,6 +403,7 @@ async getStatsByProviderAccountIdAndYear(
         acc.get(providerAccountId)!.push({
           asset: stat.asset,
           amount,
+          eurInvested: Number(stat.eurInvested) || 0,
           buys: Number(stat.buys) || 0,
           sells: Number(stat.sells) || 0,
         });

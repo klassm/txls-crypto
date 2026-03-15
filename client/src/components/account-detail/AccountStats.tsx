@@ -32,10 +32,11 @@ export function AccountStats({ history, variant = "full" }: AccountStatsProps) {
 	const monthChange = calculateChange(history, 30);
 	const quarterChange = calculateChange(history, 90);
 
-	const overallChange = history.length >= 2 && history[0].totalEurValue !== null
+	const totalEurInvested = latest.totalEurInvested;
+	const overallChange = totalEurInvested > 0
 		? {
-				absolute: latest.totalEurValue - history[0].totalEurValue,
-				relative: ((latest.totalEurValue - history[0].totalEurValue) / history[0].totalEurValue) * 100,
+				absolute: latest.totalEurValue - totalEurInvested,
+				relative: ((latest.totalEurValue - totalEurInvested) / totalEurInvested) * 100,
 			}
 		: null;
 
