@@ -1,25 +1,18 @@
-# Build stage - single stage for all builds
-FROM node:24-alpine AS builder
+# Build stage for native deps
+FROM node:24-alpine AS native-builder
 WORKDIR /app
 
 RUN apk add --no-cache python3 make g++
 RUN corepack enable && corepack prepare pnpm@10.6.5 --activate
 
-COPY pnpm-lock.yaml package.json pnpm-workspace.yaml turbo.json ./
+COPY pnpm-lock.yaml package.json pnpm-workspace.yaml ./
 COPY shared/package.json ./shared/
 COPY server/package.json ./server/
-COPY client/package.json ./client/
 
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
-    pnpm install --frozen-lockfile
+    pnpm install --filter @txls/shared --filter @txls/server --frozen-lockfile --prod
 
 RUN cd node_modules/.pnpm/better-sqlite3@*/node_modules/better-sqlite3 && npx node-gyp rebuild --release
-
-COPY shared ./shared
-COPY server ./server
-COPY client ./client
-
-RUN pnpm run build --filter @txls/shared --filter @txls/server --filter @txls/client
 
 # Runtime stage
 FROM node:24-alpine
@@ -29,20 +22,19 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 RUN corepack enable && corepack prepare pnpm@10.6.5 --activate
-RUN apk add --no-cache nginx curl sqlite jq openssl python3 make g++
+RUN apk add --no-cache nginx curl sqlite jq openssl
 
-COPY pnpm-lock.yaml package.json pnpm-workspace.yaml turbo.json ./
+COPY pnpm-lock.yaml package.json pnpm-workspace.yaml ./
 COPY shared/package.json ./shared/
 COPY server/package.json ./server/
 
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
     pnpm install --filter @txls/shared --filter @txls/server --frozen-lockfile --prod
 
-RUN cd node_modules/.pnpm/better-sqlite3@*/node_modules/better-sqlite3 && npx node-gyp rebuild --release
-
-COPY --from=builder /app/shared/dist ./shared/dist
-COPY --from=builder /app/server/dist ./server/dist
-COPY --from=builder /app/client/dist ./client/dist
+COPY --from=native-builder /app/node_modules ./node_modules
+COPY shared/dist ./shared/dist
+COPY server/dist ./server/dist
+COPY client/dist ./client/dist
 COPY public ./public
 
 COPY docker/nginx.conf /etc/nginx/nginx.conf
