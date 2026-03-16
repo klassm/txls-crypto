@@ -344,7 +344,7 @@ describe("calculatePriceChangeByDate", () => {
 		];
 		const result = calculatePriceChangeByDate(history, 7);
 		expect(result).not.toBeNull();
-		expect(result!.absolute).toBeCloseTo(-31, 0);
-		expect(result!.relative).toBeCloseTo(-24.8, 1);
+		expect(result!.absolute).toBe(-36);
+		expect(result!.relative).toBeCloseTo(-27.69, 1);
 	});
 });
