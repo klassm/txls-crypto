@@ -18,6 +18,11 @@ interface DailyAssetData {
 	sellCount: number;
 }
 
+interface AssetAccumulatedData {
+	amount: number;
+	eurInvested: number;
+}
+
 export interface PortfolioHistoryPoint {
 	date: string;
 	totalEurValue: number | null;
@@ -76,6 +81,19 @@ export class PortfolioSnapshotsService {
 		this.dataSource = dataSource;
 		this.repository = repository || new PortfolioSnapshotsRepository(dataSource);
 		this.pricesRepository = pricesRepository;
+	}
+
+	private accumulateAsset(
+		assetsMap: Map<string, AssetAccumulatedData>,
+		asset: string,
+		amount: number,
+		eurInvested: number
+	): void {
+		const existing = assetsMap.get(asset);
+		assetsMap.set(asset, {
+			amount: (existing?.amount || 0) + amount,
+			eurInvested: (existing?.eurInvested || 0) + eurInvested,
+		});
 	}
 
 	async getCurrentHoldings(userId: number, providerAccountId: number): Promise<AssetStat[]> {
@@ -194,7 +212,7 @@ export class PortfolioSnapshotsService {
 		const pricesRepo = this.pricesRepository || new PricesRepository(this.dataSource);
 
 		const allAssets = new Set<string>();
-		const snapshotsByDate = new Map<string, Map<string, { amount: number; eurInvested: number }>>();
+		const snapshotsByDate = new Map<string, Map<string, AssetAccumulatedData>>();
 
 		for (const snapshot of snapshots) {
 			allAssets.add(snapshot.asset);
@@ -209,14 +227,12 @@ export class PortfolioSnapshotsService {
 					eurInvested: Number(snapshot.eurInvested),
 				});
 			} else {
-				const existing = snapshotsByDate.get(dateKey)!.get(snapshot.asset);
-				const newAmount = (existing?.amount || 0) + Number(snapshot.amount);
-				const newEurInvested = (existing?.eurInvested || 0) + Number(snapshot.eurInvested);
-
-				snapshotsByDate.get(dateKey)!.set(snapshot.asset, {
-					amount: newAmount,
-					eurInvested: newEurInvested,
-				});
+				this.accumulateAsset(
+					snapshotsByDate.get(dateKey)!,
+					snapshot.asset,
+					Number(snapshot.amount),
+					Number(snapshot.eurInvested)
+				);
 			}
 		}
 
@@ -226,19 +242,12 @@ export class PortfolioSnapshotsService {
 				? new Map([[providerAccountId, await this.getCurrentHoldings(userId, providerAccountId)]])
 				: await this.getAllCurrentHoldings(userId);
 
-			const todayAssets = new Map<string, { amount: number; eurInvested: number }>();
+			const todayAssets = new Map<string, AssetAccumulatedData>();
 
 			for (const [_accountId, holdings] of currentHoldings) {
 				for (const holding of holdings) {
 					allAssets.add(holding.asset);
-					const existing = todayAssets.get(holding.asset);
-					const newAmount = (existing?.amount || 0) + holding.amount;
-					const newEurInvested = (existing?.eurInvested || 0) + holding.eurInvested;
-
-					todayAssets.set(holding.asset, {
-						amount: newAmount,
-						eurInvested: newEurInvested,
-					});
+					this.accumulateAsset(todayAssets, holding.asset, holding.amount, holding.eurInvested);
 				}
 			}
 
@@ -317,7 +326,7 @@ export class PortfolioSnapshotsService {
 		const pricesRepo = this.pricesRepository || new PricesRepository(this.dataSource);
 
 		const allAssets = new Set<string>();
-		const snapshotsByDate = new Map<string, Map<string, { amount: number; eurInvested: number }>>();
+		const snapshotsByDate = new Map<string, Map<string, AssetAccumulatedData>>();
 
 		for (const snapshot of snapshots) {
 			allAssets.add(snapshot.asset);
@@ -326,31 +335,23 @@ export class PortfolioSnapshotsService {
 				snapshotsByDate.set(dateKey, new Map());
 			}
 
-			const existing = snapshotsByDate.get(dateKey)!.get(snapshot.asset);
-			const newAmount = (existing?.amount || 0) + Number(snapshot.amount);
-			const newEurInvested = (existing?.eurInvested || 0) + Number(snapshot.eurInvested);
-
-			snapshotsByDate.get(dateKey)!.set(snapshot.asset, {
-				amount: newAmount,
-				eurInvested: newEurInvested,
-			});
+			this.accumulateAsset(
+				snapshotsByDate.get(dateKey)!,
+				snapshot.asset,
+				Number(snapshot.amount),
+				Number(snapshot.eurInvested)
+			);
 		}
 
 		const todayKey = endDate.toISODate() || "";
 		if (!snapshotsByDate.has(todayKey)) {
 			const currentHoldings = await this.getAllCurrentHoldings(userId);
-			const todayAssets = new Map<string, { amount: number; eurInvested: number }>();
+			const todayAssets = new Map<string, AssetAccumulatedData>();
 
 			for (const [_accountId, holdings] of currentHoldings) {
 				for (const holding of holdings) {
 					allAssets.add(holding.asset);
-					const existing = todayAssets.get(holding.asset);
-					const newAmount = (existing?.amount || 0) + holding.amount;
-
-					todayAssets.set(holding.asset, {
-						amount: newAmount,
-						eurInvested: existing?.eurInvested || 0,
-					});
+					this.accumulateAsset(todayAssets, holding.asset, holding.amount, holding.eurInvested);
 				}
 			}
 

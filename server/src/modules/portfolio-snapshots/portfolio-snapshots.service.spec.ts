@@ -431,6 +431,41 @@ describe("PortfolioSnapshotsService", () => {
 			expect(result[1].assets["BTC"]).toEqual({ amount: 1.0, eurValue: 55000 });
 		});
 
+		it("should accumulate eurInvested from multiple accounts when building today's holdings", async () => {
+			const today = DateTime.utc().startOf("day");
+
+			vi.mocked(mockRepository.findByUserAndDateRange).mockResolvedValue([]);
+
+			const mockHoldings = new Map<number, PortfolioSnapshotEntity[]>();
+			mockHoldings.set(1, [
+				createMockSnapshot({ providerAccountId: 1, asset: "BTC", amount: 0.5, eurInvested: 25000 }),
+			]);
+			mockHoldings.set(2, [
+				createMockSnapshot({ providerAccountId: 2, asset: "BTC", amount: 0.5, eurInvested: 30000 }),
+			]);
+			vi.mocked(mockRepository.findLatestByUser).mockResolvedValue(mockHoldings);
+
+			const mockPriceHistory = [
+				{ date: today, priceEur: 55000 },
+			];
+			vi.mocked(mockPricesRepository.getPriceHistoryBatch).mockResolvedValue(
+				new Map([["BTC", mockPriceHistory]])
+			);
+
+			const mockLatestPrice = new AssetPriceEntity();
+			mockLatestPrice.asset = "BTC";
+			mockLatestPrice.priceEur = 55000;
+			mockLatestPrice.fetchedAt = today;
+			vi.mocked(mockPricesRepository.getLatestPrices).mockResolvedValue(
+				new Map([["BTC", mockLatestPrice]])
+			);
+
+			const result = await service.getPortfolioHistoryWithPrices(1, undefined, { days: 30 });
+
+			expect(result).toHaveLength(1);
+			expect(result[0].totalEurInvested).toBe(55000);
+		});
+
 		it("should return empty array when no holdings exist", async () => {
 			vi.mocked(mockRepository.findByUserAndDateRange).mockResolvedValue([]);
 			vi.mocked(mockRepository.findLatestByUser).mockResolvedValue(new Map());
@@ -519,8 +554,8 @@ describe("PortfolioSnapshotsService", () => {
 			const yesterday = today.minus({ days: 1 });
 
 			const mockSnapshots = [
-				createMockSnapshot({ date: yesterday, providerAccountId: 1, asset: "BTC", amount: 0.5 }),
-				createMockSnapshot({ date: yesterday, providerAccountId: 2, asset: "BTC", amount: 0.5 }),
+				createMockSnapshot({ date: yesterday, providerAccountId: 1, asset: "BTC", amount: 0.5, eurInvested: 25000 }),
+				createMockSnapshot({ date: yesterday, providerAccountId: 2, asset: "BTC", amount: 0.5, eurInvested: 30000 }),
 			];
 			vi.mocked(mockRepository.findByUserAndDateRange).mockResolvedValue(mockSnapshots);
 			vi.mocked(mockRepository.findLatestByUser).mockResolvedValue(new Map());
@@ -536,6 +571,7 @@ describe("PortfolioSnapshotsService", () => {
 
 			expect(result).toHaveLength(1);
 			expect(result[0].assets["BTC"]).toEqual({ amount: 1.0, eurValue: 50000 });
+			expect(result[0].totalEurInvested).toBe(55000);
 		});
 
 		it("should work for specific account", async () => {
@@ -769,6 +805,43 @@ describe("PortfolioSnapshotsService", () => {
 
 			expect(result.portfolioHistory).toHaveLength(1);
 			expect(result.assets[0].eurValue).toBe(55000);
+		});
+
+		it("should accumulate eurInvested from multiple accounts when building today's holdings", async () => {
+			const today = DateTime.utc().startOf("day");
+			const yesterday = today.minus({ days: 1 });
+
+			vi.mocked(mockRepository.findByUserAndDateRange).mockResolvedValue([]);
+
+			const mockHoldings = new Map<number, PortfolioSnapshotEntity[]>();
+			mockHoldings.set(1, [
+				createMockSnapshot({ providerAccountId: 1, asset: "BTC", amount: 0.5, eurInvested: 25000 }),
+			]);
+			mockHoldings.set(2, [
+				createMockSnapshot({ providerAccountId: 2, asset: "BTC", amount: 0.5, eurInvested: 30000 }),
+			]);
+			vi.mocked(mockRepository.findLatestByUser).mockResolvedValue(mockHoldings);
+
+			const mockPriceHistory = [
+				{ date: today, priceEur: 55000 },
+			];
+			vi.mocked(mockPricesRepository.getPriceHistoryBatch).mockResolvedValue(
+				new Map([["BTC", mockPriceHistory]])
+			);
+
+			const mockLatestPrice = new AssetPriceEntity();
+			mockLatestPrice.asset = "BTC";
+			mockLatestPrice.priceEur = 55000;
+			mockLatestPrice.fetchedAt = today;
+			vi.mocked(mockPricesRepository.getLatestPrices).mockResolvedValue(
+				new Map([["BTC", mockLatestPrice]])
+			);
+
+			const result = await service.getPortfolioOverview(1, 30);
+
+			expect(result.portfolioHistory).toHaveLength(1);
+			expect(result.portfolioHistory[0].totalEurInvested).toBe(55000);
+			expect(result.assets[0].eurInvested).toBe(55000);
 		});
 	});
 });
