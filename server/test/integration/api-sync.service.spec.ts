@@ -16,7 +16,7 @@ vi.mock("../../src/providers/registry.js", () => ({
   getProviderConfig: vi.fn(),
 }));
 
-describe("API Sync Integration", () => {
+describe("API Sync Service Integration", () => {
   let dataSource: any;
   let userId: number;
   let accountId: number;

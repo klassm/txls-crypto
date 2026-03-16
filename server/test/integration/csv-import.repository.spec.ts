@@ -54,7 +54,7 @@ const testConfigs = dbConnectionString
   ? allConfigs.filter(c => c.match(dbConnectionString))
   : allConfigs;
 
-describe.each(testConfigs)("$displayName CSV Import Integration", ({ name, displayName, connectionString, setup, teardown }) => {
+describe.each(testConfigs)("$displayName CSV Import Repository Integration", ({ name, displayName, connectionString, setup, teardown }) => {
   const originalDbConnectionString = process.env.DB_CONNECTION_STRING;
   const userId = 1;
   const providerAccountId = 1;

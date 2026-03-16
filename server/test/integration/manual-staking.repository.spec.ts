@@ -7,7 +7,7 @@ import { UserEntity } from "../../src/modules/users/user.entity.js";
 import { ProviderType, TransactionType } from "@txls/shared";
 import { DateTime } from "luxon";
 
-describe("Manual Staking", () => {
+describe("Manual Staking Repository Integration", () => {
   let dataSource: any;
   let userId: number;
   let accountId: number;

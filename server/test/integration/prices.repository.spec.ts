@@ -7,7 +7,7 @@ import { DateTime } from "luxon";
 import type { DataSource } from "typeorm";
 import type { CoinPrice } from "../../src/modules/prices/coingecko.service.js";
 
-describe("Prices Integration Tests", () => {
+describe("Prices Repository Integration", () => {
 	let dataSource: DataSource;
 	let repository: PricesRepository;
 

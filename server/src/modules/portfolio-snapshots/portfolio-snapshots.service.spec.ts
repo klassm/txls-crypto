@@ -844,4 +844,84 @@ describe("PortfolioSnapshotsService", () => {
 			expect(result.assets[0].eurInvested).toBe(55000);
 		});
 	});
+
+	describe("portfolioHistory consistency", () => {
+		it("should produce identical portfolioHistory for getPortfolioOverview and getPortfolioHistoryWithPrices with same data", async () => {
+			const today = DateTime.utc().startOf("day");
+			const yesterday = today.minus({ days: 1 });
+			const twoDaysAgo = today.minus({ days: 2 });
+
+			const mockSnapshots = [
+				createMockSnapshot({ date: twoDaysAgo, asset: "BTC", amount: 1.0, eurInvested: 45000 }),
+				createMockSnapshot({ date: yesterday, asset: "BTC", amount: 1.5, eurInvested: 50000 }),
+			];
+			vi.mocked(mockRepository.findByUserAndDateRange).mockResolvedValue(mockSnapshots);
+			vi.mocked(mockRepository.findLatestByUser).mockResolvedValue(new Map());
+
+			const mockPriceHistory = [
+				{ date: twoDaysAgo, priceEur: 48000 },
+				{ date: yesterday, priceEur: 50000 },
+				{ date: today, priceEur: 52000 },
+			];
+			vi.mocked(mockPricesRepository.getPriceHistoryBatch).mockResolvedValue(
+				new Map([["BTC", mockPriceHistory]])
+			);
+
+			const mockLatestPrice = new AssetPriceEntity();
+			mockLatestPrice.asset = "BTC";
+			mockLatestPrice.priceEur = 52000;
+			mockLatestPrice.fetchedAt = today;
+			vi.mocked(mockPricesRepository.getLatestPrices).mockResolvedValue(
+				new Map([["BTC", mockLatestPrice]])
+			);
+
+			const overviewResult = await service.getPortfolioOverview(1, 30);
+			const historyResult = await service.getPortfolioHistoryWithPrices(1, undefined, { days: 30 });
+
+			expect(historyResult).toHaveLength(overviewResult.portfolioHistory.length);
+			for (let i = 0; i < historyResult.length; i++) {
+				expect(historyResult[i].date).toBe(overviewResult.portfolioHistory[i].date);
+				expect(historyResult[i].totalEurValue).toBe(overviewResult.portfolioHistory[i].totalEurValue);
+				expect(historyResult[i].totalEurInvested).toBe(overviewResult.portfolioHistory[i].totalEurInvested);
+			}
+		});
+
+		it("should produce consistent history for specific account vs filtered from overview", async () => {
+			const today = DateTime.utc().startOf("day");
+			const yesterday = today.minus({ days: 1 });
+
+			const mockSnapshotsAccount1 = [
+				createMockSnapshot({ date: yesterday, providerAccountId: 1, asset: "BTC", amount: 1.0, eurInvested: 50000 }),
+			];
+			const mockSnapshotsAll = [
+				createMockSnapshot({ date: yesterday, providerAccountId: 1, asset: "BTC", amount: 1.0, eurInvested: 50000 }),
+				createMockSnapshot({ date: yesterday, providerAccountId: 2, asset: "ETH", amount: 5.0, eurInvested: 15000 }),
+			];
+
+			vi.mocked(mockRepository.findByAccountAndDateRange).mockResolvedValue(mockSnapshotsAccount1);
+			vi.mocked(mockRepository.findLatestByAccount).mockResolvedValue([]);
+			vi.mocked(mockRepository.findByUserAndDateRange).mockResolvedValue(mockSnapshotsAll);
+			vi.mocked(mockRepository.findLatestByUser).mockResolvedValue(new Map());
+
+			const btcPriceHistory = [{ date: yesterday, priceEur: 50000 }];
+			const ethPriceHistory = [{ date: yesterday, priceEur: 3000 }];
+			vi.mocked(mockPricesRepository.getPriceHistoryBatch)
+				.mockImplementation(async (assets) => {
+					const result = new Map();
+					for (const asset of assets) {
+						if (asset === "BTC") result.set("BTC", btcPriceHistory);
+						if (asset === "ETH") result.set("ETH", ethPriceHistory);
+					}
+					return result;
+				});
+			vi.mocked(mockPricesRepository.getLatestPrices).mockResolvedValue(new Map());
+
+			const accountHistory = await service.getPortfolioHistoryWithPrices(1, 1, { days: 30 });
+
+			expect(accountHistory).toHaveLength(1);
+			expect(accountHistory[0].assets["BTC"].amount).toBe(1.0);
+			expect(accountHistory[0].totalEurValue).toBe(50000);
+			expect(accountHistory[0].totalEurInvested).toBe(50000);
+		});
+	});
 });
