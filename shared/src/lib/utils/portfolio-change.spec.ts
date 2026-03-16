@@ -320,4 +320,31 @@ describe("calculatePriceChangeByDate", () => {
 		expect(result!.absolute).toBe(100);
 		expect(result!.relative).toBe(100);
 	});
+
+	it("should return null for undefined history", () => {
+		expect(calculatePriceChangeByDate(undefined as any, 7)).toBeNull();
+	});
+
+	it("should handle zero price correctly", () => {
+		const history = [
+			createPricePoint("2024-01-08", 0),
+			createPricePoint("2024-01-15", 100),
+		];
+		const result = calculatePriceChangeByDate(history, 7);
+		expect(result).not.toBeNull();
+		expect(result!.absolute).toBe(100);
+		expect(result!.relative).toBe(Infinity);
+	});
+
+	it("should match user's real scenario - SOL 7d change with gaps", () => {
+		const history = [
+			createPricePoint("2026-03-08", 130),
+			createPricePoint("2026-03-09", 125),
+			createPricePoint("2026-03-15", 94),
+		];
+		const result = calculatePriceChangeByDate(history, 7);
+		expect(result).not.toBeNull();
+		expect(result!.absolute).toBeCloseTo(-31, 0);
+		expect(result!.relative).toBeCloseTo(-24.8, 1);
+	});
 });

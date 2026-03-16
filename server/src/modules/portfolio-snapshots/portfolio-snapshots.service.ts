@@ -530,13 +530,13 @@ export class PortfolioSnapshotsService {
 			.select([
 				"transaction.asset AS asset",
 				"SUM(CASE WHEN transaction.type IN (:sell, :withdrawal) THEN -ABS(transaction.quantity) ELSE ABS(transaction.quantity) END) AS amount",
-				"SUM(CASE WHEN transaction.type = :buy THEN transaction.eurValue ELSE 0 END) AS eurInvested",
+				"SUM(CASE WHEN transaction.type IN (:buy, :deposit) THEN transaction.eurValue ELSE 0 END) AS eurInvested",
 				"SUM(CASE WHEN transaction.type = :buy THEN 1 ELSE 0 END) AS buys",
 				"SUM(CASE WHEN transaction.type = :sell THEN 1 ELSE 0 END) AS sells",
 			])
 			.where(
 				"transaction.userId = :userId AND transaction.providerAccountId = :providerAccountId",
-				{ userId, providerAccountId, buy: TransactionType.buy, sell: TransactionType.sell, withdrawal: TransactionType.withdrawal },
+				{ userId, providerAccountId, buy: TransactionType.buy, sell: TransactionType.sell, withdrawal: TransactionType.withdrawal, deposit: TransactionType.deposit },
 			)
 			.andWhere("transaction.timestamp <= :timestampLimit", { timestampLimit })
 			.groupBy("transaction.asset")
@@ -563,13 +563,13 @@ export class PortfolioSnapshotsService {
 			.select([
 				"transaction.asset AS asset",
 				"SUM(CASE WHEN transaction.type IN (:sell, :withdrawal) THEN -ABS(transaction.quantity) ELSE ABS(transaction.quantity) END) AS amount",
-				"SUM(CASE WHEN transaction.type = :buy THEN transaction.eurValue ELSE 0 END) AS eurInvested",
+				"SUM(CASE WHEN transaction.type IN (:buy, :deposit) THEN transaction.eurValue ELSE 0 END) AS eurInvested",
 				"SUM(CASE WHEN transaction.type = :buy THEN 1 ELSE 0 END) AS buys",
 				"SUM(CASE WHEN transaction.type = :sell THEN 1 ELSE 0 END) AS sells",
 			])
 			.where(
 				"transaction.userId = :userId AND transaction.providerAccountId = :providerAccountId",
-				{ userId, providerAccountId, buy: TransactionType.buy, sell: TransactionType.sell, withdrawal: TransactionType.withdrawal },
+				{ userId, providerAccountId, buy: TransactionType.buy, sell: TransactionType.sell, withdrawal: TransactionType.withdrawal, deposit: TransactionType.deposit },
 			)
 			.groupBy("transaction.asset")
 			.getRawMany();
@@ -595,11 +595,11 @@ export class PortfolioSnapshotsService {
 				"transaction.providerAccountId AS providerAccountId",
 				"transaction.asset AS asset",
 				"SUM(CASE WHEN transaction.type IN (:sell, :withdrawal) THEN -ABS(transaction.quantity) ELSE ABS(transaction.quantity) END) AS amount",
-				"SUM(CASE WHEN transaction.type = :buy THEN transaction.eurValue ELSE 0 END) AS eurInvested",
+				"SUM(CASE WHEN transaction.type IN (:buy, :deposit) THEN transaction.eurValue ELSE 0 END) AS eurInvested",
 				"SUM(CASE WHEN transaction.type = :buy THEN 1 ELSE 0 END) AS buys",
 				"SUM(CASE WHEN transaction.type = :sell THEN 1 ELSE 0 END) AS sells",
 			])
-			.where("transaction.userId = :userId", { userId, buy: TransactionType.buy, sell: TransactionType.sell, withdrawal: TransactionType.withdrawal })
+			.where("transaction.userId = :userId", { userId, buy: TransactionType.buy, sell: TransactionType.sell, withdrawal: TransactionType.withdrawal, deposit: TransactionType.deposit })
 			.groupBy("transaction.providerAccountId, transaction.asset")
 			.getRawMany();
 

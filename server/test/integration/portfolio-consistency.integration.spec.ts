@@ -348,6 +348,180 @@ describe("Portfolio Consistency Integration", () => {
 		});
 	});
 
+	describe("eurInvested includes deposits", () => {
+		beforeEach(async () => {
+			const today = DateTime.utc().startOf("day");
+			const yesterday = today.minus({ days: 1 });
+
+			await dataSource.getRepository(AssetPriceEntity).save([
+				{ asset: "SOL", priceEur: 100, fetchedAt: yesterday } as AssetPriceEntity,
+				{ asset: "SOL", priceEur: 80, fetchedAt: today } as AssetPriceEntity,
+			]);
+		});
+
+		it("should include deposit eurValue in eurInvested calculation", async () => {
+			const today = DateTime.utc().startOf("day");
+			const yesterday = today.minus({ days: 1 });
+
+			await dataSource.getRepository(TransactionEntity).save([
+				{
+					userId,
+					providerAccountId: accountId1,
+					externalId: "buy1",
+					asset: "SOL",
+					type: TransactionType.buy,
+					quantity: 10,
+					eurValue: 1000,
+					eurFee: 0,
+					timestamp: yesterday,
+				} as TransactionEntity,
+				{
+					userId,
+					providerAccountId: accountId1,
+					externalId: "deposit1",
+					asset: "SOL",
+					type: TransactionType.deposit,
+					quantity: 5,
+					eurValue: 500,
+					eurFee: 0,
+					timestamp: yesterday,
+				} as TransactionEntity,
+			]);
+
+			const response = await request(app)
+				.get("/api/portfolio/overview?days=30")
+				.set("Cookie", [`${AUTH_COOKIE_NAME}=${authToken}`]);
+
+			expect(response.status).toBe(200);
+			expect(response.body.assets).toHaveLength(1);
+
+			const sol = response.body.assets[0];
+			expect(sol.asset).toBe("SOL");
+			expect(sol.amount).toBe(15);
+			expect(sol.eurInvested).toBe(1500);
+		});
+
+		it("should calculate correct overall change with deposits included", async () => {
+			const today = DateTime.utc().startOf("day");
+			const yesterday = today.minus({ days: 1 });
+
+			await dataSource.getRepository(TransactionEntity).save([
+				{
+					userId,
+					providerAccountId: accountId1,
+					externalId: "buy1",
+					asset: "SOL",
+					type: TransactionType.buy,
+					quantity: 10,
+					eurValue: 1000,
+					eurFee: 0,
+					timestamp: yesterday,
+				} as TransactionEntity,
+				{
+					userId,
+					providerAccountId: accountId1,
+					externalId: "deposit1",
+					asset: "SOL",
+					type: TransactionType.deposit,
+					quantity: 10,
+					eurValue: 1000,
+					eurFee: 0,
+					timestamp: yesterday,
+				} as TransactionEntity,
+			]);
+
+			const response = await request(app)
+				.get("/api/portfolio/overview?days=30")
+				.set("Cookie", [`${AUTH_COOKIE_NAME}=${authToken}`]);
+
+			expect(response.status).toBe(200);
+
+			const sol = response.body.assets[0];
+			expect(sol.eurInvested).toBe(2000);
+			expect(sol.eurValue).toBe(1600);
+		});
+
+		it("should not include rewards in eurInvested", async () => {
+			const today = DateTime.utc().startOf("day");
+			const yesterday = today.minus({ days: 1 });
+
+			await dataSource.getRepository(TransactionEntity).save([
+				{
+					userId,
+					providerAccountId: accountId1,
+					externalId: "buy1",
+					asset: "SOL",
+					type: TransactionType.buy,
+					quantity: 10,
+					eurValue: 1000,
+					eurFee: 0,
+					timestamp: yesterday,
+				} as TransactionEntity,
+				{
+					userId,
+					providerAccountId: accountId1,
+					externalId: "reward1",
+					asset: "SOL",
+					type: TransactionType.reward,
+					quantity: 1,
+					eurValue: 100,
+					eurFee: 0,
+					timestamp: yesterday,
+				} as TransactionEntity,
+			]);
+
+			const response = await request(app)
+				.get("/api/portfolio/overview?days=30")
+				.set("Cookie", [`${AUTH_COOKIE_NAME}=${authToken}`]);
+
+			expect(response.status).toBe(200);
+
+			const sol = response.body.assets[0];
+			expect(sol.amount).toBe(11);
+			expect(sol.eurInvested).toBe(1000);
+		});
+
+		it("should handle deposits from transfers correctly", async () => {
+			const today = DateTime.utc().startOf("day");
+			const yesterday = today.minus({ days: 1 });
+
+			await dataSource.getRepository(TransactionEntity).save([
+				{
+					userId,
+					providerAccountId: accountId1,
+					externalId: "buy1",
+					asset: "SOL",
+					type: TransactionType.buy,
+					quantity: 50,
+					eurValue: 5000,
+					eurFee: 0,
+					timestamp: yesterday,
+				} as TransactionEntity,
+				{
+					userId,
+					providerAccountId: accountId1,
+					externalId: "deposit1",
+					asset: "SOL",
+					type: TransactionType.deposit,
+					quantity: 50,
+					eurValue: 4000,
+					eurFee: 0,
+					timestamp: yesterday,
+				} as TransactionEntity,
+			]);
+
+			const response = await request(app)
+				.get("/api/portfolio/overview?days=30")
+				.set("Cookie", [`${AUTH_COOKIE_NAME}=${authToken}`]);
+
+			expect(response.status).toBe(200);
+
+			const sol = response.body.assets[0];
+			expect(sol.amount).toBe(100);
+			expect(sol.eurInvested).toBe(9000);
+		});
+	});
+
 	describe("Authentication and authorization", () => {
 		it("should return 401 without auth token for portfolio overview", async () => {
 			const response = await request(app).get("/api/portfolio/overview?days=30");
