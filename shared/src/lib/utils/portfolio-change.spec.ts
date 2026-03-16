@@ -1,10 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { calculatePortfolioChange, type PortfolioHistoryPoint } from "./portfolio-change";
+import { calculatePortfolioChange, calculateOverallChange, type PortfolioHistoryPoint } from "./portfolio-change";
 
-function createHistoryPoint(date: string, totalEurValue: number): PortfolioHistoryPoint {
+function createHistoryPoint(date: string, totalEurValue: number, totalEurInvested = 0): PortfolioHistoryPoint {
 	return {
 		date,
 		totalEurValue,
+		totalEurInvested,
 		assets: {},
 	};
 }
@@ -20,16 +21,16 @@ describe("calculatePortfolioChange", () => {
 	});
 
 	it("should return null when latest value is null", () => {
-		const history = [
+		const history: PortfolioHistoryPoint[] = [
 			createHistoryPoint("2024-01-08", 1000),
-			{ date: "2024-01-15", totalEurValue: null, assets: {} },
+			{ date: "2024-01-15", totalEurValue: null, totalEurInvested: 0, assets: {} },
 		];
 		expect(calculatePortfolioChange(history, 7)).toBeNull();
 	});
 
 	it("should return null when past value is null", () => {
-		const history = [
-			{ date: "2024-01-08", totalEurValue: null, assets: {} },
+		const history: PortfolioHistoryPoint[] = [
+			{ date: "2024-01-08", totalEurValue: null, totalEurInvested: 0, assets: {} },
 			createHistoryPoint("2024-01-15", 1000),
 		];
 		expect(calculatePortfolioChange(history, 7)).toBeNull();
@@ -141,5 +142,47 @@ describe("calculatePortfolioChange", () => {
 		expect(result).not.toBeNull();
 		expect(result!.absolute).toBe(100);
 		expect(result!.relative).toBe(Infinity);
+	});
+});
+
+describe("calculateOverallChange", () => {
+	it("should return null when latestValue is null", () => {
+		expect(calculateOverallChange(null, 1000)).toBeNull();
+	});
+
+	it("should return null when eurInvested is zero", () => {
+		expect(calculateOverallChange(1500, 0)).toBeNull();
+	});
+
+	it("should return null when eurInvested is negative", () => {
+		expect(calculateOverallChange(1500, -100)).toBeNull();
+	});
+
+	it("should calculate profit correctly", () => {
+		const result = calculateOverallChange(1500, 1000);
+		expect(result).not.toBeNull();
+		expect(result!.absolute).toBe(500);
+		expect(result!.relative).toBe(50);
+	});
+
+	it("should calculate loss correctly", () => {
+		const result = calculateOverallChange(800, 1000);
+		expect(result).not.toBeNull();
+		expect(result!.absolute).toBe(-200);
+		expect(result!.relative).toBe(-20);
+	});
+
+	it("should handle zero value correctly", () => {
+		const result = calculateOverallChange(0, 1000);
+		expect(result).not.toBeNull();
+		expect(result!.absolute).toBe(-1000);
+		expect(result!.relative).toBe(-100);
+	});
+
+	it("should handle no change correctly", () => {
+		const result = calculateOverallChange(1000, 1000);
+		expect(result).not.toBeNull();
+		expect(result!.absolute).toBe(0);
+		expect(result!.relative).toBe(0);
 	});
 });

@@ -41,3 +41,15 @@ export function calculatePortfolioChange(
 
 	return { absolute, relative };
 }
+
+export function calculateOverallChange(
+	latestValue: number | null,
+	eurInvested: number
+): ChangeStats | null {
+	if (latestValue === null || eurInvested <= 0) return null;
+
+	const absolute = latestValue - eurInvested;
+	const relative = (absolute / eurInvested) * 100;
+
+	return { absolute, relative };
+}

@@ -15,21 +15,7 @@ import { ChartDialog, type TimeSpan } from "../components/charts/ChartDialog";
 import { ExpandButton } from "../components/charts/ExpandButton";
 import { portfolioApi } from "../lib/client/prices-api";
 import type { PortfolioHistoryPoint, AssetOverview, StakingStats } from "../lib/client/prices-api";
-import { calculatePortfolioChange } from "@txls/shared";
-
-interface ChangeStats {
-	absolute: number;
-	relative: number;
-}
-
-function calculateChange(
-	history: PortfolioHistoryPoint[] | undefined,
-	days: number
-): ChangeStats | null {
-	const result = calculatePortfolioChange(history, days);
-	if (!result) return null;
-	return result;
-}
+import { calculatePortfolioChange, calculateOverallChange, type ChangeStats } from "@txls/shared";
 
 function PortfolioStats({ history, assets, currentYearStakingRewards, totalStakingRewards }: { history: PortfolioHistoryPoint[] | undefined; assets: AssetOverview[]; currentYearStakingRewards: StakingStats; totalStakingRewards: StakingStats }) {
 	if (!history || history.length === 0) return null;
@@ -37,14 +23,12 @@ function PortfolioStats({ history, assets, currentYearStakingRewards, totalStaki
 	const latest = history[history.length - 1];
 	if (latest.totalEurValue === null) return null;
 
-	const dayChange = calculateChange(history, 1);
-	const weekChange = calculateChange(history, 7);
-	const monthChange = calculateChange(history, 30);
+	const dayChange = calculatePortfolioChange(history, 1);
+	const weekChange = calculatePortfolioChange(history, 7);
+	const monthChange = calculatePortfolioChange(history, 30);
 
 	const totalEurInvested = assets.reduce((sum, a) => sum + a.eurInvested, 0);
-	const overallProfit = latest.totalEurValue - totalEurInvested;
-	const overallProfitPercent = totalEurInvested > 0 ? (overallProfit / totalEurInvested) * 100 : 0;
-	const overallColor = overallProfit >= 0 ? "success.main" : "error.main";
+	const overallChange = calculateOverallChange(latest.totalEurValue, totalEurInvested);
 	const currentYear = new Date().getFullYear();
 
 	const formatValue = (value: number) =>
@@ -69,6 +53,7 @@ function PortfolioStats({ history, assets, currentYearStakingRewards, totalStaki
 	const dayFormatted = formatChange(dayChange);
 	const weekFormatted = formatChange(weekChange);
 	const monthFormatted = formatChange(monthChange);
+	const overallFormatted = formatChange(overallChange);
 
 	const hasStakingRewards = totalStakingRewards.eurValue > 0;
 
@@ -112,11 +97,11 @@ function PortfolioStats({ history, assets, currentYearStakingRewards, totalStaki
 					<Typography variant="body2" color="text.secondary">
 						Overall
 					</Typography>
-					<Typography variant="h6" fontWeight={600} sx={{ color: overallColor }}>
-						{overallProfit >= 0 ? "+" : ""}{formatValue(overallProfit)}
+					<Typography variant="h6" fontWeight={600} sx={{ color: overallFormatted.color }}>
+						{overallFormatted.value}
 					</Typography>
-					<Typography variant="body2" sx={{ color: overallColor }}>
-						{overallProfitPercent >= 0 ? "+" : ""}{overallProfitPercent.toFixed(2)}%
+					<Typography variant="body2" sx={{ color: overallFormatted.color }}>
+						{overallFormatted.percent}
 					</Typography>
 				</Card>
 			</Grid>
@@ -329,18 +314,11 @@ function AssetCard({ asset }: { asset: AssetOverview }) {
 		return { absolute, relative };
 	};
 
-	const calculateOverallChange = (): { absolute: number; relative: number; color: string } | null => {
-		if (eurInvested <= 0 || positionValue === null) return null;
-		const absolute = positionValue - eurInvested;
-		const relative = (absolute / eurInvested) * 100;
-		const color = absolute >= 0 ? "success.main" : "error.main";
-		return { absolute, relative, color };
-	};
+	const overallChange = calculateOverallChange(positionValue, eurInvested);
 
 	const dayChange = calculatePriceChange(1);
 	const weekChange = calculatePriceChange(7);
 	const monthChange = calculatePriceChange(30);
-	const overallChange = calculateOverallChange();
 
 	const formatPrice = (value: number) =>
 		new Intl.NumberFormat("de-DE", {
@@ -380,19 +358,19 @@ function AssetCard({ asset }: { asset: AssetOverview }) {
 							{formatPrice(positionValue)}
 						</Typography>
 					</Box>
-					{overallChange && (
-						<Box sx={{ textAlign: "right" }}>
-							<Typography variant="caption" color="text.secondary">
-								Overall
-							</Typography>
-							<Typography variant="body2" fontWeight={600} sx={{ color: overallChange.color, fontSize: { xs: "0.75rem", sm: "0.875rem" } }}>
-								{overallChange.absolute >= 0 ? "+" : ""}{formatPrice(overallChange.absolute)}
-							</Typography>
-							<Typography variant="caption" sx={{ color: overallChange.color }}>
-								({overallChange.relative >= 0 ? "+" : ""}{overallChange.relative.toFixed(2)}%)
-							</Typography>
-						</Box>
-					)}
+				{overallChange && (
+					<Box sx={{ textAlign: "right" }}>
+						<Typography variant="caption" color="text.secondary">
+							Overall
+						</Typography>
+						<Typography variant="body2" fontWeight={600} sx={{ color: overallChange.absolute >= 0 ? "success.main" : "error.main", fontSize: { xs: "0.75rem", sm: "0.875rem" } }}>
+							{overallChange.absolute >= 0 ? "+" : ""}{formatPrice(overallChange.absolute)}
+						</Typography>
+						<Typography variant="caption" sx={{ color: overallChange.absolute >= 0 ? "success.main" : "error.main" }}>
+							({overallChange.relative >= 0 ? "+" : ""}{overallChange.relative.toFixed(2)}%)
+						</Typography>
+					</Box>
+				)}
 				</Box>
 
 				{positionHistory && positionHistory.length > 0 && (

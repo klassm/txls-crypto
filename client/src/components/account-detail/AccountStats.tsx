@@ -1,20 +1,6 @@
 import { Box, Card, Grid, Typography } from "@mui/material";
 import type { PortfolioHistoryPoint } from "../../lib/client/prices-api";
-import { calculatePortfolioChange } from "@txls/shared";
-
-interface ChangeStats {
-	absolute: number;
-	relative: number;
-}
-
-function calculateChange(
-	history: PortfolioHistoryPoint[] | undefined,
-	days: number
-): ChangeStats | null {
-	const result = calculatePortfolioChange(history, days);
-	if (!result) return null;
-	return result;
-}
+import { calculatePortfolioChange, calculateOverallChange, type ChangeStats } from "@txls/shared";
 
 interface AccountStatsProps {
 	history: PortfolioHistoryPoint[] | undefined;
@@ -27,18 +13,12 @@ export function AccountStats({ history, variant = "full" }: AccountStatsProps) {
 	const latest = history[history.length - 1];
 	if (latest.totalEurValue === null) return null;
 
-	const dayChange = calculateChange(history, 1);
-	const weekChange = calculateChange(history, 7);
-	const monthChange = calculateChange(history, 30);
-	const quarterChange = calculateChange(history, 90);
+	const dayChange = calculatePortfolioChange(history, 1);
+	const weekChange = calculatePortfolioChange(history, 7);
+	const monthChange = calculatePortfolioChange(history, 30);
+	const quarterChange = calculatePortfolioChange(history, 90);
 
-	const totalEurInvested = latest.totalEurInvested;
-	const overallChange = totalEurInvested > 0
-		? {
-				absolute: latest.totalEurValue - totalEurInvested,
-				relative: ((latest.totalEurValue - totalEurInvested) / totalEurInvested) * 100,
-			}
-		: null;
+	const overallChange = calculateOverallChange(latest.totalEurValue, latest.totalEurInvested);
 
 	const formatValue = (value: number) =>
 		new Intl.NumberFormat("de-DE", {

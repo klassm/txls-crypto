@@ -96,6 +96,65 @@ export class PortfolioSnapshotsService {
 		});
 	}
 
+	private buildSnapshotsByDate(
+		snapshots: PortfolioSnapshotEntity[],
+		providerAccountId?: number
+	): { snapshotsByDate: Map<string, Map<string, AssetAccumulatedData>>; allAssets: Set<string> } {
+		const allAssets = new Set<string>();
+		const snapshotsByDate = new Map<string, Map<string, AssetAccumulatedData>>();
+
+		for (const snapshot of snapshots) {
+			allAssets.add(snapshot.asset);
+			const dateKey = snapshot.date.toISODate() || "";
+			if (!snapshotsByDate.has(dateKey)) {
+				snapshotsByDate.set(dateKey, new Map());
+			}
+
+			if (providerAccountId) {
+				snapshotsByDate.get(dateKey)!.set(snapshot.asset, {
+					amount: Number(snapshot.amount),
+					eurInvested: Number(snapshot.eurInvested),
+				});
+			} else {
+				this.accumulateAsset(
+					snapshotsByDate.get(dateKey)!,
+					snapshot.asset,
+					Number(snapshot.amount),
+					Number(snapshot.eurInvested)
+				);
+			}
+		}
+
+		return { snapshotsByDate, allAssets };
+	}
+
+	private async addTodayHoldings(
+		snapshotsByDate: Map<string, Map<string, AssetAccumulatedData>>,
+		allAssets: Set<string>,
+		userId: number,
+		todayKey: string,
+		providerAccountId?: number
+	): Promise<void> {
+		if (snapshotsByDate.has(todayKey)) return;
+
+		const currentHoldings = providerAccountId
+			? new Map([[providerAccountId, await this.getCurrentHoldings(userId, providerAccountId)]])
+			: await this.getAllCurrentHoldings(userId);
+
+		const todayAssets = new Map<string, AssetAccumulatedData>();
+
+		for (const [, holdings] of currentHoldings) {
+			for (const holding of holdings) {
+				allAssets.add(holding.asset);
+				this.accumulateAsset(todayAssets, holding.asset, holding.amount, holding.eurInvested);
+			}
+		}
+
+		if (todayAssets.size > 0) {
+			snapshotsByDate.set(todayKey, todayAssets);
+		}
+	}
+
 	async getCurrentHoldings(userId: number, providerAccountId: number): Promise<AssetStat[]> {
 		const snapshots = await this.repository.findLatestByAccount(userId, providerAccountId);
 
@@ -211,49 +270,11 @@ export class PortfolioSnapshotsService {
 		const snapshots = await this.getPortfolioHistory(userId, providerAccountId, startDate, endDate);
 		const pricesRepo = this.pricesRepository || new PricesRepository(this.dataSource);
 
-		const allAssets = new Set<string>();
-		const snapshotsByDate = new Map<string, Map<string, AssetAccumulatedData>>();
-
-		for (const snapshot of snapshots) {
-			allAssets.add(snapshot.asset);
-			const dateKey = snapshot.date.toISODate() || "";
-			if (!snapshotsByDate.has(dateKey)) {
-				snapshotsByDate.set(dateKey, new Map());
-			}
-
-			if (providerAccountId) {
-				snapshotsByDate.get(dateKey)!.set(snapshot.asset, {
-					amount: Number(snapshot.amount),
-					eurInvested: Number(snapshot.eurInvested),
-				});
-			} else {
-				this.accumulateAsset(
-					snapshotsByDate.get(dateKey)!,
-					snapshot.asset,
-					Number(snapshot.amount),
-					Number(snapshot.eurInvested)
-				);
-			}
-		}
+		const { snapshotsByDate, allAssets } = this.buildSnapshotsByDate(snapshots, providerAccountId);
 
 		const todayKey = endDate.toISODate() || "";
-		if (includeToday && !snapshotsByDate.has(todayKey)) {
-			const currentHoldings = providerAccountId
-				? new Map([[providerAccountId, await this.getCurrentHoldings(userId, providerAccountId)]])
-				: await this.getAllCurrentHoldings(userId);
-
-			const todayAssets = new Map<string, AssetAccumulatedData>();
-
-			for (const [_accountId, holdings] of currentHoldings) {
-				for (const holding of holdings) {
-					allAssets.add(holding.asset);
-					this.accumulateAsset(todayAssets, holding.asset, holding.amount, holding.eurInvested);
-				}
-			}
-
-			if (todayAssets.size > 0) {
-				snapshotsByDate.set(todayKey, todayAssets);
-			}
+		if (includeToday) {
+			await this.addTodayHoldings(snapshotsByDate, allAssets, userId, todayKey, providerAccountId);
 		}
 
 		const assetList = Array.from(allAssets);
@@ -325,40 +346,10 @@ export class PortfolioSnapshotsService {
 		const snapshots = await this.repository.findByUserAndDateRange(userId, startDate, endDate);
 		const pricesRepo = this.pricesRepository || new PricesRepository(this.dataSource);
 
-		const allAssets = new Set<string>();
-		const snapshotsByDate = new Map<string, Map<string, AssetAccumulatedData>>();
-
-		for (const snapshot of snapshots) {
-			allAssets.add(snapshot.asset);
-			const dateKey = snapshot.date.toISODate() || "";
-			if (!snapshotsByDate.has(dateKey)) {
-				snapshotsByDate.set(dateKey, new Map());
-			}
-
-			this.accumulateAsset(
-				snapshotsByDate.get(dateKey)!,
-				snapshot.asset,
-				Number(snapshot.amount),
-				Number(snapshot.eurInvested)
-			);
-		}
+		const { snapshotsByDate, allAssets } = this.buildSnapshotsByDate(snapshots);
 
 		const todayKey = endDate.toISODate() || "";
-		if (!snapshotsByDate.has(todayKey)) {
-			const currentHoldings = await this.getAllCurrentHoldings(userId);
-			const todayAssets = new Map<string, AssetAccumulatedData>();
-
-			for (const [_accountId, holdings] of currentHoldings) {
-				for (const holding of holdings) {
-					allAssets.add(holding.asset);
-					this.accumulateAsset(todayAssets, holding.asset, holding.amount, holding.eurInvested);
-				}
-			}
-
-			if (todayAssets.size > 0) {
-				snapshotsByDate.set(todayKey, todayAssets);
-			}
-		}
+		await this.addTodayHoldings(snapshotsByDate, allAssets, userId, todayKey);
 
 		const assetList = Array.from(allAssets);
 		const priceHistories = await pricesRepo.getPriceHistoryBatch(assetList, startDate, endDate);
