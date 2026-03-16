@@ -15,7 +15,7 @@ import { ChartDialog, type TimeSpan } from "../components/charts/ChartDialog";
 import { ExpandButton } from "../components/charts/ExpandButton";
 import { portfolioApi } from "../lib/client/prices-api";
 import type { PortfolioHistoryPoint, AssetOverview, StakingStats } from "../lib/client/prices-api";
-import { calculatePortfolioChange, calculateOverallChange, type ChangeStats } from "@txls/shared";
+import { calculatePortfolioChange, calculateOverallChange, type ChangeStats, calculatePriceChangeByDate } from "@txls/shared";
 
 function PortfolioStats({ history, assets, currentYearStakingRewards, totalStakingRewards }: { history: PortfolioHistoryPoint[] | undefined; assets: AssetOverview[]; currentYearStakingRewards: StakingStats; totalStakingRewards: StakingStats }) {
 	if (!history || history.length === 0) return null;
@@ -305,20 +305,11 @@ function AssetCard({ asset }: { asset: AssetOverview }) {
 	const currentPrice = priceHistory[priceHistory.length - 1]?.priceEur ?? 0;
 	const positionValue = eurValue ?? amount * currentPrice;
 
-	const calculatePriceChange = (days: number): { absolute: number; relative: number } | null => {
-		if (priceHistory.length < days + 1) return null;
-		const pastPrice = priceHistory[priceHistory.length - 1 - days]?.priceEur;
-		if (!pastPrice) return null;
-		const absolute = currentPrice - pastPrice;
-		const relative = (absolute / pastPrice) * 100;
-		return { absolute, relative };
-	};
-
 	const overallChange = calculateOverallChange(positionValue, eurInvested);
 
-	const dayChange = calculatePriceChange(1);
-	const weekChange = calculatePriceChange(7);
-	const monthChange = calculatePriceChange(30);
+	const dayChange = calculatePriceChangeByDate(priceHistory, 1);
+	const weekChange = calculatePriceChangeByDate(priceHistory, 7);
+	const monthChange = calculatePriceChangeByDate(priceHistory, 30);
 
 	const formatPrice = (value: number) =>
 		new Intl.NumberFormat("de-DE", {

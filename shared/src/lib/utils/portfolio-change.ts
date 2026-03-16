@@ -53,3 +53,36 @@ export function calculateOverallChange(
 
 	return { absolute, relative };
 }
+
+export interface PriceHistoryPoint {
+	date: string;
+	priceEur: number;
+}
+
+export function calculatePriceChangeByDate(
+	priceHistory: PriceHistoryPoint[],
+	days: number
+): { absolute: number; relative: number } | null {
+	if (!priceHistory || priceHistory.length < 2) return null;
+
+	const latest = priceHistory[priceHistory.length - 1];
+	const latestDate = DateTime.fromISO(latest.date);
+	const targetDate = latestDate.minus({ days });
+
+	let past: PriceHistoryPoint | null = null;
+	for (let i = priceHistory.length - 1; i >= 0; i--) {
+		const entryDate = DateTime.fromISO(priceHistory[i].date);
+		if (entryDate <= targetDate) {
+			past = priceHistory[i];
+			break;
+		}
+	}
+
+	if (!past) return null;
+	if (past.date === latest.date) return null;
+
+	const absolute = latest.priceEur - past.priceEur;
+	const relative = (absolute / past.priceEur) * 100;
+
+	return { absolute, relative };
+}
