@@ -9,6 +9,7 @@
       "cache": false,
       "persistent": true
     },
+    "format": {},
     "lint": {
       "dependsOn": ["^build"]
     },
