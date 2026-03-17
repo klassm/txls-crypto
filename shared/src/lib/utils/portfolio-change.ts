@@ -61,13 +61,13 @@ export interface PriceHistoryPoint {
 
 export function calculatePriceChangeByDate(
 	priceHistory: PriceHistoryPoint[],
-	days: number
+	hours: number
 ): { absolute: number; relative: number } | null {
 	if (!priceHistory || priceHistory.length < 2) return null;
 
 	const latest = priceHistory[priceHistory.length - 1];
 	const latestDate = DateTime.fromISO(latest.date);
-	const targetDate = latestDate.minus({ days });
+	const targetDate = latestDate.minus({ hours });
 
 	let past: PriceHistoryPoint | null = null;
 	for (let i = priceHistory.length - 1; i >= 0; i--) {

@@ -213,18 +213,10 @@ export class PricesRepository {
 			.orderBy("price.fetchedAt", "ASC")
 			.getMany();
 
-		const byDay = new Map<string, { date: DateTime; priceEur: number }>();
-		for (const result of results) {
-			const dayKey = result.fetchedAt.startOf("day").toISODate() || "";
-			if (!byDay.has(dayKey)) {
-				byDay.set(dayKey, {
-					date: result.fetchedAt.startOf("day"),
-					priceEur: Number(result.priceEur),
-				});
-			}
-		}
-
-		return Array.from(byDay.values());
+		return results.map((result) => ({
+			date: result.fetchedAt,
+			priceEur: Number(result.priceEur),
+		}));
 	}
 
 	async getPriceHistoryBatch(

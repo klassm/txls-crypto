@@ -307,9 +307,9 @@ function AssetCard({ asset }: { asset: AssetOverview }) {
 
 	const overallChange = calculateOverallChange(positionValue, eurInvested);
 
-	const dayChange = calculatePriceChangeByDate(priceHistory, 1);
-	const weekChange = calculatePriceChangeByDate(priceHistory, 7);
-	const monthChange = calculatePriceChangeByDate(priceHistory, 30);
+	const dayChange = calculatePriceChangeByDate(priceHistory, 24);
+	const weekChange = calculatePriceChangeByDate(priceHistory, 24 * 7);
+	const monthChange = calculatePriceChangeByDate(priceHistory, 24 * 30);
 
 	const formatPrice = (value: number) =>
 		new Intl.NumberFormat("de-DE", {
