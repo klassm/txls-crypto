@@ -8,6 +8,7 @@ import { TransactionEntity } from "../transactions/transaction.entity.js";
 import { AccountEntity } from "../accounts/account.entity.js";
 import { PricesRepository } from "../prices/prices.repository.js";
 import { TransactionsRepository } from "../transactions/transactions.repository.js";
+import { AssetPriceEntity } from "../prices/asset-price.entity.js";
 import { logger } from "../../common/logger.js";
 
 export interface PortfolioHistoryPoint {
@@ -178,6 +179,16 @@ export class AssetHoldingsService {
 			fromTimestamp: fromTimestamp.toISO(),
 		});
 
+		const existingHoldings = await this.repository.findLatestByAccount(userId, providerAccountId);
+		if (existingHoldings.size === 0) {
+			logger.info({
+				message: "No existing holdings found, rebuilding all holdings",
+				userId,
+				providerAccountId,
+			});
+			return this.rebuildHoldings(userId, providerAccountId);
+		}
+
 		await this.repository.deleteByAccountFromTimestamp(userId, providerAccountId, fromTimestamp);
 
 		const transactions = await this.dataSource
@@ -275,6 +286,7 @@ export class AssetHoldingsService {
 
 		const assetList = Array.from(allAssets);
 		const priceHistories = await this.getPriceHistoriesHourly(pricesRepo, assetList, startDate, endDate);
+		const latestPrices = await pricesRepo.getLatestPrices(assetList);
 
 		const timestamps: DateTime[] = [];
 		const hourlyCutoff = now.minus({ days: hourlyForDays });
@@ -296,59 +308,119 @@ export class AssetHoldingsService {
 
 		const result: PortfolioHistoryPoint[] = [];
 
-		for (const ts of timestamps) {
-			let aggregatedHoldings = new Map<string, { amount: number; eurInvested: number }>();
-			
-			if (providerAccountId) {
-				const holdingsAtTime = await this.repository.getHoldingsUpToTimestamp(userId, providerAccountId, ts);
-				if (holdingsAtTime.size === 0) continue;
-				for (const [asset, h] of holdingsAtTime) {
-					aggregatedHoldings.set(asset, { amount: h.amount, eurInvested: h.eurInvested });
-				}
-			} else {
-				const holdingsByAccount = await this.repository.getAllHoldingsUpToTimestamp(userId, ts);
-				if (holdingsByAccount.size === 0) continue;
-				for (const [, accountHoldings] of holdingsByAccount) {
-					for (const [asset, h] of accountHoldings) {
-						const existing = aggregatedHoldings.get(asset) || { amount: 0, eurInvested: 0 };
-						aggregatedHoldings.set(asset, {
-							amount: existing.amount + h.amount,
-							eurInvested: existing.eurInvested + h.eurInvested,
-						});
-					}
-				}
-			}
+		for (let i = 0; i < timestamps.length; i++) {
+			const ts = timestamps[i];
+			const isLastTimestamp = i === timestamps.length - 1;
 
-			let totalEurValue: number | null = 0;
-			let totalEurInvested = 0;
-			const assetsObj: Record<string, { amount: number; eurValue: number | null }> = {};
+			const aggregatedHoldings = isLastTimestamp
+				? await this.getLatestAggregatedHoldings(userId, providerAccountId)
+				: await this.getAggregatedHoldingsAtTimestamp(userId, providerAccountId, ts);
 
-			for (const [asset, data] of aggregatedHoldings) {
-				const price = this.getPriceAtTimestamp(priceHistories, asset, ts);
-				const eurValue = price !== null ? data.amount * price : null;
+			if (aggregatedHoldings.size === 0) continue;
 
-				assetsObj[asset] = { amount: data.amount, eurValue };
-				totalEurInvested += data.eurInvested;
-
-				if (eurValue !== null) {
-					totalEurValue = (totalEurValue || 0) + eurValue;
-				} else {
-					totalEurValue = null;
-				}
-			}
-
-			if (totalEurValue !== null && Object.keys(assetsObj).length > 0) {
-				result.push({
-					date: ts.toISO() || "",
-					totalEurValue,
-					totalEurInvested,
-					assets: assetsObj,
-				});
+			const historyPoint = this.buildHistoryPoint(aggregatedHoldings, priceHistories, ts, isLastTimestamp ? latestPrices : undefined);
+			if (historyPoint) {
+				result.push(historyPoint);
 			}
 		}
 
 		result.sort((a, b) => a.date.localeCompare(b.date));
 		return result;
+	}
+
+	private async getLatestAggregatedHoldings(
+		userId: number,
+		providerAccountId?: number
+	): Promise<Map<string, { amount: number; eurInvested: number }>> {
+		if (providerAccountId) {
+			return this.holdingsMapToAggregated(
+				await this.repository.findLatestByAccount(userId, providerAccountId)
+			);
+		}
+		return this.aggregateHoldingsByAccount(await this.repository.findLatestByUser(userId));
+	}
+
+	private async getAggregatedHoldingsAtTimestamp(
+		userId: number,
+		providerAccountId: number | undefined,
+		timestamp: DateTime
+	): Promise<Map<string, { amount: number; eurInvested: number }>> {
+		if (providerAccountId) {
+			return this.holdingsMapToAggregated(
+				await this.repository.getHoldingsUpToTimestamp(userId, providerAccountId, timestamp)
+			);
+		}
+		return this.aggregateHoldingsByAccount(
+			await this.repository.getAllHoldingsUpToTimestamp(userId, timestamp)
+		);
+	}
+
+	private holdingsMapToAggregated(
+		holdings: Map<string, HoldingState>
+	): Map<string, { amount: number; eurInvested: number }> {
+		const result = new Map<string, { amount: number; eurInvested: number }>();
+		for (const [asset, h] of holdings) {
+			result.set(asset, { amount: h.amount, eurInvested: h.eurInvested });
+		}
+		return result;
+	}
+
+	private aggregateHoldingsByAccount(
+		holdingsByAccount: Map<number, Map<string, HoldingState>>
+	): Map<string, { amount: number; eurInvested: number }> {
+		const result = new Map<string, { amount: number; eurInvested: number }>();
+		for (const [, accountHoldings] of holdingsByAccount) {
+			for (const [asset, h] of accountHoldings) {
+				const existing = result.get(asset) || { amount: 0, eurInvested: 0 };
+				result.set(asset, {
+					amount: existing.amount + h.amount,
+					eurInvested: existing.eurInvested + h.eurInvested,
+				});
+			}
+		}
+		return result;
+	}
+
+	private buildHistoryPoint(
+		aggregatedHoldings: Map<string, { amount: number; eurInvested: number }>,
+		priceHistories: Map<string, { timestamp: DateTime; priceEur: number }[]>,
+		timestamp: DateTime,
+		latestPrices?: Map<string, AssetPriceEntity>
+	): PortfolioHistoryPoint | null {
+		let totalEurValue: number | null = 0;
+		let totalEurInvested = 0;
+		const assetsObj: Record<string, { amount: number; eurValue: number | null }> = {};
+
+		for (const [asset, data] of aggregatedHoldings) {
+			let price = this.getPriceAtTimestamp(priceHistories, asset, timestamp);
+			if (price === null && latestPrices) {
+				const latest = latestPrices.get(asset);
+				if (latest) {
+					price = Number(latest.priceEur);
+				}
+			}
+			const eurValue = price !== null ? data.amount * price : null;
+
+			assetsObj[asset] = { amount: data.amount, eurValue };
+			totalEurInvested += data.eurInvested;
+
+			if (eurValue !== null) {
+				totalEurValue = (totalEurValue || 0) + eurValue;
+			} else {
+				totalEurValue = null;
+			}
+		}
+
+		if (totalEurValue === null || Object.keys(assetsObj).length === 0) {
+			return null;
+		}
+
+		return {
+			date: timestamp.toISO() || "",
+			totalEurValue,
+			totalEurInvested,
+			assets: assetsObj,
+		};
 	}
 
 	async getPortfolioOverview(userId: number, days = 30): Promise<PortfolioOverview> {

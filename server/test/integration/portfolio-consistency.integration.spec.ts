@@ -406,4 +406,381 @@ describe("Portfolio Consistency Integration", () => {
 			expect(response.status).toBe(401);
 		});
 	});
+
+	describe("Account portfolio history consistency", () => {
+		beforeEach(async () => {
+			const now = DateTime.utc();
+			const yesterday = now.minus({ days: 1 });
+
+			await dataSource.getRepository(AssetPriceEntity).save([
+				{ asset: "BTC", priceEur: 50000, fetchedAt: yesterday } as AssetPriceEntity,
+				{ asset: "BTC", priceEur: 55000, fetchedAt: now } as AssetPriceEntity,
+				{ asset: "ETH", priceEur: 3000, fetchedAt: yesterday } as AssetPriceEntity,
+				{ asset: "ETH", priceEur: 3500, fetchedAt: now } as AssetPriceEntity,
+				{ asset: "XRP", priceEur: 0.5, fetchedAt: yesterday } as AssetPriceEntity,
+				{ asset: "XRP", priceEur: 0.6, fetchedAt: now } as AssetPriceEntity,
+			]);
+
+			await dataSource.getRepository(TransactionEntity).save([
+				{
+					userId,
+					providerAccountId: accountId1,
+					externalId: "tx-btc",
+					asset: "BTC",
+					type: TransactionType.buy,
+					quantity: 1.0,
+					eurValue: 50000,
+					eurFee: 0,
+					timestamp: yesterday,
+				} as TransactionEntity,
+				{
+					userId,
+					providerAccountId: accountId1,
+					externalId: "tx-eth",
+					asset: "ETH",
+					type: TransactionType.buy,
+					quantity: 10.0,
+					eurValue: 30000,
+					eurFee: 0,
+					timestamp: yesterday,
+				} as TransactionEntity,
+				{
+					userId,
+					providerAccountId: accountId1,
+					externalId: "tx-xrp",
+					asset: "XRP",
+					type: TransactionType.buy,
+					quantity: 1000.0,
+					eurValue: 500,
+					eurFee: 0,
+					timestamp: yesterday,
+				} as TransactionEntity,
+			]);
+
+			await dataSource.getRepository(AssetHoldingEntity).save([
+				{
+					userId,
+					providerAccountId: accountId1,
+					asset: "BTC",
+					amount: 1.0,
+					eurInvested: 50000,
+					timestamp: yesterday,
+				} as AssetHoldingEntity,
+				{
+					userId,
+					providerAccountId: accountId1,
+					asset: "ETH",
+					amount: 10.0,
+					eurInvested: 30000,
+					timestamp: yesterday,
+				} as AssetHoldingEntity,
+				{
+					userId,
+					providerAccountId: accountId1,
+					asset: "XRP",
+					amount: 1000.0,
+					eurInvested: 500,
+					timestamp: yesterday,
+				} as AssetHoldingEntity,
+			]);
+		});
+
+		it("should return all assets in account portfolio history", async () => {
+			const response = await request(app)
+				.get(`/api/accounts/${accountId1}/portfolio-history?days=30`)
+				.set("Cookie", [`${AUTH_COOKIE_NAME}=${authToken}`]);
+
+			expect(response.status).toBe(200);
+			expect(response.body.length).toBeGreaterThan(0);
+
+			const latest = response.body[response.body.length - 1];
+			const assetKeys = Object.keys(latest.assets);
+
+			expect(assetKeys).toContain("BTC");
+			expect(assetKeys).toContain("ETH");
+			expect(assetKeys).toContain("XRP");
+			expect(assetKeys).toHaveLength(3);
+		});
+
+		it("should calculate totalEurValue as sum of all asset values", async () => {
+			const response = await request(app)
+				.get(`/api/accounts/${accountId1}/portfolio-history?days=30`)
+				.set("Cookie", [`${AUTH_COOKIE_NAME}=${authToken}`]);
+
+			expect(response.status).toBe(200);
+
+			const latest = response.body[response.body.length - 1];
+			
+			const btcValue = latest.assets["BTC"].eurValue;
+			const ethValue = latest.assets["ETH"].eurValue;
+			const xrpValue = latest.assets["XRP"].eurValue;
+
+			const expectedTotal = btcValue + ethValue + xrpValue;
+
+			expect(latest.totalEurValue).toBeCloseTo(expectedTotal, 2);
+		});
+
+		it("should match portfolio overview total for single account", async () => {
+			const accountResponse = await request(app)
+				.get(`/api/accounts/${accountId1}/portfolio-history?days=30`)
+				.set("Cookie", [`${AUTH_COOKIE_NAME}=${authToken}`]);
+
+			const portfolioResponse = await request(app)
+				.get("/api/portfolio/overview?days=30")
+				.set("Cookie", [`${AUTH_COOKIE_NAME}=${authToken}`]);
+
+			expect(accountResponse.status).toBe(200);
+			expect(portfolioResponse.status).toBe(200);
+
+			const accountLatest = accountResponse.body[accountResponse.body.length - 1];
+			const portfolioLatest = portfolioResponse.body.portfolioHistory[portfolioResponse.body.portfolioHistory.length - 1];
+
+			expect(accountLatest.totalEurValue).toBeCloseTo(portfolioLatest.totalEurValue, 2);
+		});
+	});
+
+	describe("Single account with multiple assets at different times", () => {
+		beforeEach(async () => {
+			const now = DateTime.utc();
+			const twoDaysAgo = now.minus({ days: 2 });
+			const yesterday = now.minus({ days: 1 });
+
+			await dataSource.getRepository(AssetPriceEntity).save([
+				{ asset: "BTC", priceEur: 50000, fetchedAt: twoDaysAgo } as AssetPriceEntity,
+				{ asset: "BTC", priceEur: 52000, fetchedAt: yesterday } as AssetPriceEntity,
+				{ asset: "BTC", priceEur: 55000, fetchedAt: now } as AssetPriceEntity,
+				{ asset: "SOL", priceEur: 100, fetchedAt: twoDaysAgo } as AssetPriceEntity,
+				{ asset: "SOL", priceEur: 110, fetchedAt: yesterday } as AssetPriceEntity,
+				{ asset: "SOL", priceEur: 120, fetchedAt: now } as AssetPriceEntity,
+			]);
+
+			await dataSource.getRepository(TransactionEntity).save([
+				{
+					userId,
+					providerAccountId: accountId1,
+					externalId: "tx-btc",
+					asset: "BTC",
+					type: TransactionType.buy,
+					quantity: 1.0,
+					eurValue: 50000,
+					eurFee: 0,
+					timestamp: twoDaysAgo,
+				} as TransactionEntity,
+				{
+					userId,
+					providerAccountId: accountId1,
+					externalId: "tx-sol",
+					asset: "SOL",
+					type: TransactionType.buy,
+					quantity: 10.0,
+					eurValue: 1000,
+					eurFee: 0,
+					timestamp: yesterday,
+				} as TransactionEntity,
+			]);
+
+			await dataSource.getRepository(AssetHoldingEntity).save([
+				{
+					userId,
+					providerAccountId: accountId1,
+					asset: "BTC",
+					amount: 1.0,
+					eurInvested: 50000,
+					timestamp: twoDaysAgo,
+				} as AssetHoldingEntity,
+				{
+					userId,
+					providerAccountId: accountId1,
+					asset: "SOL",
+					amount: 10.0,
+					eurInvested: 1000,
+					timestamp: yesterday,
+				} as AssetHoldingEntity,
+			]);
+		});
+
+		it("should return all assets in latest history point", async () => {
+			const response = await request(app)
+				.get(`/api/accounts/${accountId1}/portfolio-history?days=30`)
+				.set("Cookie", [`${AUTH_COOKIE_NAME}=${authToken}`]);
+
+			expect(response.status).toBe(200);
+			expect(response.body.length).toBeGreaterThan(0);
+
+			const latest = response.body[response.body.length - 1];
+			const assetKeys = Object.keys(latest.assets);
+
+			expect(assetKeys).toContain("BTC");
+			expect(assetKeys).toContain("SOL");
+			expect(assetKeys).toHaveLength(2);
+		});
+
+		it("should sum all asset values for totalEurValue", async () => {
+			const response = await request(app)
+				.get(`/api/accounts/${accountId1}/portfolio-history?days=30`)
+				.set("Cookie", [`${AUTH_COOKIE_NAME}=${authToken}`]);
+
+			expect(response.status).toBe(200);
+
+			const latest = response.body[response.body.length - 1];
+			const btcValue = latest.assets["BTC"].eurValue;
+			const solValue = latest.assets["SOL"].eurValue;
+
+			expect(btcValue).toBe(1.0 * 55000);
+			expect(solValue).toBe(10.0 * 120);
+			expect(latest.totalEurValue).toBe(btcValue + solValue);
+		});
+	});
+
+	describe("Repository query verification", () => {
+		it("should return all assets from findLatestByAccount with different timestamps", async () => {
+			const now = DateTime.utc();
+			const twoDaysAgo = now.minus({ days: 2 });
+			const yesterday = now.minus({ days: 1 });
+
+			await dataSource.getRepository(AssetHoldingEntity).save([
+				{
+					userId,
+					providerAccountId: accountId1,
+					asset: "BTC",
+					amount: 1.0,
+					eurInvested: 50000,
+					timestamp: twoDaysAgo,
+				} as AssetHoldingEntity,
+				{
+					userId,
+					providerAccountId: accountId1,
+					asset: "SOL",
+					amount: 10.0,
+					eurInvested: 1000,
+					timestamp: yesterday,
+				} as AssetHoldingEntity,
+				{
+					userId,
+					providerAccountId: accountId1,
+					asset: "XRP",
+					amount: 1000.0,
+					eurInvested: 500,
+					timestamp: now,
+				} as AssetHoldingEntity,
+			]);
+
+			const { AssetHoldingsRepository } = await import("../../src/modules/asset-holdings/asset-holdings.repository.js");
+			const repo = new AssetHoldingsRepository(dataSource);
+			const holdings = await repo.findLatestByAccount(userId, accountId1);
+
+			expect(holdings.size).toBe(3);
+			expect(holdings.has("BTC")).toBe(true);
+			expect(holdings.has("SOL")).toBe(true);
+			expect(holdings.has("XRP")).toBe(true);
+		});
+
+		it("should return holdings at timestamp including earlier assets", async () => {
+			const now = DateTime.utc();
+			const twoDaysAgo = now.minus({ days: 2 });
+			const yesterday = now.minus({ days: 1 });
+
+			await dataSource.getRepository(AssetHoldingEntity).save([
+				{
+					userId,
+					providerAccountId: accountId1,
+					asset: "BTC",
+					amount: 1.0,
+					eurInvested: 50000,
+					timestamp: twoDaysAgo,
+				} as AssetHoldingEntity,
+				{
+					userId,
+					providerAccountId: accountId1,
+					asset: "SOL",
+					amount: 10.0,
+					eurInvested: 1000,
+					timestamp: yesterday,
+				} as AssetHoldingEntity,
+			]);
+
+			const { AssetHoldingsRepository } = await import("../../src/modules/asset-holdings/asset-holdings.repository.js");
+			const repo = new AssetHoldingsRepository(dataSource);
+			
+			const holdingsAtYesterday = await repo.getHoldingsUpToTimestamp(userId, accountId1, yesterday);
+
+			expect(holdingsAtYesterday.size).toBe(2);
+			expect(holdingsAtYesterday.has("BTC")).toBe(true);
+			expect(holdingsAtYesterday.has("SOL")).toBe(true);
+		});
+	});
+
+	describe("Holdings with very old timestamps", () => {
+		beforeEach(async () => {
+			const now = DateTime.utc();
+			const eightMonthsAgo = now.minus({ months: 8 });
+			const yesterday = now.minus({ days: 1 });
+
+			await dataSource.getRepository(AssetPriceEntity).save([
+				{ asset: "BTC", priceEur: 55000, fetchedAt: now } as AssetPriceEntity,
+				{ asset: "SOL", priceEur: 120, fetchedAt: now } as AssetPriceEntity,
+				{ asset: "XRP", priceEur: 0.6, fetchedAt: now } as AssetPriceEntity,
+			]);
+
+			await dataSource.getRepository(AssetHoldingEntity).save([
+				{
+					userId,
+					providerAccountId: accountId1,
+					asset: "XRP",
+					amount: 1000.0,
+					eurInvested: 500,
+					timestamp: eightMonthsAgo,
+				} as AssetHoldingEntity,
+				{
+					userId,
+					providerAccountId: accountId1,
+					asset: "BTC",
+					amount: 1.0,
+					eurInvested: 50000,
+					timestamp: yesterday,
+				} as AssetHoldingEntity,
+				{
+					userId,
+					providerAccountId: accountId1,
+					asset: "SOL",
+					amount: 10.0,
+					eurInvested: 1000,
+					timestamp: now,
+				} as AssetHoldingEntity,
+			]);
+		});
+
+		it("should return all assets including very old holdings", async () => {
+			const response = await request(app)
+				.get(`/api/accounts/${accountId1}/portfolio-history?days=30`)
+				.set("Cookie", [`${AUTH_COOKIE_NAME}=${authToken}`]);
+
+			expect(response.status).toBe(200);
+			expect(response.body.length).toBeGreaterThan(0);
+
+			const latest = response.body[response.body.length - 1];
+			const assetKeys = Object.keys(latest.assets);
+
+			expect(assetKeys).toContain("BTC");
+			expect(assetKeys).toContain("SOL");
+			expect(assetKeys).toContain("XRP");
+			expect(assetKeys).toHaveLength(3);
+		});
+
+		it("should calculate totalEurValue including old assets", async () => {
+			const response = await request(app)
+				.get(`/api/accounts/${accountId1}/portfolio-history?days=30`)
+				.set("Cookie", [`${AUTH_COOKIE_NAME}=${authToken}`]);
+
+			expect(response.status).toBe(200);
+
+			const latest = response.body[response.body.length - 1];
+			const btcValue = latest.assets["BTC"].eurValue;
+			const solValue = latest.assets["SOL"].eurValue;
+			const xrpValue = latest.assets["XRP"].eurValue;
+
+			const expectedTotal = btcValue + solValue + xrpValue;
+			expect(latest.totalEurValue).toBeCloseTo(expectedTotal, 2);
+		});
+	});
 });
