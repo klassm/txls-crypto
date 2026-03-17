@@ -392,12 +392,15 @@ export class AssetHoldingsService {
 		const assetsObj: Record<string, { amount: number; eurValue: number | null }> = {};
 
 		for (const [asset, data] of aggregatedHoldings) {
-			let price = this.getPriceAtTimestamp(priceHistories, asset, timestamp);
-			if (price === null && latestPrices) {
+			let price: number | null = null;
+			if (latestPrices) {
 				const latest = latestPrices.get(asset);
 				if (latest) {
 					price = Number(latest.priceEur);
 				}
+			}
+			if (price === null) {
+				price = this.getPriceAtTimestamp(priceHistories, asset, timestamp);
 			}
 			const eurValue = price !== null ? data.amount * price : null;
 
