@@ -5,7 +5,7 @@ import { AccountEntity } from "../accounts/account.entity.js";
 import { AccountsRepository } from "../accounts/accounts.repository.js";
 import { TransactionsRepository } from "../transactions/transactions.repository.js";
 import { TransactionsService } from "../transactions/transactions.service.js";
-import { PortfolioSnapshotsService } from "../portfolio-snapshots/portfolio-snapshots.service.js";
+import { AssetHoldingsService } from "../asset-holdings/asset-holdings.service.js";
 import { PriceBackfillService } from "../prices/price-backfill.service.js";
 import { TransactionEntity } from "../transactions/transaction.entity.js";
 import { getProviderConfig } from "../../providers/registry.js";
@@ -26,7 +26,7 @@ export class ApiSyncService {
   private accountsRepo: AccountsRepository;
   private transactionsRepo: TransactionsRepository;
   private transactionsService: TransactionsService;
-  private portfolioService: PortfolioSnapshotsService;
+  private holdingsService: AssetHoldingsService;
   private priceBackfillService: PriceBackfillService;
   private transferMatchingService: TransferMatchingService;
   private syncingAccounts = new Set<number>();
@@ -35,7 +35,7 @@ export class ApiSyncService {
     this.accountsRepo = new AccountsRepository(dataSource);
     this.transactionsRepo = new TransactionsRepository(dataSource);
     this.transactionsService = new TransactionsService(this.transactionsRepo);
-    this.portfolioService = new PortfolioSnapshotsService(dataSource);
+    this.holdingsService = new AssetHoldingsService(dataSource);
     this.priceBackfillService = new PriceBackfillService(dataSource);
     this.transferMatchingService = new TransferMatchingService(dataSource);
   }
@@ -131,10 +131,10 @@ export class ApiSyncService {
     if (savedTransactions.length > 0) {
       await this.priceBackfillService.storePricesFromTransactions(savedTransactions);
       await this.transferMatchingService.matchTransfersForUser(userId);
-      await this.portfolioService.rebuildFromDate(
+      await this.holdingsService.rebuildHoldingsFromTimestamp(
         userId,
         accountId,
-        earliestTimestamp.startOf("day")
+        earliestTimestamp
       );
     }
 

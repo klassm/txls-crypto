@@ -10,7 +10,7 @@ import { ImportDeduplicationService } from "../../providers/import-deduplication
 import { getProviderConfig } from "../../providers/registry.js";
 import { TaxCalculationService } from "../../modules/tax/tax-calculator.service.js";
 import { WisoCsvExportService } from "../../modules/tax/wiso-csv-export.service.js";
-import { PortfolioSnapshotsService } from "../../modules/portfolio-snapshots/portfolio-snapshots.service.js";
+import { AssetHoldingsService } from "../../modules/asset-holdings/asset-holdings.service.js";
 import { PricesRepository } from "../../modules/prices/prices.repository.js";
 import { PriceBackfillService } from "../../modules/prices/price-backfill.service.js";
 import { TransactionType } from "@txls/shared";
@@ -87,7 +87,7 @@ router.get("/portfolio-history", async (req: Request, res: Response) => {
 			return res.status(400).json({ error: "Days must be between 1 and 3650" });
 		}
 
-		const snapshotsService = new PortfolioSnapshotsService(dataSource);
+		const snapshotsService = new AssetHoldingsService(dataSource);
 		const result = await snapshotsService.getPortfolioHistoryWithPrices(userId, undefined, { days });
 
 		return res.json(result);
@@ -319,11 +319,11 @@ const repository = new TransactionsRepository(dataSource);
         ? earliestTx.timestamp 
         : DateTime.fromISO(earliestTx.timestamp as unknown as string);
 
-const snapshotsService = new PortfolioSnapshotsService(dataSource);
-		await snapshotsService.rebuildFromDate(
+const holdingsService = new AssetHoldingsService(dataSource);
+		await holdingsService.rebuildHoldingsFromTimestamp(
 			userId,
 			accountId,
-			earliestTime.startOf("day"),
+			earliestTime,
 		);
     }
 
@@ -394,8 +394,8 @@ router.post("/:id/transactions", async (req: Request, res: Response) => {
     const result = await transactionsService.importTransactions(userId, accountId, [transaction]);
 
     if (result.imported > 0) {
-      const snapshotsService = new PortfolioSnapshotsService(dataSource);
-      await snapshotsService.rebuildFromDate(userId, accountId, parsedTimestamp.startOf("day"));
+      const holdingsService = new AssetHoldingsService(dataSource);
+      await holdingsService.rebuildHoldingsFromTimestamp(userId, accountId, parsedTimestamp);
     }
 
     return res.json({ success: true, imported: result.imported });
@@ -584,7 +584,7 @@ router.get("/:id/tax/export", async (req: Request, res: Response) => {
 			return res.status(400).json({ error: "Days must be between 1 and 3650" });
 		}
 
-		const snapshotsService = new PortfolioSnapshotsService(dataSource);
+		const snapshotsService = new AssetHoldingsService(dataSource);
 
 		const result = await snapshotsService.getPortfolioHistoryWithPrices(userId, accountId, { days });
 

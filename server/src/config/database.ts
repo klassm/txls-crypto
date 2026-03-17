@@ -3,7 +3,7 @@ import { DataSource } from "typeorm";
 import { TransactionEntity } from "../modules/transactions/transaction.entity.js";
 import { AccountEntity } from "../modules/accounts/account.entity.js";
 import { UserEntity } from "../modules/users/user.entity.js";
-import { PortfolioSnapshotEntity } from "../modules/portfolio-snapshots/portfolio-snapshot.entity.js";
+import { AssetHoldingEntity } from "../modules/asset-holdings/asset-holding.entity.js";
 import { getDatabaseConfiguration } from "./database-config.js";
 
 const { type, options } = getDatabaseConfiguration();
@@ -13,7 +13,7 @@ export const dataSource = new DataSource(
     ? {
         type: "better-sqlite3",
         database: options.path || "./data/txls.db",
-        entities: [TransactionEntity, AccountEntity, UserEntity, PortfolioSnapshotEntity],
+        entities: [TransactionEntity, AccountEntity, UserEntity, AssetHoldingEntity],
         synchronize: false,
         logging: false,
       }
@@ -25,7 +25,7 @@ export const dataSource = new DataSource(
           username: options.username || "postgres",
           password: options.password || "",
           database: options.database || "txls",
-          entities: [TransactionEntity, AccountEntity, UserEntity, PortfolioSnapshotEntity],
+          entities: [TransactionEntity, AccountEntity, UserEntity, AssetHoldingEntity],
           synchronize: false,
           logging: false,
         }
@@ -36,7 +36,7 @@ export const dataSource = new DataSource(
           username: options.username || "root",
           password: options.password || "",
           database: options.database || "txls",
-          entities: [TransactionEntity, AccountEntity, UserEntity, PortfolioSnapshotEntity],
+          entities: [TransactionEntity, AccountEntity, UserEntity, AssetHoldingEntity],
           synchronize: false,
           logging: false,
         },

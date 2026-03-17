@@ -9,10 +9,11 @@ import {
 import { DateTime } from "luxon";
 import { typeOrmDateTimeTransformer } from "../../utils/typeorm-transformers.js";
 
-@Entity("portfolio_snapshots")
-@Index("idx_portfolio_snapshot_lookup", ["userId", "providerAccountId", "asset", "date"], { unique: true })
-@Index("idx_portfolio_snapshot_account_date", ["userId", "providerAccountId", "date"])
-export class PortfolioSnapshotEntity {
+@Entity("asset_holdings")
+@Index("idx_asset_holdings_lookup", ["userId", "providerAccountId", "asset", "timestamp"], { unique: true })
+@Index("idx_asset_holdings_account_timestamp", ["userId", "providerAccountId", "timestamp"])
+@Index("idx_asset_holdings_user_timestamp", ["userId", "timestamp"])
+export class AssetHoldingEntity {
 	@PrimaryGeneratedColumn()
 	id!: number;
 
@@ -25,20 +26,14 @@ export class PortfolioSnapshotEntity {
 	@Column({ type: "varchar" })
 	asset!: string;
 
-	@Column({ type: "bigint", transformer: typeOrmDateTimeTransformer })
-	date!: DateTime;
-
 	@Column({ type: "decimal", precision: 18, scale: 8 })
 	amount!: number;
 
 	@Column({ name: "eur_invested", type: "decimal", precision: 18, scale: 8 })
 	eurInvested!: number;
 
-	@Column({ name: "buy_count", type: "int", default: 0 })
-	buyCount!: number;
-
-	@Column({ name: "sell_count", type: "int", default: 0 })
-	sellCount!: number;
+	@Column({ type: "bigint", transformer: typeOrmDateTimeTransformer })
+	timestamp!: DateTime;
 
 	@CreateDateColumn({
 		name: "created_at",

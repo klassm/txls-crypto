@@ -5,31 +5,25 @@ import { DateTime } from "luxon";
 import { CoinGeckoService } from "./coingecko.service.js";
 import { PricesRepository } from "./prices.repository.js";
 import { TransactionEntity } from "../transactions/transaction.entity.js";
-import { PortfolioSnapshotsService } from "../portfolio-snapshots/portfolio-snapshots.service.js";
 
 const logger = pino({ level: "info" });
 
 const PRICE_FETCH_INTERVAL_CRON = "*/5 * * * *";
-const SNAPSHOT_BUILD_CRON = "59 23 * * *";
 const PRICE_RETENTION_DAYS = 365;
 
 export class PriceFetcherService {
 	private priceCronJob: cron.ScheduledTask | null = null;
-	private snapshotCronJob: cron.ScheduledTask | null = null;
 	private isFetching = false;
 	private coinGeckoService: CoinGeckoService;
 	private pricesRepository: PricesRepository;
-	private portfolioSnapshotsService: PortfolioSnapshotsService;
 
 	constructor(
 		private dataSource: DataSource,
 		coinGeckoService?: CoinGeckoService,
-		pricesRepository?: PricesRepository,
-		portfolioSnapshotsService?: PortfolioSnapshotsService
+		pricesRepository?: PricesRepository
 	) {
 		this.coinGeckoService = coinGeckoService || new CoinGeckoService(dataSource);
 		this.pricesRepository = pricesRepository || new PricesRepository(dataSource);
-		this.portfolioSnapshotsService = portfolioSnapshotsService || new PortfolioSnapshotsService(dataSource);
 	}
 
 	async start(): Promise<void> {
@@ -40,19 +34,12 @@ export class PriceFetcherService {
 
 		await this.fetchPricesOnce();
 
-		await this.buildDailySnapshots();
-
 		this.priceCronJob = cron.schedule(PRICE_FETCH_INTERVAL_CRON, async () => {
 			await this.fetchPricesOnce();
 		});
 
-		this.snapshotCronJob = cron.schedule(SNAPSHOT_BUILD_CRON, async () => {
-			await this.buildDailySnapshots();
-		});
-
 		logger.info({ 
 			priceSchedule: PRICE_FETCH_INTERVAL_CRON,
-			snapshotSchedule: SNAPSHOT_BUILD_CRON
 		}, "[PriceFetcher] Scheduled jobs started");
 	}
 
@@ -60,10 +47,6 @@ export class PriceFetcherService {
 		if (this.priceCronJob) {
 			this.priceCronJob.stop();
 			this.priceCronJob = null;
-		}
-		if (this.snapshotCronJob) {
-			this.snapshotCronJob.stop();
-			this.snapshotCronJob = null;
 		}
 		logger.info("[PriceFetcher] Stopped scheduled jobs");
 	}
@@ -102,20 +85,6 @@ export class PriceFetcherService {
 			logger.error({ error }, "[PriceFetcher] Error during price fetch");
 		} finally {
 			this.isFetching = false;
-		}
-	}
-
-	async buildDailySnapshots(): Promise<void> {
-		logger.info("[PriceFetcher] Building daily portfolio snapshots...");
-		const startTime = Date.now();
-
-		try {
-			await this.portfolioSnapshotsService.buildDailySnapshotsForAllAccounts();
-
-			const duration = Date.now() - startTime;
-			logger.info({ duration: `${duration}ms` }, "[PriceFetcher] Daily snapshots complete");
-		} catch (error) {
-			logger.error({ error }, "[PriceFetcher] Error building daily snapshots");
 		}
 	}
 

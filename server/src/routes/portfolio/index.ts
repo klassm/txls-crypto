@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import { getDataSource } from "../../database.js";
-import { PortfolioSnapshotsService } from "../../modules/portfolio-snapshots/index.js";
+import { AssetHoldingsService } from "../../modules/asset-holdings/asset-holdings.service.js";
 import { getUserIdFromRequest } from "../../utils/session.js";
 
 const router = Router();
@@ -19,7 +19,7 @@ router.get("/overview", async (req: Request, res: Response) => {
 	}
 
 	const dataSource = await getDataSource();
-	const service = new PortfolioSnapshotsService(dataSource);
+	const service = new AssetHoldingsService(dataSource);
 
 	const overview = await service.getPortfolioOverview(userId, days);
 

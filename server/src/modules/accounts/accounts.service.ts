@@ -4,7 +4,7 @@ import { ProviderType } from "@txls/shared";
 import { AccountEntity } from "./account.entity.js";
 import { AccountsRepository } from "./accounts.repository.js";
 import { TransactionsRepository } from "../transactions/transactions.repository.js";
-import { PortfolioSnapshotsService } from "../portfolio-snapshots/portfolio-snapshots.service.js";
+import { AssetHoldingsService } from "../asset-holdings/asset-holdings.service.js";
 import { logger } from "../../common/logger.js";
 import { providerConfigs } from "../../providers/registry.js";
 
@@ -16,13 +16,13 @@ const providerMetadata: Record<ProviderType, any> = {
 export class AccountsService {
   private readonly repository: AccountsRepository;
   private readonly transactionsRepository: TransactionsRepository;
-  private readonly snapshotsService: PortfolioSnapshotsService;
+  private readonly holdingsService: AssetHoldingsService;
 
   constructor(
     repository?: AccountsRepository,
     dataSource?: any,
     transactionsRepository?: TransactionsRepository,
-    snapshotsService?: PortfolioSnapshotsService,
+    holdingsService?: AssetHoldingsService,
   ) {
     if (repository) {
       this.repository = repository;
@@ -35,14 +35,14 @@ export class AccountsService {
     this.transactionsRepository =
       transactionsRepository || new TransactionsRepository(dataSource ?? this["repository"]["dataSource"]);
 
-    this.snapshotsService =
-      snapshotsService || new PortfolioSnapshotsService(dataSource ?? this["repository"]["dataSource"]);
+    this.holdingsService =
+      holdingsService || new AssetHoldingsService(dataSource ?? this["repository"]["dataSource"]);
   }
 
   async findAll(userId: number): Promise<Account[]> {
     try {
       const entities = await this.repository.findAll(userId);
-      const assetSummaries = await this.snapshotsService.getAllCurrentHoldings(userId);
+      const assetSummaries = await this.holdingsService.getAllCurrentHoldings(userId);
 
       return entities.map((entity) => {
         const account = this.entityToSchema(entity);
@@ -64,7 +64,7 @@ export class AccountsService {
       if (!entity) return null;
 
       const account = this.entityToSchema(entity);
-      account.assets = await this.snapshotsService.getCurrentHoldings(userId, id);
+      account.assets = await this.holdingsService.getCurrentHoldings(userId, id);
 
       return account;
     } catch (error) {
@@ -139,7 +139,7 @@ entity.provider = data.provider || entity.provider || ProviderType.Bitpanda;
 
     try {
       await this.transactionsRepository.deleteByProviderAccountId(userId, id);
-      await this.snapshotsService.deleteByAccount(userId, id);
+      await this.holdingsService.deleteByAccount(userId, id);
       await this.repository.delete(userId, id);
 
       logger.info({
