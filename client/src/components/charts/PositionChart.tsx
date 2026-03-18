@@ -67,11 +67,14 @@ export function PositionChart({ data, eurInvested, height = 50 }: PositionChartP
 						}}
 						labelFormatter={(label) => {
 							const date = new Date(label);
-							return date.toLocaleDateString("de-DE", {
+							return `${date.toLocaleDateString("de-DE", {
 								day: "2-digit",
 								month: "2-digit",
 								year: "numeric",
-							});
+							})} ${date.toLocaleTimeString("de-DE", {
+								hour: "2-digit",
+								minute: "2-digit",
+							})}`;
 						}}
 						formatter={(value) =>
 							`€${Number(value).toLocaleString("de-DE", { minimumFractionDigits: 2 })}`
