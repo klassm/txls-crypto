@@ -4,6 +4,8 @@ import { UsersService } from "../../modules/users/users.service.js";
 import { AUTH_COOKIE_NAME, verifyToken } from "../../utils/password.js";
 import { userSchema, updateUserSchema, resetPasswordSchema } from "../../validation/schemas.js";
 import { getUserIdFromRequest } from "../../utils/session.js";
+import { AssetHoldingsService } from "../../modules/asset-holdings/asset-holdings.service.js";
+import { AccountEntity } from "../../modules/accounts/account.entity.js";
 
 const router = Router();
 
@@ -209,6 +211,82 @@ router.post("/users/:id/password", async (req: Request, res: Response) => {
       return res.status(400).json({ error: error.message });
     }
     return res.status(500).json({ error: "Failed to reset password" });
+  }
+});
+
+router.post("/rebuild-holdings", async (req: Request, res: Response) => {
+  const token = req.cookies?.[AUTH_COOKIE_NAME];
+
+  if (!token) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  const payload = verifyToken(token);
+
+  if (!payload || !payload.isAdmin) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+
+  try {
+    const dataSource = await getDataSource();
+    const holdingsService = new AssetHoldingsService(dataSource);
+    const accountRepo = dataSource.getRepository(AccountEntity);
+    
+    const accounts = await accountRepo.find();
+    
+    let rebuilt = 0;
+    for (const account of accounts) {
+      await holdingsService.rebuildHoldings(account.userId, account.id);
+      rebuilt++;
+    }
+
+    return res.json({ success: true, accountsRebuilt: rebuilt });
+  } catch (error) {
+    if (error instanceof Error) {
+      return res.status(500).json({ error: error.message });
+    }
+    return res.status(500).json({ error: "Failed to rebuild holdings" });
+  }
+});
+
+router.post("/rebuild-holdings/:userId", async (req: Request, res: Response) => {
+  const token = req.cookies?.[AUTH_COOKIE_NAME];
+
+  if (!token) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  const payload = verifyToken(token);
+
+  if (!payload || !payload.isAdmin) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+
+  try {
+    const targetUserId = Number.parseInt(req.params.userId as string, 10);
+
+    if (isNaN(targetUserId)) {
+      return res.status(400).json({ error: "Invalid user ID" });
+    }
+
+    const dataSource = await getDataSource();
+    const holdingsService = new AssetHoldingsService(dataSource);
+    const accountRepo = dataSource.getRepository(AccountEntity);
+    
+    const accounts = await accountRepo.find({ where: { userId: targetUserId } });
+    
+    let rebuilt = 0;
+    for (const account of accounts) {
+      await holdingsService.rebuildHoldings(account.userId, account.id);
+      rebuilt++;
+    }
+
+    return res.json({ success: true, accountsRebuilt: rebuilt });
+  } catch (error) {
+    if (error instanceof Error) {
+      return res.status(500).json({ error: error.message });
+    }
+    return res.status(500).json({ error: "Failed to rebuild holdings" });
   }
 });
 

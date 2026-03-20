@@ -11,6 +11,7 @@ import LoginPage from "./pages/LoginPage";
 import OnboardPage from "./pages/OnboardPage";
 import AccountDetailPage from "./pages/accounts/[id]";
 import AdminUsersPage from "./pages/admin/page";
+import AdminMaintenancePage from "./pages/admin/maintenance/page";
 import TaxPage from "./pages/tax/page";
 import { TaxRulesContent } from "./pages/tax/TaxRulesContent";
 
@@ -59,6 +60,14 @@ export default function App() {
             element={
               <AuthGuard>
                 <AdminUsersPage />
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/admin/maintenance"
+            element={
+              <AuthGuard>
+                <AdminMaintenancePage />
               </AuthGuard>
             }
           />

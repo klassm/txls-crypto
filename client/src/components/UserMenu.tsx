@@ -1,6 +1,7 @@
 import {
   Logout,
   AdminPanelSettings,
+  Build,
 } from "@mui/icons-material";
 import {
   Avatar,
@@ -94,6 +95,14 @@ export default function UserMenu() {
               <AdminPanelSettings fontSize="small" />
             </ListItemIcon>
             <ListItemText>User Management</ListItemText>
+          </MenuItem>
+        )}
+        {user.isAdmin && (
+          <MenuItem onClick={() => navigate("/admin/maintenance")}>
+            <ListItemIcon>
+              <Build fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Maintenance</ListItemText>
           </MenuItem>
         )}
         <MenuItem onClick={handleLogout}>
