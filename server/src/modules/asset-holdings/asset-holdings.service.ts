@@ -140,9 +140,12 @@ export class AssetHoldingsService {
 				? -Math.abs(tx.quantity)
 				: Math.abs(tx.quantity);
 			
-			const eurInvestedDelta = tx.type === TransactionType.buy || tx.type === TransactionType.deposit
-				? tx.eurValue
-				: 0;
+			let eurInvestedDelta = 0;
+			if (tx.type === TransactionType.buy || tx.type === TransactionType.deposit) {
+				eurInvestedDelta = tx.eurValue;
+			} else if ((tx.type === TransactionType.sell || tx.type === TransactionType.withdrawal) && current.amount > 0) {
+				eurInvestedDelta = -current.eurInvested * (Math.abs(tx.quantity) / current.amount);
+			}
 
 			const newAmount = current.amount + quantity;
 			const newEurInvested = current.eurInvested + eurInvestedDelta;
@@ -229,9 +232,12 @@ export class AssetHoldingsService {
 				? -Math.abs(tx.quantity)
 				: Math.abs(tx.quantity);
 			
-			const eurInvestedDelta = tx.type === TransactionType.buy || tx.type === TransactionType.deposit
-				? tx.eurValue
-				: 0;
+			let eurInvestedDelta = 0;
+			if (tx.type === TransactionType.buy || tx.type === TransactionType.deposit) {
+				eurInvestedDelta = tx.eurValue;
+			} else if ((tx.type === TransactionType.sell || tx.type === TransactionType.withdrawal) && current.amount > 0) {
+				eurInvestedDelta = -current.eurInvested * (Math.abs(tx.quantity) / current.amount);
+			}
 
 			const newAmount = current.amount + quantity;
 			const newEurInvested = current.eurInvested + eurInvestedDelta;

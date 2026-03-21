@@ -393,6 +393,141 @@ describe("Portfolio Consistency Integration", () => {
 		});
 	});
 
+	describe("eurInvested calculation with sells", () => {
+		beforeEach(async () => {
+			const now = DateTime.utc();
+			const twoDaysAgo = now.minus({ days: 2 });
+			const yesterday = now.minus({ days: 1 });
+
+			await dataSource.getRepository(AssetPriceEntity).save([
+				{ asset: "BTC", priceEur: 50000, fetchedAt: twoDaysAgo } as AssetPriceEntity,
+				{ asset: "BTC", priceEur: 55000, fetchedAt: yesterday } as AssetPriceEntity,
+				{ asset: "BTC", priceEur: 50000, fetchedAt: now } as AssetPriceEntity,
+			]);
+
+			await dataSource.getRepository(TransactionEntity).save([
+				{
+					userId,
+					providerAccountId: accountId1,
+					externalId: "buy1",
+					asset: "BTC",
+					type: TransactionType.buy,
+					quantity: 2.0,
+					eurValue: 100000,
+					eurFee: 0,
+					timestamp: twoDaysAgo,
+				} as TransactionEntity,
+				{
+					userId,
+					providerAccountId: accountId1,
+					externalId: "sell1",
+					asset: "BTC",
+					type: TransactionType.sell,
+					quantity: 1.0,
+					eurValue: 55000,
+					eurFee: 0,
+					timestamp: yesterday,
+				} as TransactionEntity,
+			]);
+		});
+
+		it("should reduce eurInvested proportionally when selling", async () => {
+			const { AssetHoldingsService } = await import("../../src/modules/asset-holdings/asset-holdings.service.js");
+			const service = new AssetHoldingsService(dataSource);
+			await service.rebuildHoldings(userId, accountId1);
+
+			const response = await request(app)
+				.get("/api/portfolio/overview?days=30")
+				.set("Cookie", [`${AUTH_COOKIE_NAME}=${authToken}`]);
+
+			expect(response.status).toBe(200);
+			expect(response.body.assets).toHaveLength(1);
+
+			const btc = response.body.assets[0];
+			expect(btc.asset).toBe("BTC");
+			expect(btc.amount).toBe(1.0);
+			expect(btc.eurInvested).toBe(50000);
+		});
+
+		it("should calculate correct overall change after sell", async () => {
+			const { AssetHoldingsService } = await import("../../src/modules/asset-holdings/asset-holdings.service.js");
+			const service = new AssetHoldingsService(dataSource);
+			await service.rebuildHoldings(userId, accountId1);
+
+			const response = await request(app)
+				.get("/api/portfolio/overview?days=30")
+				.set("Cookie", [`${AUTH_COOKIE_NAME}=${authToken}`]);
+
+			expect(response.status).toBe(200);
+
+			const btc = response.body.assets[0];
+			const eurValue = btc.eurValue;
+			const eurInvested = btc.eurInvested;
+			const overallChange = eurValue - eurInvested;
+
+			expect(eurValue).toBe(1.0 * 50000);
+			expect(eurInvested).toBe(50000);
+			expect(overallChange).toBe(0);
+		});
+	});
+
+	describe("eurInvested calculation with withdrawals (staking)", () => {
+		beforeEach(async () => {
+			const now = DateTime.utc();
+			const twoDaysAgo = now.minus({ days: 2 });
+			const yesterday = now.minus({ days: 1 });
+
+			await dataSource.getRepository(AssetPriceEntity).save([
+				{ asset: "BTC", priceEur: 50000, fetchedAt: twoDaysAgo } as AssetPriceEntity,
+				{ asset: "BTC", priceEur: 55000, fetchedAt: yesterday } as AssetPriceEntity,
+				{ asset: "BTC", priceEur: 50000, fetchedAt: now } as AssetPriceEntity,
+			]);
+
+			await dataSource.getRepository(TransactionEntity).save([
+				{
+					userId,
+					providerAccountId: accountId1,
+					externalId: "buy1",
+					asset: "BTC",
+					type: TransactionType.buy,
+					quantity: 2.0,
+					eurValue: 100000,
+					eurFee: 0,
+					timestamp: twoDaysAgo,
+				} as TransactionEntity,
+				{
+					userId,
+					providerAccountId: accountId1,
+					externalId: "withdraw1",
+					asset: "BTC",
+					type: TransactionType.withdrawal,
+					quantity: 1.0,
+					eurValue: 55000,
+					eurFee: 0,
+					timestamp: yesterday,
+				} as TransactionEntity,
+			]);
+		});
+
+		it("should reduce eurInvested proportionally when withdrawing", async () => {
+			const { AssetHoldingsService } = await import("../../src/modules/asset-holdings/asset-holdings.service.js");
+			const service = new AssetHoldingsService(dataSource);
+			await service.rebuildHoldings(userId, accountId1);
+
+			const response = await request(app)
+				.get("/api/portfolio/overview?days=30")
+				.set("Cookie", [`${AUTH_COOKIE_NAME}=${authToken}`]);
+
+			expect(response.status).toBe(200);
+			expect(response.body.assets).toHaveLength(1);
+
+			const btc = response.body.assets[0];
+			expect(btc.asset).toBe("BTC");
+			expect(btc.amount).toBe(1.0);
+			expect(btc.eurInvested).toBe(50000);
+		});
+	});
+
 	describe("Authentication and authorization", () => {
 		it("should return 401 without auth token for portfolio overview", async () => {
 			const response = await request(app).get("/api/portfolio/overview?days=30");
