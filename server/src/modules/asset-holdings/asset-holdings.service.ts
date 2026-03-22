@@ -614,10 +614,10 @@ export class AssetHoldingsService {
 		const result = new Map<string, { timestamp: DateTime; priceEur: number }[]>();
 
 		for (const asset of assets) {
-			const prices = await this.pricesRepository.getPricesInTimeRange(asset, startDate, endDate);
+			const prices = await this.pricesRepository.getPriceHistory(asset, startDate, endDate);
 			result.set(asset, prices.map(p => ({
-				timestamp: p.fetchedAt,
-				priceEur: Number(p.priceEur),
+				timestamp: p.date,
+				priceEur: p.priceEur,
 			})));
 		}
 
