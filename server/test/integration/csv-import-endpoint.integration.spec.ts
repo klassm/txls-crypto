@@ -199,7 +199,8 @@ T12345,2026-02-19 20:00:00,buy,outgoing,1000,EUR,0.05,BTC,20000,EUR,Cryptocurren
 
     await service.importTransactions(userId, accountId, parseResult.transactions);
 
-    const dedupService = new ImportDeduplicationService(ds, userId);
+    const dedupService = new ImportDeduplicationService(repository);
+    dedupService.setUserId(userId);
     const dedupResult = await dedupService.shouldSkipOrReplace(accountId, parseResult.transactions);
 
     expect(dedupResult.shouldSkip).toBe(true);

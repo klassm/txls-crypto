@@ -7,6 +7,7 @@ import { UserEntity } from "../../src/modules/users/user.entity.js";
 import { generateToken, AUTH_COOKIE_NAME } from "../../src/utils/password.js";
 import { DateTime } from "luxon";
 import { createTestDataSource, destroyTestDataSource } from "../test-helpers.js";
+import { createContainer, resetContainer } from "../../src/di/container.js";
 import configRouter from "../../src/routes/config/index.js";
 
 let app: express.Application;
@@ -17,6 +18,8 @@ describe("HASS Auth API Integration Tests", () => {
     process.env.SUPERVISOR_TOKEN = "test-supervisor-token";
     process.env.JWT_SECRET = "test-jwt-secret-key-for-testing-must-be-long-enough";
     await createTestDataSource();
+    const dataSource = await getDataSource();
+    createContainer(dataSource);
 
     mockFetch = vi.fn();
     global.fetch = mockFetch;
@@ -29,6 +32,7 @@ describe("HASS Auth API Integration Tests", () => {
   });
 
   afterEach(async () => {
+    resetContainer();
     await destroyTestDataSource();
     delete process.env.SUPERVISOR_TOKEN;
     delete process.env.JWT_SECRET;

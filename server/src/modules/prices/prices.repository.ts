@@ -216,10 +216,84 @@ export class PricesRepository {
 			.orderBy("price.fetchedAt", "ASC")
 			.getMany();
 
-		return results.map((result) => ({
-			date: result.fetchedAt,
-			priceEur: Number(result.priceEur),
+		if (results.length === 0) return [];
+
+		const days = endDate.diff(startDate, "days").days;
+
+		if (days <= 1) {
+			return results.map((r) => ({
+				date: r.fetchedAt,
+				priceEur: Number(r.priceEur),
+			}));
+		}
+
+		if (days <= 7) {
+			return this.aggregateByHour(results);
+		}
+
+		return this.aggregateByDay(results);
+	}
+
+	private aggregateByHour(
+		prices: AssetPriceEntity[]
+	): { date: DateTime; priceEur: number }[] {
+		const groups = new Map<string, { sum: number; count: number; date: DateTime }>();
+
+		for (const price of prices) {
+			const hourStart = price.fetchedAt.startOf("hour");
+			const key = hourStart.toISO() || "";
+
+			const existing = groups.get(key);
+			if (existing) {
+				existing.sum += Number(price.priceEur);
+				existing.count++;
+			} else {
+				groups.set(key, {
+					sum: Number(price.priceEur),
+					count: 1,
+					date: hourStart,
+				});
+			}
+		}
+
+		const result = Array.from(groups.values()).map((g) => ({
+			date: g.date,
+			priceEur: g.sum / g.count,
 		}));
+
+		result.sort((a, b) => a.date.toMillis() - b.date.toMillis());
+		return result;
+	}
+
+	private aggregateByDay(
+		prices: AssetPriceEntity[]
+	): { date: DateTime; priceEur: number }[] {
+		const groups = new Map<string, { sum: number; count: number; date: DateTime }>();
+
+		for (const price of prices) {
+			const dayStart = price.fetchedAt.startOf("day");
+			const key = dayStart.toISODate() || "";
+
+			const existing = groups.get(key);
+			if (existing) {
+				existing.sum += Number(price.priceEur);
+				existing.count++;
+			} else {
+				groups.set(key, {
+					sum: Number(price.priceEur),
+					count: 1,
+					date: dayStart,
+				});
+			}
+		}
+
+		const result = Array.from(groups.values()).map((g) => ({
+			date: g.date,
+			priceEur: g.sum / g.count,
+		}));
+
+		result.sort((a, b) => a.date.toMillis() - b.date.toMillis());
+		return result;
 	}
 
 	async getPriceHistoryBatch(

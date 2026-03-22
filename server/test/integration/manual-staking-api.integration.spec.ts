@@ -13,6 +13,7 @@ import accountsRouter from "../../src/routes/accounts/index.js";
 import { generateToken, AUTH_COOKIE_NAME } from "../../src/utils/password.js";
 import * as database from "../../src/database.js";
 import { createTestDataSource, destroyTestDataSource } from "../test-helpers.js";
+import { createContainer, resetContainer } from "../../src/di/container.js";
 
 describe("Manual Staking API Integration", () => {
   let app: express.Application;
@@ -25,6 +26,7 @@ describe("Manual Staking API Integration", () => {
   beforeEach(async () => {
     await createTestDataSource();
     dataSource = await getDataSource();
+    createContainer(dataSource);
 
     vi.spyOn(database, "getDataSource").mockResolvedValue(dataSource);
 
@@ -70,6 +72,7 @@ describe("Manual Staking API Integration", () => {
 
   afterEach(async () => {
     vi.restoreAllMocks();
+    resetContainer();
     await destroyTestDataSource();
   });
 

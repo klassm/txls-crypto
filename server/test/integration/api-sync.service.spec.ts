@@ -10,11 +10,17 @@ import { ProviderType, TransactionType, Transaction } from "@txls/shared";
 import { DateTime } from "luxon";
 import { encrypt } from "../../src/modules/api-sync/encryption.service.js";
 import { createTestDataSource, destroyTestDataSource } from "../test-helpers.js";
+import { createContainer, resetContainer, getContainer } from "../../src/di/container.js";
+import { TYPES } from "../../src/di/types.js";
 import * as registry from "../../src/providers/registry.js";
 
-vi.mock("../../src/providers/registry.js", () => ({
-  getProviderConfig: vi.fn(),
-}));
+vi.mock("../../src/providers/registry.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../src/providers/registry.js")>();
+  return {
+    ...actual,
+    getProviderConfig: vi.fn(),
+  };
+});
 
 describe("API Sync Service Integration", () => {
   let dataSource: any;
@@ -26,11 +32,13 @@ describe("API Sync Service Integration", () => {
   beforeAll(async () => {
     await createTestDataSource();
     dataSource = await getDataSource();
+    createContainer(dataSource);
     transactionsRepo = new TransactionsRepository(dataSource);
     accountsRepo = new AccountsRepository(dataSource);
   });
 
   afterAll(async () => {
+    resetContainer();
     await destroyTestDataSource();
   });
 
@@ -86,7 +94,7 @@ describe("API Sync Service Integration", () => {
         createMockTransaction("api-tx-2", "2025-01-02T10:00:00", TransactionType.buy, "SOL", 10, 1500),
       ]);
 
-      const syncService = new ApiSyncService(dataSource);
+      const syncService = getContainer().get<ApiSyncService>(TYPES.ApiSyncService);
       const result = await syncService.syncAccount(accountId, userId);
 
       expect(result.success).toBe(true);
@@ -123,7 +131,7 @@ describe("API Sync Service Integration", () => {
         createMockTransaction("api-tx-1", "2025-01-01T10:00:00", TransactionType.buy, "ETH", 1, 3000),
       ]);
 
-      const syncService = new ApiSyncService(dataSource);
+      const syncService = getContainer().get<ApiSyncService>(TYPES.ApiSyncService);
       await syncService.syncAccount(accountId, userId);
 
       const otherAccountTxs = await transactionsRepo.findByProviderAccountId(userId, savedOtherAccount.id);
@@ -137,7 +145,7 @@ describe("API Sync Service Integration", () => {
         createMockTransaction("staking-reward-2", "2025-02-01T10:00:00", TransactionType.reward, "SOL", 0.3, 45),
       ]);
 
-      const syncService = new ApiSyncService(dataSource);
+      const syncService = getContainer().get<ApiSyncService>(TYPES.ApiSyncService);
       const result = await syncService.syncAccount(accountId, userId);
 
       expect(result.success).toBe(true);
@@ -154,7 +162,7 @@ describe("API Sync Service Integration", () => {
         createMockTransaction("api-tx-1", "2025-01-01T10:00:00", TransactionType.buy, "ETH", 1, 3000),
       ]);
 
-      const syncService = new ApiSyncService(dataSource);
+      const syncService = getContainer().get<ApiSyncService>(TYPES.ApiSyncService);
       await syncService.syncAccount(accountId, userId);
 
       const account = await accountsRepo.findById(userId, accountId);
@@ -171,7 +179,7 @@ describe("API Sync Service Integration", () => {
         createMockTransaction("api-tx-1", "2025-01-01T10:00:00", TransactionType.buy, "ETH", 1, 3000),
       ]);
 
-      const syncService = new ApiSyncService(dataSource);
+      const syncService = getContainer().get<ApiSyncService>(TYPES.ApiSyncService);
       await syncService.syncAccount(accountId, userId);
 
       const updatedAccount = await accountsRepo.findById(userId, accountId);
@@ -181,7 +189,7 @@ describe("API Sync Service Integration", () => {
     it("should handle empty response from API", async () => {
       mockProviderConfig([]);
 
-      const syncService = new ApiSyncService(dataSource);
+      const syncService = getContainer().get<ApiSyncService>(TYPES.ApiSyncService);
       const result = await syncService.syncAccount(accountId, userId);
 
       expect(result.success).toBe(true);
@@ -211,7 +219,7 @@ describe("API Sync Service Integration", () => {
         createMockTransaction("new-tx-1", "2025-02-01T10:00:00", TransactionType.buy, "ETH", 2, 6000),
       ]);
 
-      const syncService = new ApiSyncService(dataSource);
+      const syncService = getContainer().get<ApiSyncService>(TYPES.ApiSyncService);
       const result = await syncService.syncAccount(accountId, userId);
 
       expect(result.success).toBe(true);

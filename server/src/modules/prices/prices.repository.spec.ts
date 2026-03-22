@@ -207,4 +207,93 @@ describe("PricesRepository", () => {
 			expect(result?.priceEur).toBe(51000);
 		});
 	});
+
+	describe("getPriceHistory", () => {
+		function createMockPrice(
+			date: DateTime,
+			priceEur: number
+		): AssetPriceEntity {
+			const entity = new AssetPriceEntity();
+			entity.id = Math.random();
+			entity.asset = "BTC";
+			entity.priceEur = priceEur;
+			entity.fetchedAt = date;
+			entity.source = "coingecko";
+			return entity;
+		}
+
+		it("should return raw 5-min data for <=1 day range", async () => {
+			const startDate = DateTime.utc(2024, 1, 15, 0, 0, 0);
+			const endDate = DateTime.utc(2024, 1, 15, 23, 59, 59);
+
+			const mockPrices = [
+				createMockPrice(DateTime.utc(2024, 1, 15, 10, 0, 0), 50000),
+				createMockPrice(DateTime.utc(2024, 1, 15, 10, 5, 0), 50100),
+				createMockPrice(DateTime.utc(2024, 1, 15, 10, 10, 0), 50200),
+			];
+
+			mockQueryBuilder.getMany.mockResolvedValue(mockPrices);
+
+			const result = await repository.getPriceHistory("BTC", startDate, endDate);
+
+			expect(result).toHaveLength(3);
+			expect(result[0].priceEur).toBe(50000);
+			expect(result[1].priceEur).toBe(50100);
+			expect(result[2].priceEur).toBe(50200);
+		});
+
+		it("should aggregate by hour for <=7 days range", async () => {
+			const startDate = DateTime.utc(2024, 1, 15, 0, 0, 0);
+			const endDate = DateTime.utc(2024, 1, 17, 23, 59, 59);
+
+			const mockPrices = [
+				createMockPrice(DateTime.utc(2024, 1, 15, 10, 0, 0), 50000),
+				createMockPrice(DateTime.utc(2024, 1, 15, 10, 15, 0), 50200),
+				createMockPrice(DateTime.utc(2024, 1, 15, 10, 45, 0), 50400),
+				createMockPrice(DateTime.utc(2024, 1, 15, 11, 0, 0), 50600),
+				createMockPrice(DateTime.utc(2024, 1, 15, 11, 30, 0), 50800),
+			];
+
+			mockQueryBuilder.getMany.mockResolvedValue(mockPrices);
+
+			const result = await repository.getPriceHistory("BTC", startDate, endDate);
+
+			expect(result).toHaveLength(2);
+			expect(result[0].priceEur).toBe((50000 + 50200 + 50400) / 3);
+			expect(result[1].priceEur).toBe((50600 + 50800) / 2);
+		});
+
+		it("should aggregate by day for >7 days range", async () => {
+			const startDate = DateTime.utc(2024, 1, 1, 0, 0, 0);
+			const endDate = DateTime.utc(2024, 1, 15, 23, 59, 59);
+
+			const mockPrices = [
+				createMockPrice(DateTime.utc(2024, 1, 10, 10, 0, 0), 50000),
+				createMockPrice(DateTime.utc(2024, 1, 10, 14, 0, 0), 50400),
+				createMockPrice(DateTime.utc(2024, 1, 10, 18, 0, 0), 50800),
+				createMockPrice(DateTime.utc(2024, 1, 11, 10, 0, 0), 51000),
+				createMockPrice(DateTime.utc(2024, 1, 11, 14, 0, 0), 51400),
+			];
+
+			mockQueryBuilder.getMany.mockResolvedValue(mockPrices);
+
+			const result = await repository.getPriceHistory("BTC", startDate, endDate);
+
+			expect(result).toHaveLength(2);
+			expect(result[0].priceEur).toBe((50000 + 50400 + 50800) / 3);
+			expect(result[1].priceEur).toBe((51000 + 51400) / 2);
+		});
+
+		it("should return empty array when no prices found", async () => {
+			mockQueryBuilder.getMany.mockResolvedValue([]);
+
+			const result = await repository.getPriceHistory(
+				"BTC",
+				DateTime.utc(2024, 1, 1),
+				DateTime.utc(2024, 1, 15)
+			);
+
+			expect(result).toHaveLength(0);
+		});
+	});
 });

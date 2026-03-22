@@ -15,6 +15,7 @@ import portfolioRouter from "../../src/routes/portfolio/index.js";
 import { generateToken, AUTH_COOKIE_NAME } from "../../src/utils/password.js";
 import * as database from "../../src/database.js";
 import { createTestDataSource, destroyTestDataSource } from "../test-helpers.js";
+import { createContainer, resetContainer } from "../../src/di/container.js";
 
 describe("Portfolio Consistency Integration", () => {
 	let app: express.Application;
@@ -27,6 +28,7 @@ describe("Portfolio Consistency Integration", () => {
 	beforeEach(async () => {
 		await createTestDataSource();
 		dataSource = await getDataSource();
+		createContainer(dataSource);
 
 		vi.spyOn(database, "getDataSource").mockResolvedValue(dataSource);
 
@@ -75,6 +77,7 @@ describe("Portfolio Consistency Integration", () => {
 
 	afterEach(async () => {
 		vi.restoreAllMocks();
+		resetContainer();
 		await destroyTestDataSource();
 	});
 
