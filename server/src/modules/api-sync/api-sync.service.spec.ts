@@ -26,40 +26,58 @@ vi.mock("./encryption.service.js", () => ({
 describe("ApiSyncService", () => {
   let service: ApiSyncService;
   let mockDataSource: DataSource;
-  let mockAccountRepo: any;
+  let mockAccountsRepo: any;
   let mockTransactionsRepo: any;
+  let mockTransactionsService: any;
+  let mockHoldingsService: any;
+  let mockPriceBackfillService: any;
+  let mockTransferMatchingService: any;
 
   beforeEach(async () => {
     vi.clearAllMocks();
 
-    const mockQueryBuilder = {
-      where: vi.fn().mockReturnThis(),
-      andWhere: vi.fn().mockReturnThis(),
-      getOne: vi.fn(),
-      getMany: vi.fn().mockResolvedValue([]),
-    };
-
-    mockAccountRepo = {
+    mockAccountsRepo = {
       findById: vi.fn(),
       save: vi.fn(),
-      update: vi.fn(),
-      createQueryBuilder: vi.fn(() => mockQueryBuilder),
     };
 
     mockTransactionsRepo = {
-      findManyByExternalIds: vi.fn(),
+      findByProviderAccountId: vi.fn().mockResolvedValue([]),
       save: vi.fn(),
+      findManyByExternalIds: vi.fn().mockResolvedValue([]),
+    };
+
+    mockTransactionsService = {
+      importTransactions: vi.fn(),
+    };
+
+    mockHoldingsService = {
+      rebuildHoldingsFromTimestamp: vi.fn(),
+    };
+
+    mockPriceBackfillService = {
+      storePricesFromTransactions: vi.fn(),
+    };
+
+    mockTransferMatchingService = {
+      matchTransfersForUser: vi.fn(),
     };
 
     mockDataSource = {
-      getRepository: vi.fn((entity: any) => {
-        if (entity.name === "AccountEntity") return mockAccountRepo;
-        if (entity.name === "TransactionEntity") return mockTransactionsRepo;
-        return {};
+      getRepository: vi.fn().mockReturnValue({
+        update: vi.fn().mockResolvedValue(undefined),
       }),
     } as any;
 
-    service = new ApiSyncService(mockDataSource);
+    service = new ApiSyncService(
+      mockDataSource,
+      mockAccountsRepo as any,
+      mockTransactionsRepo as any,
+      mockTransactionsService as any,
+      mockHoldingsService as any,
+      mockPriceBackfillService as any,
+      mockTransferMatchingService as any,
+    );
   });
 
   afterEach(() => {
@@ -115,18 +133,13 @@ describe("ApiSyncService", () => {
 
   describe("syncAccount", () => {
     it("should skip when already syncing", async () => {
-      const mockQueryBuilder = {
-        where: vi.fn().mockReturnThis(),
-        andWhere: vi.fn().mockReturnThis(),
-        getOne: vi.fn().mockResolvedValue({
-          id: 1,
-          userId: 1,
-          provider: ProviderType.Bitpanda,
-          apiEnabled: true,
-          apiKeyEncrypted: "test-key",
-        }),
-      };
-      mockAccountRepo.createQueryBuilder = vi.fn(() => mockQueryBuilder);
+      mockAccountsRepo.findById.mockResolvedValue({
+        id: 1,
+        userId: 1,
+        provider: ProviderType.Bitpanda,
+        apiEnabled: true,
+        apiKeyEncrypted: "test-key",
+      });
 
       const firstSync = service.syncAccount(1, 1);
       const secondSync = service.syncAccount(1, 1);
@@ -138,12 +151,7 @@ describe("ApiSyncService", () => {
     });
 
     it("should return error when account not found", async () => {
-      const mockQueryBuilder = {
-        where: vi.fn().mockReturnThis(),
-        andWhere: vi.fn().mockReturnThis(),
-        getOne: vi.fn().mockResolvedValue(null),
-      };
-      mockAccountRepo.createQueryBuilder = vi.fn(() => mockQueryBuilder);
+      mockAccountsRepo.findById.mockResolvedValue(null);
 
       const result = await service.syncAccount(1, 1);
 
@@ -152,18 +160,13 @@ describe("ApiSyncService", () => {
     });
 
     it("should return error when API sync not enabled", async () => {
-      const mockQueryBuilder = {
-        where: vi.fn().mockReturnThis(),
-        andWhere: vi.fn().mockReturnThis(),
-        getOne: vi.fn().mockResolvedValue({
-          id: 1,
-          userId: 1,
-          provider: ProviderType.Bitpanda,
-          apiEnabled: false,
-          apiKeyEncrypted: null,
-        }),
-      };
-      mockAccountRepo.createQueryBuilder = vi.fn(() => mockQueryBuilder);
+      mockAccountsRepo.findById.mockResolvedValue({
+        id: 1,
+        userId: 1,
+        provider: ProviderType.Bitpanda,
+        apiEnabled: false,
+        apiKeyEncrypted: null,
+      });
 
       const result = await service.syncAccount(1, 1);
 

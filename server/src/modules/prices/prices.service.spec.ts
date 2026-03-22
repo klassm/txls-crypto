@@ -16,8 +16,7 @@ describe("PricesService", () => {
 			getPricesInTimeRange: vi.fn(),
 		};
 
-		service = new PricesService({} as any);
-		(service as any).repository = mockRepository;
+		service = new PricesService({} as any, mockRepository);
 	});
 
 	describe("getLatestPrice", () => {

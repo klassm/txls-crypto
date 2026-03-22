@@ -1,14 +1,20 @@
 import type { DataSource } from "typeorm";
+import { injectable, inject } from "inversify";
 import { DateTime } from "luxon";
+import { TYPES } from "../../di/types.js";
 import { PricesRepository } from "./prices.repository.js";
 import { TransactionEntity } from "../transactions/transaction.entity.js";
 import { TransactionType } from "@txls/shared";
 
+@injectable()
 export class PriceBackfillService {
 	private repository: PricesRepository;
 
-	constructor(private dataSource: DataSource) {
-		this.repository = new PricesRepository(dataSource);
+	constructor(
+		@inject(TYPES.DataSource) private dataSource: DataSource,
+		@inject(TYPES.PricesRepository) repository: PricesRepository
+	) {
+		this.repository = repository;
 	}
 
 	async storePricesFromTransactions(transactions: TransactionEntity[]): Promise<void> {

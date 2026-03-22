@@ -3,6 +3,7 @@ import { AUTH_COOKIE_NAME, verifyToken, getTokenExpiration } from "./password.js
 import { config } from "../config/env.js";
 import { logger } from "../common/logger.js";
 import { getDataSource } from "../database.js";
+import { getUsersService } from "../di/service-locator.js";
 import cookie from "cookie";
 import { HassSupervisorError } from "./errors.js";
 
@@ -57,8 +58,7 @@ async function getHomeAssistantUserIdFromHeaders(
   
   logger.info({ msg: "Getting user from HASS headers", remoteUserId, remoteUserName, remoteUserDisplayName, username });
   
-  const dataSource = await getDataSource();
-  const usersService = new UsersService(undefined, dataSource);
+  const usersService = getUsersService();
   
   let userEntity = await usersService.findByUsername(username);
   if (!userEntity) {
@@ -201,8 +201,7 @@ async function getHomeAssistantUserIdFromToken(token: string): Promise<number | 
 
   logger.info({ msg: "User found", name: userData.name, is_owner: userData.is_owner });
 
-  const dataSource = await getDataSource();
-  const usersService = new UsersService(undefined, dataSource);
+  const usersService = getUsersService();
 
   let userEntity = await usersService.findByUsername(userData.name);
   if (!userEntity) {

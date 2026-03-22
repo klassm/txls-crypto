@@ -1,5 +1,7 @@
 import "reflect-metadata";
+import { injectable, inject } from "inversify";
 import type { User, CreateOnboardingUserDto } from "@txls/shared";
+import { TYPES } from "../../di/types.js";
 import { UserEntity } from "./user.entity.js";
 import { UsersRepository } from "./users.repository.js";
 import { logger } from "../../common/logger.js";
@@ -20,17 +22,12 @@ export interface UpdateUserDto {
   isAdmin?: boolean;
 }
 
+@injectable()
 export class UsersService {
   private readonly repository: UsersRepository;
 
-  constructor(repository?: UsersRepository, dataSource?: any) {
-    if (repository) {
-      this.repository = repository;
-    } else if (dataSource) {
-      this.repository = new UsersRepository(dataSource);
-    } else {
-      throw new Error("Either repository or dataSource must be provided");
-    }
+  constructor(@inject(TYPES.UsersRepository) repository: UsersRepository) {
+    this.repository = repository;
   }
 
   async findAll(): Promise<User[]> {

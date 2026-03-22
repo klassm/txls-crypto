@@ -4,6 +4,7 @@ import type { Transaction } from "@txls/shared";
 import { DateTime } from "luxon";
 
 const mockDataSource = {} as any;
+const mockTransactionsRepo = {} as any;
 
 describe("TransferMatchingService", () => {
   const createTransaction = (
@@ -35,7 +36,7 @@ describe("TransferMatchingService", () => {
 
   describe("findMatches", () => {
     it("should match withdrawal to deposit with same asset and quantity", () => {
-      const service = new TransferMatchingService(mockDataSource);
+      const service = new TransferMatchingService(mockDataSource, mockTransactionsRepo);
       const transactions: Transaction[] = [
         createTransaction(1, "2024-01-01T10:00:00Z", "buy", "BTC", 0.1, 1000, 0, 1),
         createTransaction(2, "2024-06-01T10:00:00Z", "withdrawal", "BTC", 0.1, 1200, 0, 1),
@@ -52,7 +53,7 @@ describe("TransferMatchingService", () => {
     });
 
     it("should not match transactions with different assets", () => {
-      const service = new TransferMatchingService(mockDataSource);
+      const service = new TransferMatchingService(mockDataSource, mockTransactionsRepo);
       const transactions: Transaction[] = [
         createTransaction(1, "2024-06-01T10:00:00Z", "withdrawal", "BTC", 0.1, 1200, 0, 1),
         createTransaction(2, "2024-06-01T10:30:00Z", "deposit", "ETH", 0.1, 1200, 0, 2),
@@ -64,7 +65,7 @@ describe("TransferMatchingService", () => {
     });
 
     it("should not match transactions with different quantities", () => {
-      const service = new TransferMatchingService(mockDataSource);
+      const service = new TransferMatchingService(mockDataSource, mockTransactionsRepo);
       const transactions: Transaction[] = [
         createTransaction(1, "2024-06-01T10:00:00Z", "withdrawal", "BTC", 0.1, 1200, 0, 1),
         createTransaction(2, "2024-06-01T10:30:00Z", "deposit", "BTC", 0.2, 2400, 0, 2),
@@ -76,7 +77,7 @@ describe("TransferMatchingService", () => {
     });
 
     it("should not match transactions outside time window (default 48h)", () => {
-      const service = new TransferMatchingService(mockDataSource);
+      const service = new TransferMatchingService(mockDataSource, mockTransactionsRepo);
       const transactions: Transaction[] = [
         createTransaction(1, "2024-06-01T10:00:00Z", "withdrawal", "BTC", 0.1, 1200, 0, 1),
         createTransaction(2, "2024-06-05T10:30:00Z", "deposit", "BTC", 0.1, 1200, 0, 2),
@@ -88,7 +89,7 @@ describe("TransferMatchingService", () => {
     });
 
     it("should match transactions within time window (same day)", () => {
-      const service = new TransferMatchingService(mockDataSource);
+      const service = new TransferMatchingService(mockDataSource, mockTransactionsRepo);
       const transactions: Transaction[] = [
         createTransaction(1, "2024-06-01T08:00:00Z", "withdrawal", "BTC", 0.1, 1200, 0, 1),
         createTransaction(2, "2024-06-01T20:00:00Z", "deposit", "BTC", 0.1, 1200, 0, 2),
@@ -100,7 +101,7 @@ describe("TransferMatchingService", () => {
     });
 
     it("should not match already linked transactions", () => {
-      const service = new TransferMatchingService(mockDataSource);
+      const service = new TransferMatchingService(mockDataSource, mockTransactionsRepo);
       const transactions: Transaction[] = [
         createTransaction(1, "2024-06-01T10:00:00Z", "withdrawal", "BTC", 0.1, 1200, 0, 1, 999),
         createTransaction(2, "2024-06-01T10:30:00Z", "deposit", "BTC", 0.1, 1200, 0, 2),
@@ -112,7 +113,7 @@ describe("TransferMatchingService", () => {
     });
 
     it("should match withdrawal to closest deposit when multiple candidates exist", () => {
-      const service = new TransferMatchingService(mockDataSource);
+      const service = new TransferMatchingService(mockDataSource, mockTransactionsRepo);
       const transactions: Transaction[] = [
         createTransaction(1, "2024-06-01T10:00:00Z", "withdrawal", "BTC", 0.1, 1200, 0, 1),
         createTransaction(2, "2024-06-01T11:00:00Z", "deposit", "BTC", 0.1, 1200, 0, 2),
@@ -126,7 +127,7 @@ describe("TransferMatchingService", () => {
     });
 
     it("should match multiple withdrawal/deposit pairs", () => {
-      const service = new TransferMatchingService(mockDataSource);
+      const service = new TransferMatchingService(mockDataSource, mockTransactionsRepo);
       const transactions: Transaction[] = [
         createTransaction(1, "2024-06-01T10:00:00Z", "withdrawal", "BTC", 0.1, 1200, 0, 1),
         createTransaction(2, "2024-06-01T10:30:00Z", "deposit", "BTC", 0.1, 1200, 0, 2),
@@ -142,7 +143,7 @@ describe("TransferMatchingService", () => {
     });
 
     it("should not match withdrawal to deposit on same account", () => {
-      const service = new TransferMatchingService(mockDataSource);
+      const service = new TransferMatchingService(mockDataSource, mockTransactionsRepo);
       const transactions: Transaction[] = [
         createTransaction(1, "2024-06-01T10:00:00Z", "withdrawal", "BTC", 0.1, 1200, 0, 1),
         createTransaction(2, "2024-06-01T10:30:00Z", "deposit", "BTC", 0.1, 1200, 0, 1),
@@ -154,7 +155,7 @@ describe("TransferMatchingService", () => {
     });
 
     it("should handle quantity with small floating point tolerance", () => {
-      const service = new TransferMatchingService(mockDataSource);
+      const service = new TransferMatchingService(mockDataSource, mockTransactionsRepo);
       const transactions: Transaction[] = [
         createTransaction(1, "2024-06-01T10:00:00Z", "withdrawal", "BTC", 0.10000001, 1200, 0, 1),
         createTransaction(2, "2024-06-01T10:30:00Z", "deposit", "BTC", 0.10000002, 1200, 0, 2),
@@ -168,7 +169,7 @@ describe("TransferMatchingService", () => {
 
   describe("getUnmatchedWithdrawals", () => {
     it("should return withdrawals without linked deposit", () => {
-      const service = new TransferMatchingService(mockDataSource);
+      const service = new TransferMatchingService(mockDataSource, mockTransactionsRepo);
       const transactions: Transaction[] = [
         createTransaction(1, "2024-06-01T10:00:00Z", "withdrawal", "BTC", 0.1, 1200, 0, 1),
         createTransaction(2, "2024-06-01T10:30:00Z", "deposit", "ETH", 1.0, 2000, 0, 2),
@@ -181,7 +182,7 @@ describe("TransferMatchingService", () => {
     });
 
     it("should not return already linked withdrawals", () => {
-      const service = new TransferMatchingService(mockDataSource);
+      const service = new TransferMatchingService(mockDataSource, mockTransactionsRepo);
       const transactions: Transaction[] = [
         createTransaction(1, "2024-06-01T10:00:00Z", "withdrawal", "BTC", 0.1, 1200, 0, 1, 2),
       ];
@@ -194,7 +195,7 @@ describe("TransferMatchingService", () => {
 
   describe("getUnmatchedDeposits", () => {
     it("should return deposits without linked withdrawal", () => {
-      const service = new TransferMatchingService(mockDataSource);
+      const service = new TransferMatchingService(mockDataSource, mockTransactionsRepo);
       const transactions: Transaction[] = [
         createTransaction(1, "2024-06-01T10:00:00Z", "withdrawal", "BTC", 0.1, 1200, 0, 1),
         createTransaction(2, "2024-06-01T10:30:00Z", "deposit", "ETH", 1.0, 2000, 0, 2),

@@ -1,6 +1,7 @@
 import type { Transaction } from "@txls/shared";
 import { TransactionType } from "@txls/shared";
 import { DateTime } from "luxon";
+import { injectable } from "inversify";
 import { diffDays, getYear } from "../../utils/date.js";
 
 export interface TaxCalculation {
@@ -50,6 +51,7 @@ interface BuyLot {
   originalAcquisitionTimestamp?: DateTime;
 }
 
+@injectable()
 export class TaxCalculationService {
   private savedLossCarryover: LossCarryover | null = null;
 

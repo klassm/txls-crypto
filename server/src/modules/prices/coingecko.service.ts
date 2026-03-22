@@ -1,6 +1,8 @@
 import pino from "pino";
 import { DateTime } from "luxon";
 import type { DataSource } from "typeorm";
+import { injectable, inject } from "inversify";
+import { TYPES } from "../../di/types.js";
 import { CoinGeckoIdEntity } from "./coingecko-id.entity.js";
 import { TransactionEntity } from "../transactions/transaction.entity.js";
 
@@ -22,12 +24,13 @@ const COINGECKO_API_BASE = "https://api.coingecko.com/api/v3";
 const RATE_LIMIT_DELAY_MS = 12_000;
 const MAX_SYMBOLS_PER_REQUEST = 50;
 
+@injectable()
 export class CoinGeckoService {
 	private lastRequestTime = 0;
 	private symbolToIdCache: Map<string, string> = new Map();
 	private initialized = false;
 
-	constructor(private dataSource: DataSource) {}
+	constructor(@inject(TYPES.DataSource) private dataSource: DataSource) {}
 
 	async initialize(): Promise<void> {
 		if (this.initialized) return;

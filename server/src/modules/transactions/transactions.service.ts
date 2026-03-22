@@ -1,15 +1,18 @@
 import "reflect-metadata";
+import { injectable, inject } from "inversify";
 import type { Transaction } from "@txls/shared";
 import { TransactionType } from "@txls/shared";
 import type { AssetStat, YearStats } from "@txls/shared";
+import { TYPES } from "../../di/types.js";
 import { TransactionEntity } from "./transaction.entity.js";
 import { TransactionsRepository } from "./transactions.repository.js";
 import { logger } from "../../common/logger.js";
 
+@injectable()
 export class TransactionsService {
   private readonly repository: TransactionsRepository;
 
-  constructor(repository: TransactionsRepository) {
+  constructor(@inject(TYPES.TransactionsRepository) repository: TransactionsRepository) {
     this.repository = repository;
   }
 

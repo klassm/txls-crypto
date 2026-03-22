@@ -1,7 +1,9 @@
 import pino from "pino";
 import cron from "node-cron";
 import type { DataSource } from "typeorm";
+import { injectable, inject } from "inversify";
 import { DateTime } from "luxon";
+import { TYPES } from "../../di/types.js";
 import { CoinGeckoService } from "./coingecko.service.js";
 import { PricesRepository } from "./prices.repository.js";
 import { TransactionEntity } from "../transactions/transaction.entity.js";
@@ -11,6 +13,7 @@ const logger = pino({ level: "info" });
 const PRICE_FETCH_INTERVAL_CRON = "*/5 * * * *";
 const PRICE_RETENTION_DAYS = 365;
 
+@injectable()
 export class PriceFetcherService {
 	private priceCronJob: cron.ScheduledTask | null = null;
 	private isFetching = false;
@@ -18,12 +21,12 @@ export class PriceFetcherService {
 	private pricesRepository: PricesRepository;
 
 	constructor(
-		private dataSource: DataSource,
-		coinGeckoService?: CoinGeckoService,
-		pricesRepository?: PricesRepository
+		@inject(TYPES.DataSource) private dataSource: DataSource,
+		@inject(TYPES.CoinGeckoService) coinGeckoService: CoinGeckoService,
+		@inject(TYPES.PricesRepository) pricesRepository: PricesRepository
 	) {
-		this.coinGeckoService = coinGeckoService || new CoinGeckoService(dataSource);
-		this.pricesRepository = pricesRepository || new PricesRepository(dataSource);
+		this.coinGeckoService = coinGeckoService;
+		this.pricesRepository = pricesRepository;
 	}
 
 	async start(): Promise<void> {

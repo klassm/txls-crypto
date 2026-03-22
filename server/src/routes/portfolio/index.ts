@@ -1,6 +1,5 @@
 import { Router, Request, Response } from "express";
-import { getDataSource } from "../../database.js";
-import { AssetHoldingsService } from "../../modules/asset-holdings/asset-holdings.service.js";
+import { getAssetHoldingsService, getPricesRepository } from "../../di/service-locator.js";
 import { getUserIdFromRequest } from "../../utils/session.js";
 
 const router = Router();
@@ -18,8 +17,7 @@ router.get("/overview", async (req: Request, res: Response) => {
 		return res.status(400).json({ error: "Days must be between 1 and 3650" });
 	}
 
-	const dataSource = await getDataSource();
-	const service = new AssetHoldingsService(dataSource);
+	const service = getAssetHoldingsService();
 
 	const overview = await service.getPortfolioOverview(userId, days);
 

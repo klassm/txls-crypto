@@ -1,7 +1,9 @@
 import type { DataSource } from "typeorm";
+import { injectable, inject } from "inversify";
 import type { AssetStat } from "@txls/shared";
 import { TransactionType } from "@txls/shared";
 import { DateTime } from "luxon";
+import { TYPES } from "../../di/types.js";
 import { AssetHoldingsRepository, type AssetHoldingData, type HoldingState } from "./asset-holdings.repository.js";
 import { AssetHoldingEntity } from "./asset-holding.entity.js";
 import { TransactionEntity } from "../transactions/transaction.entity.js";
@@ -56,18 +58,19 @@ export interface PortfolioOverview {
 	totalStakingRewards: StakingStats;
 }
 
+@injectable()
 export class AssetHoldingsService {
 	private repository: AssetHoldingsRepository;
 	private dataSource: DataSource;
-	private pricesRepository?: PricesRepository;
+	private pricesRepository: PricesRepository;
 
 	constructor(
-		dataSource: DataSource,
-		repository?: AssetHoldingsRepository,
-		pricesRepository?: PricesRepository
+		@inject(TYPES.DataSource) dataSource: DataSource,
+		@inject(TYPES.AssetHoldingsRepository) repository: AssetHoldingsRepository,
+		@inject(TYPES.PricesRepository) pricesRepository: PricesRepository
 	) {
 		this.dataSource = dataSource;
-		this.repository = repository || new AssetHoldingsRepository(dataSource);
+		this.repository = repository;
 		this.pricesRepository = pricesRepository;
 	}
 
@@ -130,8 +133,34 @@ export class AssetHoldingsService {
 			return;
 		}
 
+		const typeBreakdown = transactions.reduce((acc, tx) => {
+			acc[tx.type] = (acc[tx.type] || 0) + 1;
+			return acc;
+		}, {} as Record<string, number>);
+		
+		const eurValueByType = transactions.reduce((acc, tx) => {
+			acc[tx.type] = (acc[tx.type] || 0) + Number(tx.eurValue);
+			return acc;
+		}, {} as Record<string, number>);
+
+		logger.info({
+			message: "RebuildHoldings: fetched transactions",
+			count: transactions.length,
+			typeBreakdown,
+			eurValueByType,
+			enumValues: {
+				buy: TransactionType.buy,
+				deposit: TransactionType.deposit,
+				sell: TransactionType.sell,
+				withdrawal: TransactionType.withdrawal,
+				reward: TransactionType.reward,
+			},
+		});
+
 		const holdingsByAsset = new Map<string, { amount: number; eurInvested: number }>();
 		const holdingData: AssetHoldingData[] = [];
+
+		let totalEurInvestedDelta = 0;
 
 		for (const tx of transactions) {
 			const current = holdingsByAsset.get(tx.asset) || { amount: 0, eurInvested: 0 };
@@ -141,10 +170,48 @@ export class AssetHoldingsService {
 				: Math.abs(tx.quantity);
 			
 			let eurInvestedDelta = 0;
-			if (tx.type === TransactionType.buy || tx.type === TransactionType.deposit) {
+			const typeMatchesBuy = tx.type === TransactionType.buy;
+			const typeMatchesDeposit = tx.type === TransactionType.deposit;
+			
+			if (typeMatchesBuy || typeMatchesDeposit) {
 				eurInvestedDelta = tx.eurValue;
+				totalEurInvestedDelta += eurInvestedDelta;
+				
+				logger.debug({
+					message: "RebuildHoldings: adding eurInvested",
+					externalId: tx.externalId,
+					type: tx.type,
+					typeString: JSON.stringify(tx.type),
+					asset: tx.asset,
+					eurValue: Number(tx.eurValue),
+					eurInvestedDelta,
+					typeMatchesBuy,
+					typeMatchesDeposit,
+					runningTotal: totalEurInvestedDelta,
+				});
 			} else if ((tx.type === TransactionType.sell || tx.type === TransactionType.withdrawal) && current.amount > 0) {
 				eurInvestedDelta = -current.eurInvested * (Math.abs(tx.quantity) / current.amount);
+				totalEurInvestedDelta += eurInvestedDelta;
+				
+				logger.debug({
+					message: "RebuildHoldings: reducing eurInvested",
+					externalId: tx.externalId,
+					type: tx.type,
+					asset: tx.asset,
+					eurInvestedDelta,
+					runningTotal: totalEurInvestedDelta,
+				});
+			} else {
+				logger.debug({
+					message: "RebuildHoldings: no eurInvested change",
+					externalId: tx.externalId,
+					type: tx.type,
+					typeString: JSON.stringify(tx.type),
+					asset: tx.asset,
+					eurValue: Number(tx.eurValue),
+					typeMatchesBuy,
+					typeMatchesDeposit,
+				});
 			}
 
 			const newAmount = current.amount + quantity;
@@ -166,6 +233,16 @@ export class AssetHoldingsService {
 				});
 			}
 		}
+
+		logger.info({
+			message: "RebuildHoldings: final totals",
+			totalEurInvestedDelta,
+			holdingsByAsset: Array.from(holdingsByAsset.entries()).map(([asset, data]) => ({
+				asset,
+				amount: data.amount,
+				eurInvested: data.eurInvested,
+			})),
+		});
 
 		await this.repository.saveMany(holdingData);
 	}
@@ -272,7 +349,7 @@ export class AssetHoldingsService {
 		const endDate = now;
 		const startDate = endDate.minus({ days }).startOf("day");
 
-		const pricesRepo = this.pricesRepository || new PricesRepository(this.dataSource);
+		const pricesRepo = this.pricesRepository;
 
 		const currentHoldings = providerAccountId
 			? await this.repository.findLatestByAccount(userId, providerAccountId)
@@ -436,7 +513,7 @@ export class AssetHoldingsService {
 		const now = DateTime.utc();
 		const startDate = now.minus({ days }).startOf("day");
 
-		const pricesRepo = this.pricesRepository || new PricesRepository(this.dataSource);
+		const pricesRepo = this.pricesRepository;
 		const holdingsByAccount = await this.repository.findLatestByUser(userId);
 
 		if (holdingsByAccount.size === 0) {

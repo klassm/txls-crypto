@@ -1,11 +1,14 @@
 import "reflect-metadata";
+import { injectable, inject } from "inversify";
 import type { DataSource, SelectQueryBuilder } from "typeorm";
 import { DateTime } from "luxon";
+import { TYPES } from "../../di/types.js";
 import { AssetPriceEntity } from "./asset-price.entity.js";
 import type { CoinPrice } from "./coingecko.service.js";
 
+@injectable()
 export class PricesRepository {
-	constructor(private dataSource: DataSource) {}
+	constructor(@inject(TYPES.DataSource) private dataSource: DataSource) {}
 
 	private get qb(): SelectQueryBuilder<AssetPriceEntity> {
 		return this.dataSource

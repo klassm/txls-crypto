@@ -1,10 +1,9 @@
 import { Router, Request, Response } from "express";
-import { getDataSource } from "../../database.js";
-import { UsersService } from "../../modules/users/users.service.js";
+import { getUsersService, getAssetHoldingsService } from "../../di/service-locator.js";
 import { AUTH_COOKIE_NAME, verifyToken } from "../../utils/password.js";
 import { userSchema, updateUserSchema, resetPasswordSchema } from "../../validation/schemas.js";
 import { getUserIdFromRequest } from "../../utils/session.js";
-import { AssetHoldingsService } from "../../modules/asset-holdings/asset-holdings.service.js";
+import { getDataSource } from "../../database.js";
 import { AccountEntity } from "../../modules/accounts/account.entity.js";
 
 const router = Router();
@@ -22,8 +21,7 @@ router.get("/users", async (req: Request, res: Response) => {
     return res.status(403).json({ error: "Forbidden" });
   }
 
-  const dataSource = await getDataSource();
-  const service = new UsersService(undefined, dataSource);
+  const service = getUsersService();
   const users = await service.findAll();
 
   return res.json(users);
@@ -49,8 +47,7 @@ router.post("/users", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Invalid input", details: parsed.error.issues });
     }
 
-    const dataSource = await getDataSource();
-    const service = new UsersService(undefined, dataSource);
+    const service = getUsersService();
 
     const user = await service.createUser(parsed.data);
     return res.status(201).json(user);
@@ -82,8 +79,7 @@ router.get("/users/:id", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Invalid user ID" });
     }
 
-    const dataSource = await getDataSource();
-    const service = new UsersService(undefined, dataSource);
+    const service = getUsersService();
     const user = await service.findById(userId);
 
     if (!user) {
@@ -122,8 +118,7 @@ router.put("/users/:id", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Invalid input", details: parsed.error.issues });
     }
 
-    const dataSource = await getDataSource();
-    const service = new UsersService(undefined, dataSource);
+    const service = getUsersService();
     const user = await service.updateUser(userId, parsed.data);
 
     return res.json(user);
@@ -159,8 +154,7 @@ router.delete("/users/:id", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Cannot delete yourself" });
     }
 
-    const dataSource = await getDataSource();
-    const service = new UsersService(undefined, dataSource);
+    const service = getUsersService();
     await service.deleteUser(userId);
 
     return res.json({ success: true });
@@ -178,8 +172,7 @@ router.post("/users/:id/password", async (req: Request, res: Response) => {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
-  const dataSource = await getDataSource();
-  const service = new UsersService(undefined, dataSource);
+  const service = getUsersService();
   const adminUser = await service.findById(userId);
 
   if (!adminUser || !adminUser.isAdmin) {
@@ -228,8 +221,8 @@ router.post("/rebuild-holdings", async (req: Request, res: Response) => {
   }
 
   try {
+    const holdingsService = getAssetHoldingsService();
     const dataSource = await getDataSource();
-    const holdingsService = new AssetHoldingsService(dataSource);
     const accountRepo = dataSource.getRepository(AccountEntity);
     
     const accounts = await accountRepo.find();
@@ -269,8 +262,8 @@ router.post("/rebuild-holdings/:userId", async (req: Request, res: Response) => 
       return res.status(400).json({ error: "Invalid user ID" });
     }
 
+    const holdingsService = getAssetHoldingsService();
     const dataSource = await getDataSource();
-    const holdingsService = new AssetHoldingsService(dataSource);
     const accountRepo = dataSource.getRepository(AccountEntity);
     
     const accounts = await accountRepo.find({ where: { userId: targetUserId } });

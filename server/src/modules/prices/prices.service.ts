@@ -1,5 +1,7 @@
 import type { DataSource } from "typeorm";
+import { injectable, inject } from "inversify";
 import { DateTime } from "luxon";
+import { TYPES } from "../../di/types.js";
 import { PricesRepository } from "./prices.repository.js";
 import { AssetPriceEntity } from "./asset-price.entity.js";
 
@@ -10,11 +12,15 @@ export interface AssetPrice {
 	source: string;
 }
 
+@injectable()
 export class PricesService {
 	private repository: PricesRepository;
 
-	constructor(private dataSource: DataSource) {
-		this.repository = new PricesRepository(dataSource);
+	constructor(
+		@inject(TYPES.DataSource) private dataSource: DataSource,
+		@inject(TYPES.PricesRepository) repository: PricesRepository
+	) {
+		this.repository = repository;
 	}
 
 	async getLatestPrice(asset: string): Promise<AssetPrice | null> {

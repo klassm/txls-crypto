@@ -1,6 +1,8 @@
 import "reflect-metadata";
+import { injectable, inject } from "inversify";
 import type { DataSource } from "typeorm";
 import { DateTime } from "luxon";
+import { TYPES } from "../../di/types.js";
 import { AssetHoldingEntity } from "./asset-holding.entity.js";
 
 export interface AssetHoldingData {
@@ -18,24 +20,33 @@ export interface HoldingState {
 	eurInvested: number;
 }
 
+@injectable()
 export class AssetHoldingsRepository {
-	constructor(private dataSource: DataSource) {}
+	constructor(@inject(TYPES.DataSource) private dataSource: DataSource) {}
 
 	async findLatestByAccount(
 		userId: number,
 		providerAccountId: number
 	): Promise<Map<string, HoldingState>> {
-		const results = await this.dataSource.query(`
-			SELECT ah.*
-			FROM asset_holdings ah
-			INNER JOIN (
-				SELECT asset, MAX(timestamp) as max_timestamp
-				FROM asset_holdings
-				WHERE user_id = ? AND provider_account_id = ?
-				GROUP BY asset
-			) latest ON ah.asset = latest.asset AND ah.timestamp = latest.max_timestamp
-			WHERE ah.user_id = ? AND ah.provider_account_id = ?
-		`, [userId, providerAccountId, userId, providerAccountId]);
+		const results = await this.dataSource
+			.createQueryBuilder()
+			.select("ah.*")
+			.from("asset_holdings", "ah")
+			.innerJoin(
+				(subQuery) =>
+					subQuery
+						.select("asset")
+						.addSelect("MAX(timestamp)", "max_timestamp")
+						.from("asset_holdings", "sub_ah")
+						.where("sub_ah.user_id = :userId", { userId })
+						.andWhere("sub_ah.provider_account_id = :providerAccountId", { providerAccountId })
+						.groupBy("asset"),
+				"latest",
+				"ah.asset = latest.asset AND ah.timestamp = latest.max_timestamp"
+			)
+			.where("ah.user_id = :userId", { userId })
+			.andWhere("ah.provider_account_id = :providerAccountId", { providerAccountId })
+			.getRawMany();
 
 		const holdings = new Map<string, HoldingState>();
 		for (const row of results) {
@@ -50,19 +61,27 @@ export class AssetHoldingsRepository {
 	}
 
 	async findLatestByUser(userId: number): Promise<Map<number, Map<string, HoldingState>>> {
-		const results = await this.dataSource.query(`
-			SELECT ah.*
-			FROM asset_holdings ah
-			INNER JOIN (
-				SELECT provider_account_id, asset, MAX(timestamp) as max_timestamp
-				FROM asset_holdings
-				WHERE user_id = ?
-				GROUP BY provider_account_id, asset
-			) latest ON ah.provider_account_id = latest.provider_account_id 
-				AND ah.asset = latest.asset 
-				AND ah.timestamp = latest.max_timestamp
-			WHERE ah.user_id = ?
-		`, [userId, userId]);
+		const results = await this.dataSource
+			.createQueryBuilder()
+			.select("ah.*")
+			.from("asset_holdings", "ah")
+			.innerJoin(
+				(subQuery) =>
+					subQuery
+						.select("provider_account_id")
+						.addSelect("asset")
+						.addSelect("MAX(timestamp)", "max_timestamp")
+						.from("asset_holdings", "sub_ah")
+						.where("sub_ah.user_id = :userId", { userId })
+						.groupBy("provider_account_id")
+						.addGroupBy("asset"),
+				"latest",
+				"ah.provider_account_id = latest.provider_account_id " +
+					"AND ah.asset = latest.asset " +
+					"AND ah.timestamp = latest.max_timestamp"
+			)
+			.where("ah.user_id = :userId", { userId })
+			.getRawMany();
 
 		const holdingsByAccount = new Map<number, Map<string, HoldingState>>();
 		for (const row of results) {
@@ -86,17 +105,27 @@ export class AssetHoldingsRepository {
 		timestamp: DateTime
 	): Promise<Map<string, HoldingState>> {
 		const ts = timestamp.toMillis();
-		const results = await this.dataSource.query(`
-			SELECT ah.*
-			FROM asset_holdings ah
-			INNER JOIN (
-				SELECT asset, MAX(timestamp) as max_timestamp
-				FROM asset_holdings
-				WHERE user_id = ? AND provider_account_id = ? AND timestamp <= ?
-				GROUP BY asset
-			) latest ON ah.asset = latest.asset AND ah.timestamp = latest.max_timestamp
-			WHERE ah.user_id = ? AND ah.provider_account_id = ?
-		`, [userId, providerAccountId, ts, userId, providerAccountId]);
+		const results = await this.dataSource
+			.createQueryBuilder()
+			.select("ah.*")
+			.from("asset_holdings", "ah")
+			.innerJoin(
+				(subQuery) =>
+					subQuery
+						.select("asset")
+						.addSelect("MAX(timestamp)", "max_timestamp")
+						.from("asset_holdings", "sub_ah")
+						.where("sub_ah.user_id = :userId", { userId })
+						.andWhere("sub_ah.provider_account_id = :providerAccountId", { providerAccountId })
+						.andWhere("sub_ah.timestamp <= :ts", { ts })
+						.groupBy("asset"),
+				"latest",
+				"ah.asset = latest.asset AND ah.timestamp = latest.max_timestamp"
+			)
+			.where("ah.user_id = :userId", { userId })
+			.andWhere("ah.provider_account_id = :providerAccountId", { providerAccountId })
+			.setParameters({ userId, providerAccountId, ts })
+			.getRawMany();
 
 		const holdings = new Map<string, HoldingState>();
 		for (const row of results) {
@@ -115,19 +144,29 @@ export class AssetHoldingsRepository {
 		timestamp: DateTime
 	): Promise<Map<number, Map<string, HoldingState>>> {
 		const ts = timestamp.toMillis();
-		const results = await this.dataSource.query(`
-			SELECT ah.*
-			FROM asset_holdings ah
-			INNER JOIN (
-				SELECT provider_account_id, asset, MAX(timestamp) as max_timestamp
-				FROM asset_holdings
-				WHERE user_id = ? AND timestamp <= ?
-				GROUP BY provider_account_id, asset
-			) latest ON ah.provider_account_id = latest.provider_account_id 
-				AND ah.asset = latest.asset 
-				AND ah.timestamp = latest.max_timestamp
-			WHERE ah.user_id = ?
-		`, [userId, ts, userId]);
+		const results = await this.dataSource
+			.createQueryBuilder()
+			.select("ah.*")
+			.from("asset_holdings", "ah")
+			.innerJoin(
+				(subQuery) =>
+					subQuery
+						.select("provider_account_id")
+						.addSelect("asset")
+						.addSelect("MAX(timestamp)", "max_timestamp")
+						.from("asset_holdings", "sub_ah")
+						.where("sub_ah.user_id = :userId", { userId })
+						.andWhere("sub_ah.timestamp <= :ts", { ts })
+						.groupBy("provider_account_id")
+						.addGroupBy("asset"),
+				"latest",
+				"ah.provider_account_id = latest.provider_account_id " +
+					"AND ah.asset = latest.asset " +
+					"AND ah.timestamp = latest.max_timestamp"
+			)
+			.where("ah.user_id = :userId", { userId })
+			.setParameters({ userId, ts })
+			.getRawMany();
 
 		const holdingsByAccount = new Map<number, Map<string, HoldingState>>();
 		for (const row of results) {

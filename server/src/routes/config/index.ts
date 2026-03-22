@@ -1,6 +1,5 @@
 import { Router, Request, Response } from "express";
-import { getDataSource } from "../../database.js";
-import { UsersService } from "../../modules/users/users.service.js";
+import { getUsersService } from "../../di/service-locator.js";
 import { AUTH_COOKIE_NAME, generateToken, getSessionMaxAge, verifyToken } from "../../utils/password.js";
 import { toISOString } from "../../utils/date.js";
 import { onboardingUserSchema } from "../../validation/schemas.js";
@@ -32,8 +31,7 @@ router.get("/", async (req: Request, res: Response) => {
   });
 
   try {
-    const dataSource = await getDataSource();
-    const usersService = new UsersService(undefined, dataSource);
+    const usersService = getUsersService();
     const existingUsersCount = await usersService.count();
 
     let user = null;
@@ -105,8 +103,7 @@ router.get("/", async (req: Request, res: Response) => {
 });
 
 router.post("/onboard", async (req: Request, res: Response) => {
-  const dataSource = await getDataSource();
-  const usersService = new UsersService(undefined, dataSource);
+  const usersService = getUsersService();
 
   const existingUsersCount = await usersService.count();
 

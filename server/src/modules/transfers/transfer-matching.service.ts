@@ -1,6 +1,8 @@
 import type { Transaction } from "@txls/shared";
 import { DateTime } from "luxon";
 import type { DataSource } from "typeorm";
+import { injectable, inject } from "inversify";
+import { TYPES } from "../../di/types.js";
 import { TransactionsRepository } from "../transactions/transactions.repository.js";
 import { TransactionEntity } from "../transactions/transaction.entity.js";
 
@@ -22,17 +24,20 @@ export interface MatchResult {
 const TIME_WINDOW_HOURS = 48;
 const QUANTITY_TOLERANCE = 0.0001;
 
+@injectable()
 export class TransferMatchingService {
-  constructor(private dataSource: DataSource) {}
+  constructor(
+    @inject(TYPES.DataSource) private dataSource: DataSource,
+    @inject(TYPES.TransactionsRepository) private transactionsRepository: TransactionsRepository
+  ) {}
 
   async matchTransfersForUser(userId: number): Promise<{ matched: number }> {
-    const repository = new TransactionsRepository(this.dataSource);
-    const entities = await repository.findByUserId(userId);
+    const entities = await this.transactionsRepository.findByUserId(userId);
     const transactions = entities.map((e) => e as unknown as Transaction);
     const matches = this.findMatches(transactions);
 
     for (const match of matches) {
-      await repository.updateLinkedTransaction(
+      await this.transactionsRepository.updateLinkedTransaction(
         userId,
         match.withdrawalId,
         match.depositId
@@ -42,7 +47,7 @@ export class TransferMatchingService {
       if (withdrawal) {
         const { timestamp, eurValue } = this.getOriginalValues(withdrawal, entities);
         
-        await repository.updateLinkedTransaction(
+        await this.transactionsRepository.updateLinkedTransaction(
           userId,
           match.depositId,
           match.withdrawalId,

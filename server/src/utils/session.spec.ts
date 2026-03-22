@@ -30,10 +30,10 @@ vi.mock("../database.js", () => ({
 const mockFindByUsername = vi.fn();
 const mockCreateUser = vi.fn();
 
-vi.mock("../modules/users/users.service.js", () => ({
-  UsersService: vi.fn(function(this: any) {
-    this.findByUsername = mockFindByUsername;
-    this.createUser = mockCreateUser;
+vi.mock("../di/service-locator.js", () => ({
+  getUsersService: () => ({
+    findByUsername: mockFindByUsername,
+    createUser: mockCreateUser,
   }),
 }));
 

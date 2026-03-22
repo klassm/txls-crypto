@@ -1,6 +1,8 @@
 import { DateTime } from "luxon";
+import { injectable } from "inversify";
 import type { TaxCalculation } from "./tax-calculator.service.js";
 
+@injectable()
 export class WisoCsvExportService {
   formatGermanDate(date: DateTime): string {
     return date.toFormat("dd.MM.yyyy");

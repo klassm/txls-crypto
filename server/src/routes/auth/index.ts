@@ -1,7 +1,6 @@
 import { Router, Request, Response } from "express";
 import rateLimit from "express-rate-limit";
-import { getDataSource } from "../../database.js";
-import { UsersService } from "../../modules/users/users.service.js";
+import { getUsersService } from "../../di/service-locator.js";
 import { AUTH_COOKIE_NAME, generateToken, getSessionMaxAge, verifyToken } from "../../utils/password.js";
 import { loginSchema, changePasswordSchema } from "../../validation/schemas.js";
 import { config } from "../../config/env.js";
@@ -18,8 +17,7 @@ const loginRateLimiter = rateLimit({
 });
 
 router.post("/login", loginRateLimiter, async (req: Request, res: Response) => {
-  const dataSource = await getDataSource();
-  const usersService = new UsersService(undefined, dataSource);
+  const usersService = getUsersService();
 
   try {
     const parsed = loginSchema.safeParse(req.body);
@@ -88,8 +86,7 @@ router.post("/change-password", async (req: Request, res: Response) => {
 
   const { currentPassword, newPassword } = validationResult.data;
 
-  const dataSource = await getDataSource();
-  const usersService = new UsersService(undefined, dataSource);
+  const usersService = getUsersService();
 
   try {
     const user = await usersService.findById(userId);

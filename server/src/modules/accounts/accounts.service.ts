@@ -1,6 +1,8 @@
 import "reflect-metadata";
+import { injectable, inject } from "inversify";
 import type { Account, CreateAccountDto, UpdateAccountDto } from "@txls/shared";
 import { ProviderType } from "@txls/shared";
+import { TYPES } from "../../di/types.js";
 import { AccountEntity } from "./account.entity.js";
 import { AccountsRepository } from "./accounts.repository.js";
 import { TransactionsRepository } from "../transactions/transactions.repository.js";
@@ -13,30 +15,20 @@ const providerMetadata: Record<ProviderType, any> = {
 	[ProviderType.TradeRepublic]: providerConfigs[ProviderType.TradeRepublic],
 };
 
+@injectable()
 export class AccountsService {
   private readonly repository: AccountsRepository;
   private readonly transactionsRepository: TransactionsRepository;
   private readonly holdingsService: AssetHoldingsService;
 
   constructor(
-    repository?: AccountsRepository,
-    dataSource?: any,
-    transactionsRepository?: TransactionsRepository,
-    holdingsService?: AssetHoldingsService,
+    @inject(TYPES.AccountsRepository) repository: AccountsRepository,
+    @inject(TYPES.TransactionsRepository) transactionsRepository: TransactionsRepository,
+    @inject(TYPES.AssetHoldingsService) holdingsService: AssetHoldingsService,
   ) {
-    if (repository) {
-      this.repository = repository;
-    } else if (dataSource) {
-      this.repository = new AccountsRepository(dataSource);
-    } else {
-      throw new Error("Either repository or dataSource must be provided");
-    }
-
-    this.transactionsRepository =
-      transactionsRepository || new TransactionsRepository(dataSource ?? this["repository"]["dataSource"]);
-
-    this.holdingsService =
-      holdingsService || new AssetHoldingsService(dataSource ?? this["repository"]["dataSource"]);
+    this.repository = repository;
+    this.transactionsRepository = transactionsRepository;
+    this.holdingsService = holdingsService;
   }
 
   async findAll(userId: number): Promise<Account[]> {

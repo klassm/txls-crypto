@@ -1,6 +1,8 @@
 import "reflect-metadata";
+import { injectable, inject } from "inversify";
 import { Between, DataSource } from "typeorm";
 import type { Transaction } from "@txls/shared";
+import { TYPES } from "../di/types.js";
 import { TransactionEntity } from "../modules/transactions/transaction.entity.js";
 import { logger } from "../common/logger.js";
 
@@ -18,11 +20,17 @@ interface ImportRange {
   maxTimestamp: number;
 }
 
+@injectable()
 export class ImportDeduplicationService {
+  private userId?: number;
+
   constructor(
-    private dataSource: DataSource,
-    private userId?: number
+    @inject(TYPES.DataSource) private dataSource: DataSource,
   ) {}
+
+  setUserId(userId: number | undefined): void {
+    this.userId = userId;
+  }
 
   async shouldSkipOrReplace(
     accountId: number,

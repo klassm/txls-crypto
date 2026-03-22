@@ -1,14 +1,17 @@
 import "reflect-metadata";
+import { injectable, inject } from "inversify";
 import type { AssetStat, YearStats } from "@txls/shared";
 import type { DataSource, SelectQueryBuilder } from "typeorm";
 import { TransactionType } from "@txls/shared";
 import { Between } from "typeorm";
+import { TYPES } from "../../di/types.js";
 import { TransactionEntity } from "./transaction.entity.js";
 import { DateTime } from "luxon";
 import { toMillis } from "../../utils/date.js";
 
+@injectable()
 export class TransactionsRepository {
-  constructor(private dataSource: DataSource) {}
+  constructor(@inject(TYPES.DataSource) private dataSource: DataSource) {}
 
   private get qb(): SelectQueryBuilder<TransactionEntity> {
     return this.dataSource

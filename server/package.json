@@ -21,6 +21,7 @@
   "dependencies": {
     "@txls/shared": "workspace:*",
     "bcrypt": "^6.0.0",
+    "inversify": "^6.0.0",
     "cookie": "^1.1.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
@@ -48,6 +49,7 @@
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
+    "@types/inversify": "^2.0.0",
     "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",

@@ -16,6 +16,8 @@ import configRouter from "./routes/config/index.js";
 import pricesRouter from "./routes/prices/index.js";
 import portfolioRouter from "./routes/portfolio/index.js";
 import { getDataSource } from "./database.js";
+import { createContainer, getContainer } from "./di/container.js";
+import { TYPES } from "./di/types.js";
 import { PriceFetcherService } from "./modules/prices/index.js";
 import { ApiSyncScheduler } from "./api-sync-scheduler.js";
 import { setupWebSocket } from "./websocket.js";
@@ -30,11 +32,14 @@ async function startServer() {
 	console.log("[Server] Starting...");
 	
 	const dataSource = await getDataSource();
+	createContainer(dataSource);
 	
-	priceFetcher = new PriceFetcherService(dataSource);
+	const container = getContainer();
+	
+	priceFetcher = container.get<PriceFetcherService>(TYPES.PriceFetcherService);
 	await priceFetcher.start();
 	
-	apiSyncScheduler = new ApiSyncScheduler(dataSource);
+	apiSyncScheduler = container.get<ApiSyncScheduler>(TYPES.ApiSyncScheduler);
 	await apiSyncScheduler.start();
 	
 	app.set("trust proxy", true);

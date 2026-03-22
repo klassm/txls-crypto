@@ -1,28 +1,28 @@
 import { Router } from "express";
 import multer from "multer";
 import { Request, Response } from "express";
-import { getDataSource } from "../../database.js";
-import { AccountsRepository } from "../../modules/accounts/accounts.repository.js";
-import { AccountsService } from "../../modules/accounts/accounts.service.js";
-import { TransactionsRepository } from "../../modules/transactions/transactions.repository.js";
-import { TransactionsService } from "../../modules/transactions/transactions.service.js";
-import { ImportDeduplicationService } from "../../providers/import-deduplication.service.js";
+import {
+  getAccountsService,
+  getTransactionsService,
+  getAssetHoldingsService,
+  getTransactionsRepository,
+  getAccountsRepository,
+  getTaxCalculationService,
+  getWisoCsvExportService,
+  getApiSyncService,
+  getPriceBackfillService,
+  getTransferMatchingService,
+  getImportDeduplicationService,
+} from "../../di/service-locator.js";
 import { getProviderConfig } from "../../providers/registry.js";
-import { TaxCalculationService } from "../../modules/tax/tax-calculator.service.js";
-import { WisoCsvExportService } from "../../modules/tax/wiso-csv-export.service.js";
-import { AssetHoldingsService } from "../../modules/asset-holdings/asset-holdings.service.js";
-import { PricesRepository } from "../../modules/prices/prices.repository.js";
-import { PriceBackfillService } from "../../modules/prices/price-backfill.service.js";
 import { TransactionType } from "@txls/shared";
 import { toISOString } from "../../utils/date.js";
 import { DateTime } from "luxon";
 import { getUserIdFromRequest, verifyToken, AUTH_COOKIE_NAME } from "../../utils/session.js";
-import { ApiSyncService } from "../../modules/api-sync/api-sync.service.js";
 import { logger } from "../../common/logger.js";
 import { encrypt } from "../../modules/api-sync/encryption.service.js";
 import { z } from "zod";
 import { createAccountSchema } from "../../validation/schemas.js";
-import { TransferMatchingService } from "../../modules/transfers/transfer-matching.service.js";
 
 const upload = multer({ storage: multer.memoryStorage() });
 const router = Router();
@@ -40,8 +40,7 @@ router.get("/", async (req: Request, res: Response) => {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
-  const dataSource = await getDataSource();
-  const accountsService = new AccountsService(undefined, dataSource);
+  const accountsService = getAccountsService();
   const serializedAccounts = (await accountsService.findAll(userId)).map((acc) => ({
     ...acc,
     createdAt: toISOString(acc.createdAt) ?? "",
@@ -61,8 +60,7 @@ router.post("/", async (req: Request, res: Response) => {
     return res.status(400).json({ error: validationResult.error.issues[0].message });
   }
 
-  const dataSource = await getDataSource();
-  const accountsService = new AccountsService(undefined, dataSource);
+  const accountsService = getAccountsService();
   const account = await accountsService.create(userId, validationResult.data);
   const serializedAccount = account ? {
     ...account,
@@ -78,7 +76,6 @@ router.get("/portfolio-history", async (req: Request, res: Response) => {
 		return res.status(401).json({ error: "Unauthorized" });
 	}
 
-	const dataSource = await getDataSource();
 	try {
 		const daysParam = req.query.days as string | undefined;
 		const days = daysParam ? Number.parseInt(daysParam, 10) : 30;
@@ -87,7 +84,7 @@ router.get("/portfolio-history", async (req: Request, res: Response) => {
 			return res.status(400).json({ error: "Days must be between 1 and 3650" });
 		}
 
-		const snapshotsService = new AssetHoldingsService(dataSource);
+		const snapshotsService = getAssetHoldingsService();
 		const result = await snapshotsService.getPortfolioHistoryWithPrices(userId, undefined, { days });
 
 		return res.json(result);
@@ -103,14 +100,13 @@ router.get("/:id", async (req: Request, res: Response) => {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
-  const dataSource = await getDataSource();
   const accountId = Number.parseInt(req.params.id as string, 10);
 
   if (isNaN(accountId)) {
     return res.status(400).json({ error: "Invalid account ID" });
   }
 
-  const accountsService = new AccountsService(undefined, dataSource);
+  const accountsService = getAccountsService();
   const account = await accountsService.findById(userId, accountId);
 
   if (!account) {
@@ -132,14 +128,13 @@ router.delete("/:id", async (req: Request, res: Response) => {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
-  const dataSource = await getDataSource();
   const accountId = Number.parseInt(req.params.id as string, 10);
 
   if (isNaN(accountId)) {
     return res.status(400).json({ error: "Invalid account ID" });
   }
 
-  const accountsService = new AccountsService(undefined, dataSource);
+  const accountsService = getAccountsService();
   await accountsService.delete(userId, accountId);
 
   return res.json({ success: true });
@@ -151,7 +146,6 @@ router.get("/:id/transactions", async (req: Request, res: Response) => {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
-  const dataSource = await getDataSource();
   try {
     const accountId = Number.parseInt(req.params.id as string, 10);
 
@@ -171,12 +165,11 @@ router.get("/:id/transactions", async (req: Request, res: Response) => {
 
     const year = yearParam ? Number.parseInt(yearParam, 10) : currentYear;
 
-    const accountsRepository = new AccountsRepository(dataSource);
-    const accountsService = new AccountsService(accountsRepository, dataSource);
-    const account = await accountsService.findById(userId, accountId);
+    const accountsService = getAccountsService();
+    const transactionsService = getTransactionsService();
+    const transactionsRepository = getTransactionsRepository();
 
-    const transactionsRepository = new TransactionsRepository(dataSource);
-    const transactionsService = new TransactionsService(transactionsRepository);
+    const account = await accountsService.findById(userId, accountId);
 
     const result = await transactionsService.findByProviderAccountIdWithStats(userId, accountId, year);
 
@@ -220,7 +213,6 @@ router.post("/:id/transactions/import", upload.single("file"), async (req: Reque
     return res.status(401).json({ error: "Unauthorized" });
   }
 
-  const dataSource = await getDataSource();
   try {
     const accountId = Number.parseInt(req.params.id as string, 10);
 
@@ -244,7 +236,7 @@ router.post("/:id/transactions/import", upload.single("file"), async (req: Reque
       return res.status(400).json({ message: "File is empty" });
     }
 
-    const accountsRepository = new AccountsRepository(dataSource);
+    const accountsRepository = getAccountsRepository();
     const account = await accountsRepository.findById(userId, accountId);
 
     if (!account) {
@@ -272,7 +264,8 @@ router.post("/:id/transactions/import", upload.single("file"), async (req: Reque
 
     const { transactions, validationErrors } = parseResult;
 
-    const deduplicationService = new ImportDeduplicationService(dataSource, userId);
+    const deduplicationService = getImportDeduplicationService();
+    deduplicationService.setUserId(userId);
     const dedupResult = await deduplicationService.shouldSkipOrReplace(accountId, transactions);
 
     if (dedupResult.shouldSkip) {
@@ -291,22 +284,22 @@ router.post("/:id/transactions/import", upload.single("file"), async (req: Reque
       });
     }
 
-const repository = new TransactionsRepository(dataSource);
-		const transactionsService = new TransactionsService(repository);
+    const transactionsService = getTransactionsService();
+    const transactionsRepository = getTransactionsRepository();
 
-		const importResult = await transactionsService.importTransactions(userId, accountId, transactions);
+    const importResult = await transactionsService.importTransactions(userId, accountId, transactions);
 
-		if (importResult.imported > 0) {
-			const priceBackfillService = new PriceBackfillService(dataSource);
-			const savedEntities = await repository.findByProviderAccountId(userId, accountId);
-			const newlySaved = savedEntities.filter(e => 
-				transactions.some(t => t.externalId === e.externalId)
-			);
-			await priceBackfillService.storePricesFromTransactions(newlySaved);
+    if (importResult.imported > 0) {
+      const priceBackfillService = getPriceBackfillService();
+      const savedEntities = await transactionsRepository.findByProviderAccountId(userId, accountId);
+      const newlySaved = savedEntities.filter(e => 
+        transactions.some(t => t.externalId === e.externalId)
+      );
+      await priceBackfillService.storePricesFromTransactions(newlySaved);
 
-			const transferMatchingService = new TransferMatchingService(dataSource);
-			await transferMatchingService.matchTransfersForUser(userId);
-		}
+      const transferMatchingService = getTransferMatchingService();
+      await transferMatchingService.matchTransfersForUser(userId);
+    }
 
     if (importResult.imported > 0 && transactions.length > 0) {
       const earliestTx = transactions.reduce((earliest, tx) => {
@@ -319,12 +312,12 @@ const repository = new TransactionsRepository(dataSource);
         ? earliestTx.timestamp 
         : DateTime.fromISO(earliestTx.timestamp as unknown as string);
 
-const holdingsService = new AssetHoldingsService(dataSource);
-		await holdingsService.rebuildHoldingsFromTimestamp(
-			userId,
-			accountId,
-			earliestTime,
-		);
+      const holdingsService = getAssetHoldingsService();
+      await holdingsService.rebuildHoldingsFromTimestamp(
+        userId,
+        accountId,
+        earliestTime,
+      );
     }
 
     return res.json({
@@ -344,7 +337,6 @@ router.post("/:id/transactions", async (req: Request, res: Response) => {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
-  const dataSource = await getDataSource();
   try {
     const accountId = Number.parseInt(req.params.id as string, 10);
     if (isNaN(accountId)) {
@@ -358,7 +350,7 @@ router.post("/:id/transactions", async (req: Request, res: Response) => {
 
     const { timestamp, asset, quantity, eurValue } = validationResult.data;
 
-    const accountsRepository = new AccountsRepository(dataSource);
+    const accountsRepository = getAccountsRepository();
     const account = await accountsRepository.findById(userId, accountId);
 
     if (!account) {
@@ -389,12 +381,11 @@ router.post("/:id/transactions", async (req: Request, res: Response) => {
       processed: false,
     };
 
-    const repository = new TransactionsRepository(dataSource);
-    const transactionsService = new TransactionsService(repository);
+    const transactionsService = getTransactionsService();
     const result = await transactionsService.importTransactions(userId, accountId, [transaction]);
 
     if (result.imported > 0) {
-      const holdingsService = new AssetHoldingsService(dataSource);
+      const holdingsService = getAssetHoldingsService();
       await holdingsService.rebuildHoldingsFromTimestamp(userId, accountId, parsedTimestamp);
     }
 
@@ -411,7 +402,6 @@ router.get("/:id/tax", async (req: Request, res: Response) => {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
-  const dataSource = await getDataSource();
   try {
     const year = req.query.year as string;
 
@@ -431,8 +421,8 @@ router.get("/:id/tax", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Invalid account ID" });
     }
 
-    const repository = new TransactionsRepository(dataSource);
-    const transactionEntities = await repository.findByProviderAccountId(userId, accountId);
+    const transactionsRepository = getTransactionsRepository();
+    const transactionEntities = await transactionsRepository.findByProviderAccountId(userId, accountId);
 
     const transactions = transactionEntities.map((e) => ({
       id: e.id,
@@ -448,7 +438,7 @@ router.get("/:id/tax", async (req: Request, res: Response) => {
       processed: e.processed,
     }));
 
-    const taxCalculator = new TaxCalculationService();
+    const taxCalculator = getTaxCalculationService();
     const taxYear = parsedYear;
 
     const taxResult = taxCalculator.calculateTaxForYear(
@@ -515,11 +505,10 @@ router.get("/:id/tax/export", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Invalid year" });
     }
 
-    const dataSource = await getDataSource();
-    const transactionsRepository = new TransactionsRepository(dataSource);
-    const accountsService = new AccountsService(undefined, dataSource);
-    const taxService = new TaxCalculationService();
-    const csvExportService = new WisoCsvExportService();
+    const transactionsRepository = getTransactionsRepository();
+    const accountsService = getAccountsService();
+    const taxService = getTaxCalculationService();
+    const csvExportService = getWisoCsvExportService();
 
     const account = await accountsService.findById(payload.userId, accountId);
     if (!account) {
@@ -569,7 +558,6 @@ router.get("/:id/tax/export", async (req: Request, res: Response) => {
 		return res.status(401).json({ error: "Unauthorized" });
 	}
 
-	const dataSource = await getDataSource();
 	try {
 		const accountId = Number.parseInt(req.params.id as string, 10);
 
@@ -584,7 +572,7 @@ router.get("/:id/tax/export", async (req: Request, res: Response) => {
 			return res.status(400).json({ error: "Days must be between 1 and 3650" });
 		}
 
-		const snapshotsService = new AssetHoldingsService(dataSource);
+		const snapshotsService = getAssetHoldingsService();
 
 		const result = await snapshotsService.getPortfolioHistoryWithPrices(userId, accountId, { days });
 
@@ -606,7 +594,6 @@ router.get("/:id/api-settings", async (req: Request, res: Response) => {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
-  const dataSource = await getDataSource();
   try {
     const accountId = Number.parseInt(req.params.id as string, 10);
 
@@ -614,7 +601,7 @@ router.get("/:id/api-settings", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Invalid account ID" });
     }
 
-    const accountsRepository = new AccountsRepository(dataSource);
+    const accountsRepository = getAccountsRepository();
     const account = await accountsRepository.findById(userId, accountId);
 
     if (!account) {
@@ -642,7 +629,6 @@ router.patch("/:id/api-settings", async (req: Request, res: Response) => {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
-  const dataSource = await getDataSource();
   try {
     const accountId = Number.parseInt(req.params.id as string, 10);
 
@@ -657,7 +643,7 @@ router.patch("/:id/api-settings", async (req: Request, res: Response) => {
 
     const { apiEnabled, apiKey } = validationResult.data;
 
-    const accountsRepository = new AccountsRepository(dataSource);
+    const accountsRepository = getAccountsRepository();
     const account = await accountsRepository.findById(userId, accountId);
 
     if (!account) {
@@ -670,7 +656,7 @@ router.patch("/:id/api-settings", async (req: Request, res: Response) => {
     }
 
     if (apiEnabled && apiKey) {
-      const syncService = new ApiSyncService(dataSource);
+      const syncService = getApiSyncService();
       const validation = await syncService.validateApiKey(account.provider, apiKey);
 
       if (!validation.valid) {
@@ -727,7 +713,6 @@ router.post("/:id/sync", async (req: Request, res: Response) => {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
-  const dataSource = await getDataSource();
   try {
     const accountId = Number.parseInt(req.params.id as string, 10);
 
@@ -735,7 +720,7 @@ router.post("/:id/sync", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Invalid account ID" });
     }
 
-    const syncService = new ApiSyncService(dataSource);
+    const syncService = getApiSyncService();
     const result = await syncService.syncAccount(accountId, userId);
 
     return res.json(result);
@@ -751,7 +736,6 @@ router.get("/:id/sync-status", async (req: Request, res: Response) => {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
-  const dataSource = await getDataSource();
   try {
     const accountId = Number.parseInt(req.params.id as string, 10);
 
@@ -759,8 +743,8 @@ router.get("/:id/sync-status", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Invalid account ID" });
     }
 
-    const syncService = new ApiSyncService(dataSource);
-    const accountsRepository = new AccountsRepository(dataSource);
+    const syncService = getApiSyncService();
+    const accountsRepository = getAccountsRepository();
     const account = await accountsRepository.findById(userId, accountId);
 
     if (!account) {

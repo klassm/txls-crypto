@@ -1,9 +1,12 @@
 import "reflect-metadata";
+import { injectable, inject } from "inversify";
 import type { DataSource, SelectQueryBuilder } from "typeorm";
+import { TYPES } from "../../di/types.js";
 import { UserEntity } from "./user.entity.js";
 
+@injectable()
 export class UsersRepository {
-  constructor(private dataSource: DataSource) {}
+  constructor(@inject(TYPES.DataSource) private dataSource: DataSource) {}
 
   private get qb(): SelectQueryBuilder<UserEntity> {
     return this.dataSource

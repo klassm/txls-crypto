@@ -1,17 +1,20 @@
 import cron from "node-cron";
 import type { DataSource } from "typeorm";
+import { injectable, inject } from "inversify";
 import { config } from "./config/env.js";
+import { TYPES } from "./di/types.js";
 import { ApiSyncService, type SyncResult } from "./modules/api-sync/api-sync.service.js";
 import { logger } from "./common/logger.js";
 
+@injectable()
 export class ApiSyncScheduler {
   private cronJob: cron.ScheduledTask | null = null;
-  private syncService: ApiSyncService;
   private isRunning = false;
 
-  constructor(private dataSource: DataSource) {
-    this.syncService = new ApiSyncService(dataSource);
-  }
+  constructor(
+    @inject(TYPES.DataSource) private dataSource: DataSource,
+    @inject(TYPES.ApiSyncService) private syncService: ApiSyncService
+  ) {}
 
   async start(): Promise<void> {
     if (!config.apiSync.enabled) {
