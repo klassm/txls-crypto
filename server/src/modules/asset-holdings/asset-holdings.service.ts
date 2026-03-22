@@ -168,9 +168,9 @@ export class AssetHoldingsService {
 			const typeMatchesBuy = tx.type === TransactionType.buy;
 			const typeMatchesDeposit = tx.type === TransactionType.deposit;
 			
-			if (typeMatchesBuy || typeMatchesDeposit) {
-				eurInvestedDelta = tx.eurValue;
-				totalEurInvestedDelta += eurInvestedDelta;
+		if (typeMatchesBuy || typeMatchesDeposit) {
+			eurInvestedDelta = Number(tx.eurValue);
+			totalEurInvestedDelta += eurInvestedDelta;
 				
 				logger.debug({
 					message: "RebuildHoldings: adding eurInvested",
@@ -185,7 +185,7 @@ export class AssetHoldingsService {
 					runningTotal: totalEurInvestedDelta,
 				});
 			} else if ((tx.type === TransactionType.sell || tx.type === TransactionType.withdrawal) && current.amount > 0) {
-				eurInvestedDelta = -current.eurInvested * (Math.abs(tx.quantity) / current.amount);
+				eurInvestedDelta = -Number(current.eurInvested) * (Math.abs(tx.quantity) / current.amount);
 				totalEurInvestedDelta += eurInvestedDelta;
 				
 				logger.debug({
@@ -210,7 +210,7 @@ export class AssetHoldingsService {
 			}
 
 			const newAmount = current.amount + quantity;
-			const newEurInvested = current.eurInvested + eurInvestedDelta;
+			const newEurInvested = Number(current.eurInvested) + eurInvestedDelta;
 
 			holdingsByAsset.set(tx.asset, {
 				amount: newAmount,
@@ -301,13 +301,13 @@ export class AssetHoldingsService {
 			
 			let eurInvestedDelta = 0;
 			if (tx.type === TransactionType.buy || tx.type === TransactionType.deposit) {
-				eurInvestedDelta = tx.eurValue;
+				eurInvestedDelta = Number(tx.eurValue);
 			} else if ((tx.type === TransactionType.sell || tx.type === TransactionType.withdrawal) && current.amount > 0) {
-				eurInvestedDelta = -current.eurInvested * (Math.abs(tx.quantity) / current.amount);
+				eurInvestedDelta = -Number(current.eurInvested) * (Math.abs(tx.quantity) / current.amount);
 			}
 
 			const newAmount = current.amount + quantity;
-			const newEurInvested = current.eurInvested + eurInvestedDelta;
+			const newEurInvested = Number(current.eurInvested) + eurInvestedDelta;
 
 			holdingsByAsset.set(tx.asset, {
 				amount: newAmount,
