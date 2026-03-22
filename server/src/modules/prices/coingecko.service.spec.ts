@@ -1,42 +1,23 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { CoinGeckoService } from "./coingecko.service.js";
-import { CoinGeckoIdEntity } from "./coingecko-id.entity.js";
 import { DateTime } from "luxon";
 
 describe("CoinGeckoService", () => {
 	let service: CoinGeckoService;
-	let mockDataSource: any;
-	let mockRepository: any;
+	let mockCoinGeckoRepository: any;
+	let mockTransactionsRepository: any;
 
 	beforeEach(() => {
-		mockRepository = {
-			find: vi.fn(),
-			createQueryBuilder: vi.fn().mockReturnThis(),
-			insert: vi.fn().mockReturnThis(),
-			into: vi.fn().mockReturnThis(),
-			values: vi.fn().mockReturnThis(),
-			orUpdate: vi.fn().mockReturnThis(),
-			execute: vi.fn(),
-			create: vi.fn().mockImplementation((data) => data),
+		mockCoinGeckoRepository = {
+			findActiveMappings: vi.fn().mockResolvedValue([]),
+			upsertMapping: vi.fn().mockResolvedValue(undefined),
 		};
 
-		const transactionRepo = {
-			createQueryBuilder: vi.fn().mockReturnValue({
-				select: vi.fn().mockReturnThis(),
-				getRawMany: vi.fn().mockResolvedValue([]),
-			}),
+		mockTransactionsRepository = {
+			getDistinctAssets: vi.fn().mockResolvedValue([]),
 		};
 
-		mockDataSource = {
-			getRepository: vi.fn().mockImplementation((entity) => {
-				if (entity.name === "CoinGeckoIdEntity") {
-					return mockRepository;
-				}
-				return transactionRepo;
-			}),
-		};
-
-		service = new CoinGeckoService(mockDataSource);
+		service = new CoinGeckoService(mockCoinGeckoRepository, mockTransactionsRepository);
 	});
 
 	describe("getCoinGeckoId", () => {
@@ -94,7 +75,7 @@ describe("CoinGeckoService", () => {
 					json: async () => ({ bitcoin: { eur: 50000 } }),
 				});
 
-			mockRepository.execute.mockResolvedValue({});
+			mockCoinGeckoRepository.upsertMapping.mockResolvedValue(undefined);
 
 			const result = await service.fetchPrices(["BTC"]);
 

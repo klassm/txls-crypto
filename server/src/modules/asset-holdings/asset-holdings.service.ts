@@ -1,15 +1,12 @@
-import type { DataSource } from "typeorm";
 import { injectable, inject } from "inversify";
 import type { AssetStat } from "@txls/shared";
 import { TransactionType } from "@txls/shared";
 import { DateTime } from "luxon";
 import { TYPES } from "../../di/types.js";
 import { AssetHoldingsRepository, type AssetHoldingData, type HoldingState } from "./asset-holdings.repository.js";
-import { AssetHoldingEntity } from "./asset-holding.entity.js";
-import { TransactionEntity } from "../transactions/transaction.entity.js";
-import { AccountEntity } from "../accounts/account.entity.js";
 import { PricesRepository } from "../prices/prices.repository.js";
 import { TransactionsRepository } from "../transactions/transactions.repository.js";
+import { AccountsRepository } from "../accounts/accounts.repository.js";
 import { AssetPriceEntity } from "../prices/asset-price.entity.js";
 import { logger } from "../../common/logger.js";
 
@@ -60,22 +57,25 @@ export interface PortfolioOverview {
 
 @injectable()
 export class AssetHoldingsService {
-	private repository: AssetHoldingsRepository;
-	private dataSource: DataSource;
+	private holdingsRepository: AssetHoldingsRepository;
+	private transactionsRepository: TransactionsRepository;
+	private accountsRepository: AccountsRepository;
 	private pricesRepository: PricesRepository;
 
 	constructor(
-		@inject(TYPES.DataSource) dataSource: DataSource,
-		@inject(TYPES.AssetHoldingsRepository) repository: AssetHoldingsRepository,
+		@inject(TYPES.AssetHoldingsRepository) holdingsRepository: AssetHoldingsRepository,
+		@inject(TYPES.TransactionsRepository) transactionsRepository: TransactionsRepository,
+		@inject(TYPES.AccountsRepository) accountsRepository: AccountsRepository,
 		@inject(TYPES.PricesRepository) pricesRepository: PricesRepository
 	) {
-		this.dataSource = dataSource;
-		this.repository = repository;
+		this.holdingsRepository = holdingsRepository;
+		this.transactionsRepository = transactionsRepository;
+		this.accountsRepository = accountsRepository;
 		this.pricesRepository = pricesRepository;
 	}
 
 	async getCurrentHoldings(userId: number, providerAccountId: number): Promise<AssetStat[]> {
-		const holdings = await this.repository.findLatestByAccount(userId, providerAccountId);
+		const holdings = await this.holdingsRepository.findLatestByAccount(userId, providerAccountId);
 		
 		if (holdings.size > 0) {
 			return Array.from(holdings.values()).map(h => ({
@@ -87,11 +87,11 @@ export class AssetHoldingsService {
 			}));
 		}
 
-		return this.calculateHoldings(userId, providerAccountId);
+		return this.transactionsRepository.calculateHoldingsByAccount(userId, providerAccountId);
 	}
 
 	async getAllCurrentHoldings(userId: number): Promise<Map<number, AssetStat[]>> {
-		const holdingsByAccount = await this.repository.findLatestByUser(userId);
+		const holdingsByAccount = await this.holdingsRepository.findLatestByUser(userId);
 		
 		if (holdingsByAccount.size > 0) {
 			const result = new Map<number, AssetStat[]>();
@@ -107,7 +107,7 @@ export class AssetHoldingsService {
 			return result;
 		}
 
-		return this.calculateAllHoldings(userId);
+		return this.transactionsRepository.calculateAllHoldingsByUser(userId);
 	}
 
 	async rebuildHoldings(userId: number, providerAccountId: number): Promise<void> {
@@ -117,17 +117,12 @@ export class AssetHoldingsService {
 			providerAccountId,
 		});
 
-		await this.repository.deleteByAccount(userId, providerAccountId);
+		await this.holdingsRepository.deleteByAccount(userId, providerAccountId);
 
-		const transactions = await this.dataSource
-			.getRepository(TransactionEntity)
-			.createQueryBuilder("tx")
-			.where("tx.userId = :userId AND tx.providerAccountId = :providerAccountId", {
-				userId,
-				providerAccountId,
-			})
-			.orderBy("tx.timestamp", "ASC")
-			.getMany();
+		const transactions = await this.transactionsRepository.findTransactionsByAccountOrdered(
+			userId,
+			providerAccountId
+		);
 
 		if (transactions.length === 0) {
 			return;
@@ -244,7 +239,7 @@ export class AssetHoldingsService {
 			})),
 		});
 
-		await this.repository.saveMany(holdingData);
+		await this.holdingsRepository.saveMany(holdingData);
 	}
 
 	async rebuildHoldingsFromTimestamp(
@@ -259,7 +254,7 @@ export class AssetHoldingsService {
 			fromTimestamp: fromTimestamp.toISO(),
 		});
 
-		const existingHoldings = await this.repository.findLatestByAccount(userId, providerAccountId);
+		const existingHoldings = await this.holdingsRepository.findLatestByAccount(userId, providerAccountId);
 		if (existingHoldings.size === 0) {
 			logger.info({
 				message: "No existing holdings found, rebuilding all holdings",
@@ -269,24 +264,19 @@ export class AssetHoldingsService {
 			return this.rebuildHoldings(userId, providerAccountId);
 		}
 
-		await this.repository.deleteByAccountFromTimestamp(userId, providerAccountId, fromTimestamp);
+		await this.holdingsRepository.deleteByAccountFromTimestamp(userId, providerAccountId, fromTimestamp);
 
-		const transactions = await this.dataSource
-			.getRepository(TransactionEntity)
-			.createQueryBuilder("tx")
-			.where("tx.userId = :userId AND tx.providerAccountId = :providerAccountId", {
-				userId,
-				providerAccountId,
-			})
-			.andWhere("tx.timestamp >= :fromTimestamp", { fromTimestamp: fromTimestamp.toMillis() })
-			.orderBy("tx.timestamp", "ASC")
-			.getMany();
+		const transactions = await this.transactionsRepository.findTransactionsByAccountFromTimestamp(
+			userId,
+			providerAccountId,
+			fromTimestamp
+		);
 
 		if (transactions.length === 0) {
 			return;
 		}
 
-		const holdingsBefore = await this.repository.getHoldingsUpToTimestamp(
+		const holdingsBefore = await this.holdingsRepository.getHoldingsUpToTimestamp(
 			userId,
 			providerAccountId,
 			fromTimestamp.minus({ milliseconds: 1 })
@@ -336,7 +326,7 @@ export class AssetHoldingsService {
 			}
 		}
 
-		await this.repository.saveMany(holdingData);
+		await this.holdingsRepository.saveMany(holdingData);
 	}
 
 	async getPortfolioHistoryWithPrices(
@@ -349,11 +339,9 @@ export class AssetHoldingsService {
 		const endDate = now;
 		const startDate = endDate.minus({ days }).startOf("day");
 
-		const pricesRepo = this.pricesRepository;
-
 		const currentHoldings = providerAccountId
-			? await this.repository.findLatestByAccount(userId, providerAccountId)
-			: await this.repository.findLatestByUser(userId);
+			? await this.holdingsRepository.findLatestByAccount(userId, providerAccountId)
+			: await this.holdingsRepository.findLatestByUser(userId);
 
 		if (currentHoldings.size === 0 || (providerAccountId && currentHoldings.size === 0)) {
 			return [];
@@ -368,8 +356,8 @@ export class AssetHoldingsService {
 		}
 
 		const assetList = Array.from(allAssets);
-		const priceHistories = await this.getPriceHistoriesHourly(pricesRepo, assetList, startDate, endDate);
-		const latestPrices = await pricesRepo.getLatestPrices(assetList);
+		const priceHistories = await this.getPriceHistoriesHourly(assetList, startDate, endDate);
+		const latestPrices = await this.pricesRepository.getLatestPrices(assetList);
 
 		const timestamps: DateTime[] = [];
 		const hourlyCutoff = now.minus({ days: hourlyForDays });
@@ -417,10 +405,10 @@ export class AssetHoldingsService {
 	): Promise<Map<string, { amount: number; eurInvested: number }>> {
 		if (providerAccountId) {
 			return this.holdingsMapToAggregated(
-				await this.repository.findLatestByAccount(userId, providerAccountId)
+				await this.holdingsRepository.findLatestByAccount(userId, providerAccountId)
 			);
 		}
-		return this.aggregateHoldingsByAccount(await this.repository.findLatestByUser(userId));
+		return this.aggregateHoldingsByAccount(await this.holdingsRepository.findLatestByUser(userId));
 	}
 
 	private async getAggregatedHoldingsAtTimestamp(
@@ -430,11 +418,11 @@ export class AssetHoldingsService {
 	): Promise<Map<string, { amount: number; eurInvested: number }>> {
 		if (providerAccountId) {
 			return this.holdingsMapToAggregated(
-				await this.repository.getHoldingsUpToTimestamp(userId, providerAccountId, timestamp)
+				await this.holdingsRepository.getHoldingsUpToTimestamp(userId, providerAccountId, timestamp)
 			);
 		}
 		return this.aggregateHoldingsByAccount(
-			await this.repository.getAllHoldingsUpToTimestamp(userId, timestamp)
+			await this.holdingsRepository.getAllHoldingsUpToTimestamp(userId, timestamp)
 		);
 	}
 
@@ -513,8 +501,7 @@ export class AssetHoldingsService {
 		const now = DateTime.utc();
 		const startDate = now.minus({ days }).startOf("day");
 
-		const pricesRepo = this.pricesRepository;
-		const holdingsByAccount = await this.repository.findLatestByUser(userId);
+		const holdingsByAccount = await this.holdingsRepository.findLatestByUser(userId);
 
 		if (holdingsByAccount.size === 0) {
 			return {
@@ -541,8 +528,8 @@ export class AssetHoldingsService {
 		}
 
 		const assetList = Array.from(allAssets);
-		const priceHistories = await this.getPriceHistoriesHourly(pricesRepo, assetList, startDate, now);
-		const latestPrices = await pricesRepo.getLatestPrices(assetList);
+		const priceHistories = await this.getPriceHistoriesHourly(assetList, startDate, now);
+		const latestPrices = await this.pricesRepository.getLatestPrices(assetList);
 
 		const portfolioHistory = await this.getPortfolioHistoryWithPrices(userId, undefined, { days });
 
@@ -581,10 +568,9 @@ export class AssetHoldingsService {
 		assetsOverview.sort((a, b) => (b.eurValue || 0) - (a.eurValue || 0));
 
 		const accountsOverview: AccountOverview[] = [];
-		const accountRepo = this.dataSource.getRepository(AccountEntity);
 
 		for (const [accountId, holdings] of holdingsByAccount) {
-			const account = await accountRepo.findOne({ where: { id: accountId } });
+			const account = await this.accountsRepository.findById(userId, accountId);
 			if (account) {
 				let accountValue: number | null = 0;
 				for (const [asset, h] of holdings) {
@@ -603,10 +589,9 @@ export class AssetHoldingsService {
 			}
 		}
 
-		const transactionsRepo = new TransactionsRepository(this.dataSource);
 		const currentYear = now.year;
-		const currentYearStaking = await transactionsRepo.getStakingRewardsByYear(userId, currentYear);
-		const totalStaking = await transactionsRepo.getTotalStakingRewards(userId);
+		const currentYearStaking = await this.transactionsRepository.getStakingRewardsByYear(userId, currentYear);
+		const totalStaking = await this.transactionsRepository.getTotalStakingRewards(userId);
 
 		return {
 			portfolioHistory,
@@ -618,79 +603,10 @@ export class AssetHoldingsService {
 	}
 
 	async deleteByAccount(userId: number, providerAccountId: number): Promise<void> {
-		await this.repository.deleteByAccount(userId, providerAccountId);
-	}
-
-	private async calculateHoldings(userId: number, providerAccountId: number): Promise<AssetStat[]> {
-		const qb = this.dataSource
-			.getRepository(TransactionEntity)
-			.createQueryBuilder("transaction");
-
-		const stats = await qb
-			.select([
-				"transaction.asset AS asset",
-				"SUM(CASE WHEN transaction.type IN (:sell, :withdrawal) THEN -ABS(transaction.quantity) ELSE ABS(transaction.quantity) END) AS amount",
-				"SUM(CASE WHEN transaction.type IN (:buy, :deposit) THEN transaction.eurValue ELSE 0 END) AS eurInvested",
-			])
-			.where(
-				"transaction.userId = :userId AND transaction.providerAccountId = :providerAccountId",
-				{ userId, providerAccountId, sell: TransactionType.sell, withdrawal: TransactionType.withdrawal, buy: TransactionType.buy, deposit: TransactionType.deposit }
-			)
-			.groupBy("transaction.asset")
-			.getRawMany();
-
-		return stats
-			.filter((stat) => stat.amount !== null && Number(stat.amount) !== 0)
-			.map((stat) => ({
-				asset: stat.asset,
-				amount: Number(stat.amount) || 0,
-				eurInvested: Number(stat.eurInvested) || 0,
-				buys: 0,
-				sells: 0,
-			}));
-	}
-
-	private async calculateAllHoldings(userId: number): Promise<Map<number, AssetStat[]>> {
-		const qb = this.dataSource
-			.getRepository(TransactionEntity)
-			.createQueryBuilder("transaction");
-
-		const stats = await qb
-			.select([
-				"transaction.providerAccountId AS providerAccountId",
-				"transaction.asset AS asset",
-				"SUM(CASE WHEN transaction.type IN (:sell, :withdrawal) THEN -ABS(transaction.quantity) ELSE ABS(transaction.quantity) END) AS amount",
-				"SUM(CASE WHEN transaction.type IN (:buy, :deposit) THEN transaction.eurValue ELSE 0 END) AS eurInvested",
-			])
-			.where("transaction.userId = :userId", { userId, sell: TransactionType.sell, withdrawal: TransactionType.withdrawal, buy: TransactionType.buy, deposit: TransactionType.deposit })
-			.groupBy("transaction.providerAccountId, transaction.asset")
-			.getRawMany();
-
-		const result = new Map<number, AssetStat[]>();
-
-		for (const stat of stats) {
-			const amount = Number(stat.amount) || 0;
-			if (amount === 0) continue;
-
-			const providerAccountId = Number(stat.providerAccountId);
-			if (!result.has(providerAccountId)) {
-				result.set(providerAccountId, []);
-			}
-
-			result.get(providerAccountId)!.push({
-				asset: stat.asset,
-				amount,
-				eurInvested: Number(stat.eurInvested) || 0,
-				buys: 0,
-				sells: 0,
-			});
-		}
-
-		return result;
+		await this.holdingsRepository.deleteByAccount(userId, providerAccountId);
 	}
 
 	private async getPriceHistoriesHourly(
-		pricesRepo: PricesRepository,
 		assets: string[],
 		startDate: DateTime,
 		endDate: DateTime
@@ -698,7 +614,7 @@ export class AssetHoldingsService {
 		const result = new Map<string, { timestamp: DateTime; priceEur: number }[]>();
 
 		for (const asset of assets) {
-			const prices = await pricesRepo.getPricesInTimeRange(asset, startDate, endDate);
+			const prices = await this.pricesRepository.getPricesInTimeRange(asset, startDate, endDate);
 			result.set(asset, prices.map(p => ({
 				timestamp: p.fetchedAt,
 				priceEur: Number(p.priceEur),

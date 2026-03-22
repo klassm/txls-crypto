@@ -1,10 +1,9 @@
 import pino from "pino";
 import { DateTime } from "luxon";
-import type { DataSource } from "typeorm";
 import { injectable, inject } from "inversify";
 import { TYPES } from "../../di/types.js";
-import { CoinGeckoIdEntity } from "./coingecko-id.entity.js";
-import { TransactionEntity } from "../transactions/transaction.entity.js";
+import { CoinGeckoRepository } from "./coingecko.repository.js";
+import { TransactionsRepository } from "../transactions/transactions.repository.js";
 
 const logger = pino({ level: "info" });
 
@@ -30,7 +29,10 @@ export class CoinGeckoService {
 	private symbolToIdCache: Map<string, string> = new Map();
 	private initialized = false;
 
-	constructor(@inject(TYPES.DataSource) private dataSource: DataSource) {}
+	constructor(
+		@inject(TYPES.CoinGeckoRepository) private coinGeckoRepository: CoinGeckoRepository,
+		@inject(TYPES.TransactionsRepository) private transactionsRepository: TransactionsRepository
+	) {}
 
 	async initialize(): Promise<void> {
 		if (this.initialized) return;
@@ -41,8 +43,7 @@ export class CoinGeckoService {
 	}
 
 	private async loadSymbolMappingFromDb(): Promise<void> {
-		const repo = this.dataSource.getRepository(CoinGeckoIdEntity);
-		const mappings = await repo.find({ where: { isActive: true } });
+		const mappings = await this.coinGeckoRepository.findActiveMappings();
 
 		for (const mapping of mappings) {
 			this.symbolToIdCache.set(mapping.symbol.toUpperCase(), mapping.coinGeckoId);
@@ -52,13 +53,7 @@ export class CoinGeckoService {
 	}
 
 	private async cacheSymbolsFromTransactions(): Promise<void> {
-		const repo = this.dataSource.getRepository(TransactionEntity);
-		const results = await repo
-			.createQueryBuilder("transaction")
-			.select("DISTINCT transaction.asset", "asset")
-			.getRawMany();
-
-		const symbols = results.map((r) => r.asset as string).filter((s) => s);
+		const symbols = await this.transactionsRepository.getDistinctAssets();
 		const uncachedSymbols = symbols.filter((s) => !this.symbolToIdCache.has(s.toUpperCase()));
 
 		if (uncachedSymbols.length === 0) {
@@ -99,7 +94,11 @@ export class CoinGeckoService {
 
 			this.symbolToIdCache.set(symbol.toUpperCase(), matchingCoin.id);
 
-			await this.persistSymbolMapping(symbol.toUpperCase(), matchingCoin);
+			await this.coinGeckoRepository.upsertMapping(
+				symbol.toUpperCase(),
+				matchingCoin.id,
+				matchingCoin.name
+			);
 
 			logger.info({ symbol, coinGeckoId: matchingCoin.id, name: matchingCoin.name }, "[CoinGecko] Cached symbol mapping");
 		} catch (error) {
@@ -132,31 +131,6 @@ export class CoinGeckoService {
 		if (symbolMatch) return symbolMatch;
 
 		return null;
-	}
-
-	private async persistSymbolMapping(symbol: string, coin: CoinGeckoCoin): Promise<void> {
-		const repo = this.dataSource.getRepository(CoinGeckoIdEntity);
-
-		try {
-			const entity = repo.create({
-				symbol,
-				coinGeckoId: coin.id,
-				name: coin.name,
-				isActive: true,
-				createdAt: DateTime.utc(),
-				updatedAt: DateTime.utc(),
-			});
-
-			await repo
-				.createQueryBuilder()
-				.insert()
-				.into(CoinGeckoIdEntity)
-				.values(entity)
-				.orUpdate(["coingecko_id", "name", "updated_at"], ["symbol"])
-				.execute();
-		} catch (error) {
-			logger.warn({ error, symbol }, "[CoinGecko] Error persisting symbol mapping");
-		}
 	}
 
 	async fetchPrices(symbols: string[]): Promise<CoinPrice[]> {

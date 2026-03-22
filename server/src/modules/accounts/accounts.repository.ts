@@ -1,6 +1,7 @@
 import "reflect-metadata";
 import { injectable, inject } from "inversify";
 import type { DataSource, SelectQueryBuilder } from "typeorm";
+import { DateTime } from "luxon";
 import { TYPES } from "../../di/types.js";
 import { AccountEntity } from "./account.entity.js";
 
@@ -50,5 +51,31 @@ export class AccountsRepository {
       .andWhere("account.userId = :userId", { userId })
       .getCount();
     return count > 0;
+  }
+
+  async findEnabledApiSyncAccounts(): Promise<AccountEntity[]> {
+    return this.qb
+      .where("account.apiEnabled = :enabled", { enabled: true })
+      .andWhere("account.apiKeyEncrypted IS NOT NULL")
+      .getMany();
+  }
+
+  async updateSyncSuccess(account: AccountEntity): Promise<void> {
+    account.lastSyncAt = DateTime.now();
+    account.syncError = null;
+    await this.dataSource.getRepository(AccountEntity).save(account);
+  }
+
+  async updateSyncError(accountId: number, error: string): Promise<void> {
+    await this.dataSource
+      .getRepository(AccountEntity)
+      .createQueryBuilder()
+      .update()
+      .set({
+        syncError: error,
+        updatedAt: DateTime.now(),
+      })
+      .where("id = :accountId", { accountId })
+      .execute();
   }
 }

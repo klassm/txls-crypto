@@ -8,6 +8,7 @@ import { TransactionsService } from "../../src/modules/transactions/transactions
 import { AssetHoldingsService } from "../../src/modules/asset-holdings/asset-holdings.service.js";
 import { AssetHoldingsRepository } from "../../src/modules/asset-holdings/asset-holdings.repository.js";
 import { PricesRepository } from "../../src/modules/prices/prices.repository.js";
+import { AccountsRepository } from "../../src/modules/accounts/accounts.repository.js";
 import { AccountEntity } from "../../src/modules/accounts/account.entity.js";
 import { UserEntity } from "../../src/modules/users/user.entity.js";
 import { TransactionEntity } from "../../src/modules/transactions/transaction.entity.js";
@@ -109,6 +110,15 @@ describe.each(testConfigs)("$displayName eurInvested Calculation", ({ displayNam
 		providerAccountId = account.id;
 	};
 
+	const createAssetHoldingsService = () => {
+		return new AssetHoldingsService(
+			new AssetHoldingsRepository(dataSource),
+			new TransactionsRepository(dataSource),
+			new AccountsRepository(dataSource),
+			new PricesRepository(dataSource)
+		);
+	};
+
 	describe("Basic eurInvested calculation", () => {
 		beforeEach(createUserAndAccount);
 
@@ -142,11 +152,10 @@ describe.each(testConfigs)("$displayName eurInvested Calculation", ({ displayNam
 
 			await repository.saveMany([tx1, tx2]);
 
-			const holdingsRepo = new AssetHoldingsRepository(dataSource);
-			const pricesRepo = new PricesRepository(dataSource);
-			const holdingsService = new AssetHoldingsService(dataSource, holdingsRepo, pricesRepo);
+			const holdingsService = createAssetHoldingsService();
 			await holdingsService.rebuildHoldings(userId, providerAccountId);
 
+			const holdingsRepo = new AssetHoldingsRepository(dataSource);
 			const holdings = await holdingsRepo.findLatestByAccount(userId, providerAccountId);
 
 			expect(holdings.size).toBe(2);
@@ -186,11 +195,10 @@ describe.each(testConfigs)("$displayName eurInvested Calculation", ({ displayNam
 
 			await repository.saveMany([tx1, tx2]);
 
-			const holdingsRepo = new AssetHoldingsRepository(dataSource);
-			const pricesRepo = new PricesRepository(dataSource);
-			const holdingsService = new AssetHoldingsService(dataSource, holdingsRepo, pricesRepo);
+			const holdingsService = createAssetHoldingsService();
 			await holdingsService.rebuildHoldings(userId, providerAccountId);
 
+			const holdingsRepo = new AssetHoldingsRepository(dataSource);
 			const holdings = await holdingsRepo.findLatestByAccount(userId, providerAccountId);
 
 			expect(holdings.get("BTC")?.eurInvested).toBe(50000);
@@ -229,11 +237,10 @@ describe.each(testConfigs)("$displayName eurInvested Calculation", ({ displayNam
 
 			await repository.saveMany([tx1, tx2]);
 
-			const holdingsRepo = new AssetHoldingsRepository(dataSource);
-			const pricesRepo = new PricesRepository(dataSource);
-			const holdingsService = new AssetHoldingsService(dataSource, holdingsRepo, pricesRepo);
+			const holdingsService = createAssetHoldingsService();
 			await holdingsService.rebuildHoldings(userId, providerAccountId);
 
+			const holdingsRepo = new AssetHoldingsRepository(dataSource);
 			const holdings = await holdingsRepo.findLatestByAccount(userId, providerAccountId);
 
 			expect(holdings.get("SOL")?.amount).toBe(10);
@@ -269,11 +276,10 @@ describe.each(testConfigs)("$displayName eurInvested Calculation", ({ displayNam
 
 			await repository.saveMany([tx1, tx2]);
 
-			const holdingsRepo = new AssetHoldingsRepository(dataSource);
-			const pricesRepo = new PricesRepository(dataSource);
-			const holdingsService = new AssetHoldingsService(dataSource, holdingsRepo, pricesRepo);
+			const holdingsService = createAssetHoldingsService();
 			await holdingsService.rebuildHoldings(userId, providerAccountId);
 
+			const holdingsRepo = new AssetHoldingsRepository(dataSource);
 			const holdings = await holdingsRepo.findLatestByAccount(userId, providerAccountId);
 
 			expect(holdings.get("BTC")?.amount).toBe(1.0);
@@ -299,11 +305,10 @@ describe.each(testConfigs)("$displayName eurInvested Calculation", ({ displayNam
 
 			expect(importResult.imported).toBeGreaterThan(0);
 
-			const holdingsRepo = new AssetHoldingsRepository(dataSource);
-			const pricesRepo = new PricesRepository(dataSource);
-			const holdingsService = new AssetHoldingsService(dataSource, holdingsRepo, pricesRepo);
+			const holdingsService = createAssetHoldingsService();
 			await holdingsService.rebuildHoldings(userId, providerAccountId);
 
+			const holdingsRepo = new AssetHoldingsRepository(dataSource);
 			const holdings = await holdingsRepo.findLatestByAccount(userId, providerAccountId);
 
 			const savedTx = await repository.findByProviderAccountId(userId, providerAccountId);
@@ -405,11 +410,10 @@ describe.each(testConfigs)("$displayName eurInvested Calculation", ({ displayNam
 			console.log(`Total deposit EUR value: ${totalDepositEurValue}`);
 			console.log(`Total reward EUR value: ${totalRewardEurValue}`);
 
-			const holdingsRepo = new AssetHoldingsRepository(dataSource);
-			const pricesRepo = new PricesRepository(dataSource);
-			const holdingsService = new AssetHoldingsService(dataSource, holdingsRepo, pricesRepo);
+			const holdingsService = createAssetHoldingsService();
 			await holdingsService.rebuildHoldings(userId, providerAccountId);
 
+			const holdingsRepo = new AssetHoldingsRepository(dataSource);
 			const holdings = await holdingsRepo.findLatestByAccount(userId, providerAccountId);
 
 			const totalEurInvested = Array.from(holdings.values()).reduce((sum, h) => sum + h.eurInvested, 0);

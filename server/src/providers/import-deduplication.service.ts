@@ -1,9 +1,9 @@
 import "reflect-metadata";
 import { injectable, inject } from "inversify";
-import { Between, DataSource } from "typeorm";
 import type { Transaction } from "@txls/shared";
 import { TYPES } from "../di/types.js";
 import { TransactionEntity } from "../modules/transactions/transaction.entity.js";
+import { TransactionsRepository } from "../modules/transactions/transactions.repository.js";
 import { logger } from "../common/logger.js";
 
 interface ImportDeduplicationResult {
@@ -25,7 +25,7 @@ export class ImportDeduplicationService {
   private userId?: number;
 
   constructor(
-    @inject(TYPES.DataSource) private dataSource: DataSource,
+    @inject(TYPES.TransactionsRepository) private transactionsRepo: TransactionsRepository,
   ) {}
 
   setUserId(userId: number | undefined): void {
@@ -142,25 +142,12 @@ export class ImportDeduplicationService {
     accountId: number,
     { minTimestamp, maxTimestamp }: ImportRange,
   ): Promise<TransactionEntity[]> {
-    const repository = this.dataSource.getRepository(TransactionEntity);
-
-    const whereConditions: any = {
-      providerAccountId: accountId,
-    };
-
-    if (this.userId !== undefined) {
-      whereConditions.userId = this.userId;
-    }
-
-    const transactions = await repository
-      .createQueryBuilder("transaction")
-      .where("transaction.providerAccountId = :accountId AND transaction.userId = COALESCE(:userId, transaction.userId)", { accountId, userId: this.userId })
-      .andWhere("transaction.timestamp BETWEEN :minTimestamp AND :maxTimestamp", {
-        minTimestamp,
-        maxTimestamp,
-      })
-      .orderBy("transaction.timestamp", "ASC")
-      .getMany();
+    const transactions = await this.transactionsRepo.findTransactionsInTimeRange(
+      accountId,
+      minTimestamp,
+      maxTimestamp,
+      this.userId
+    );
 
     logger.debug({
       accountId,
@@ -179,22 +166,17 @@ export class ImportDeduplicationService {
     accountId: number,
     { minTimestamp, maxTimestamp }: ImportRange,
   ): Promise<void> {
-    const qb = this.dataSource
-      .createQueryBuilder()
-      .delete()
-      .from(TransactionEntity)
-      .where("providerAccountId = :accountId AND userId = COALESCE(:userId, userId)", { accountId, userId: this.userId })
-      .andWhere("timestamp BETWEEN :minTimestamp AND :maxTimestamp", {
-        minTimestamp,
-        maxTimestamp,
-      });
-
-    const result = await qb.execute();
+    const affected = await this.transactionsRepo.deleteTransactionsInTimeRange(
+      accountId,
+      minTimestamp,
+      maxTimestamp,
+      this.userId
+    );
 
     logger.debug({
       accountId,
       message: "Deleted existing transactions in range",
-      affected: result.affected || 0,
+      affected,
     });
   }
 }

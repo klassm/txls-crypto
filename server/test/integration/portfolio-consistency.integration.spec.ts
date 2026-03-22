@@ -433,7 +433,16 @@ describe("Portfolio Consistency Integration", () => {
 
 		it("should reduce eurInvested proportionally when selling", async () => {
 			const { AssetHoldingsService } = await import("../../src/modules/asset-holdings/asset-holdings.service.js");
-			const service = new AssetHoldingsService(dataSource);
+			const { AssetHoldingsRepository } = await import("../../src/modules/asset-holdings/asset-holdings.repository.js");
+			const { TransactionsRepository } = await import("../../src/modules/transactions/transactions.repository.js");
+			const { AccountsRepository } = await import("../../src/modules/accounts/accounts.repository.js");
+			const { PricesRepository } = await import("../../src/modules/prices/prices.repository.js");
+			const service = new AssetHoldingsService(
+				new AssetHoldingsRepository(dataSource),
+				new TransactionsRepository(dataSource),
+				new AccountsRepository(dataSource),
+				new PricesRepository(dataSource)
+			);
 			await service.rebuildHoldings(userId, accountId1);
 
 			const response = await request(app)
@@ -451,7 +460,16 @@ describe("Portfolio Consistency Integration", () => {
 
 		it("should calculate correct overall change after sell", async () => {
 			const { AssetHoldingsService } = await import("../../src/modules/asset-holdings/asset-holdings.service.js");
-			const service = new AssetHoldingsService(dataSource);
+			const { AssetHoldingsRepository } = await import("../../src/modules/asset-holdings/asset-holdings.repository.js");
+			const { TransactionsRepository } = await import("../../src/modules/transactions/transactions.repository.js");
+			const { AccountsRepository } = await import("../../src/modules/accounts/accounts.repository.js");
+			const { PricesRepository } = await import("../../src/modules/prices/prices.repository.js");
+			const service = new AssetHoldingsService(
+				new AssetHoldingsRepository(dataSource),
+				new TransactionsRepository(dataSource),
+				new AccountsRepository(dataSource),
+				new PricesRepository(dataSource)
+			);
 			await service.rebuildHoldings(userId, accountId1);
 
 			const response = await request(app)
@@ -511,7 +529,16 @@ describe("Portfolio Consistency Integration", () => {
 
 		it("should reduce eurInvested proportionally when withdrawing", async () => {
 			const { AssetHoldingsService } = await import("../../src/modules/asset-holdings/asset-holdings.service.js");
-			const service = new AssetHoldingsService(dataSource);
+			const { AssetHoldingsRepository } = await import("../../src/modules/asset-holdings/asset-holdings.repository.js");
+			const { TransactionsRepository } = await import("../../src/modules/transactions/transactions.repository.js");
+			const { AccountsRepository } = await import("../../src/modules/accounts/accounts.repository.js");
+			const { PricesRepository } = await import("../../src/modules/prices/prices.repository.js");
+			const service = new AssetHoldingsService(
+				new AssetHoldingsRepository(dataSource),
+				new TransactionsRepository(dataSource),
+				new AccountsRepository(dataSource),
+				new PricesRepository(dataSource)
+			);
 			await service.rebuildHoldings(userId, accountId1);
 
 			const response = await request(app)

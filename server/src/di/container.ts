@@ -9,6 +9,7 @@ import { UsersRepository } from "../modules/users/users.repository.js";
 import { AssetHoldingsRepository } from "../modules/asset-holdings/asset-holdings.repository.js";
 import { PricesRepository } from "../modules/prices/prices.repository.js";
 import { ProvidersRepository } from "../modules/providers/providers.repository.js";
+import { CoinGeckoRepository } from "../modules/prices/coingecko.repository.js";
 
 import { AccountsService } from "../modules/accounts/accounts.service.js";
 import { TransactionsService } from "../modules/transactions/transactions.service.js";
@@ -42,6 +43,7 @@ export function createContainer(dataSource: DataSource): Container {
   container.bind<AssetHoldingsRepository>(TYPES.AssetHoldingsRepository).to(AssetHoldingsRepository).inSingletonScope();
   container.bind<PricesRepository>(TYPES.PricesRepository).to(PricesRepository).inSingletonScope();
   container.bind<ProvidersRepository>(TYPES.ProvidersRepository).to(ProvidersRepository).inSingletonScope();
+  container.bind<CoinGeckoRepository>(TYPES.CoinGeckoRepository).to(CoinGeckoRepository).inSingletonScope();
 
   container.bind<AccountsService>(TYPES.AccountsService).to(AccountsService).inSingletonScope();
   container.bind<TransactionsService>(TYPES.TransactionsService).to(TransactionsService).inSingletonScope();

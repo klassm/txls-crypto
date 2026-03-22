@@ -12,6 +12,8 @@ import { DateTime } from "luxon";
 import { ProviderType, TransactionType } from "@txls/shared";
 import * as database from "../../src/database.js";
 import { createTestDataSource, destroyTestDataSource } from "../test-helpers.js";
+import { createContainer, resetContainer, getContainer } from "../../src/di/container.js";
+import { TYPES } from "../../src/di/types.js";
 import { TransferMatchingService } from "../../src/modules/transfers/transfer-matching.service.js";
 import { TaxCalculationService } from "../../src/modules/tax/tax-calculator.service.js";
 
@@ -23,6 +25,7 @@ describe("Transfer Flow Integration Tests", () => {
   beforeEach(async () => {
     await createTestDataSource();
     const dataSource = await getDataSource();
+    createContainer(dataSource);
 
     vi.spyOn(database, "getDataSource").mockResolvedValue(dataSource);
 
@@ -35,6 +38,7 @@ describe("Transfer Flow Integration Tests", () => {
 
   afterEach(async () => {
     vi.restoreAllMocks();
+    resetContainer();
     await destroyTestDataSource();
   });
 
@@ -111,7 +115,7 @@ describe("Transfer Flow Integration Tests", () => {
       const transactions = await dataSource.getRepository(TransactionEntity)
         .find({ where: { userId } });
 
-      const matchingService = new TransferMatchingService(dataSource);
+      const matchingService = getContainer().get<TransferMatchingService>(TYPES.TransferMatchingService);
       const matches = matchingService.findMatches(transactions as any);
 
       expect(matches).toHaveLength(1);
@@ -137,7 +141,7 @@ describe("Transfer Flow Integration Tests", () => {
       const transactions = await dataSource.getRepository(TransactionEntity)
         .find({ where: { userId } });
 
-      const matchingService = new TransferMatchingService(dataSource);
+      const matchingService = getContainer().get<TransferMatchingService>(TYPES.TransferMatchingService);
       const matches = matchingService.findMatches(transactions as any);
 
       expect(matches).toHaveLength(0);
@@ -392,7 +396,7 @@ describe("Transfer Flow Integration Tests", () => {
       );
 
       const dataSource = await getDataSource();
-      const matchingService = new TransferMatchingService(dataSource);
+      const matchingService = getContainer().get<TransferMatchingService>(TYPES.TransferMatchingService);
       const result = await matchingService.matchTransfersForUser(userId);
       
       expect(result.matched).toBe(1);
@@ -441,7 +445,7 @@ describe("Transfer Flow Integration Tests", () => {
       );
 
       const dataSource = await getDataSource();
-      const matchingService = new TransferMatchingService(dataSource);
+      const matchingService = getContainer().get<TransferMatchingService>(TYPES.TransferMatchingService);
       await matchingService.matchTransfersForUser(userId);
 
       const transactions = await dataSource.getRepository(TransactionEntity)
@@ -492,7 +496,7 @@ describe("Transfer Flow Integration Tests", () => {
       );
 
       const dataSource = await getDataSource();
-      const matchingService = new TransferMatchingService(dataSource);
+      const matchingService = getContainer().get<TransferMatchingService>(TYPES.TransferMatchingService);
       await matchingService.matchTransfersForUser(userId);
 
       const transactions = await dataSource.getRepository(TransactionEntity)

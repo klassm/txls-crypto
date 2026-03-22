@@ -1,12 +1,11 @@
 import pino from "pino";
 import cron from "node-cron";
-import type { DataSource } from "typeorm";
 import { injectable, inject } from "inversify";
 import { DateTime } from "luxon";
 import { TYPES } from "../../di/types.js";
 import { CoinGeckoService } from "./coingecko.service.js";
 import { PricesRepository } from "./prices.repository.js";
-import { TransactionEntity } from "../transactions/transaction.entity.js";
+import { TransactionsRepository } from "../transactions/transactions.repository.js";
 
 const logger = pino({ level: "info" });
 
@@ -19,14 +18,16 @@ export class PriceFetcherService {
 	private isFetching = false;
 	private coinGeckoService: CoinGeckoService;
 	private pricesRepository: PricesRepository;
+	private transactionsRepository: TransactionsRepository;
 
 	constructor(
-		@inject(TYPES.DataSource) private dataSource: DataSource,
 		@inject(TYPES.CoinGeckoService) coinGeckoService: CoinGeckoService,
-		@inject(TYPES.PricesRepository) pricesRepository: PricesRepository
+		@inject(TYPES.PricesRepository) pricesRepository: PricesRepository,
+		@inject(TYPES.TransactionsRepository) transactionsRepository: TransactionsRepository
 	) {
 		this.coinGeckoService = coinGeckoService;
 		this.pricesRepository = pricesRepository;
+		this.transactionsRepository = transactionsRepository;
 	}
 
 	async start(): Promise<void> {
@@ -92,13 +93,7 @@ export class PriceFetcherService {
 	}
 
 	private async getActiveAssets(): Promise<string[]> {
-		const repo = this.dataSource.getRepository(TransactionEntity);
-		const results = await repo
-			.createQueryBuilder("transaction")
-			.select("DISTINCT transaction.asset", "asset")
-			.getRawMany();
-
-		return results.map(r => r.asset as string);
+		return this.transactionsRepository.getDistinctAssets();
 	}
 
 	private async cleanupOldPrices(): Promise<void> {

@@ -1,4 +1,3 @@
-import type { DataSource } from "typeorm";
 import { DateTime } from "luxon";
 import { injectable, inject } from "inversify";
 import type { Transaction } from "@txls/shared";
@@ -29,7 +28,6 @@ export class ApiSyncService {
   private syncingAccounts = new Set<number>();
 
   constructor(
-    @inject(TYPES.DataSource) private dataSource: DataSource,
     @inject(TYPES.AccountsRepository) private accountsRepo: AccountsRepository,
     @inject(TYPES.TransactionsRepository) private transactionsRepo: TransactionsRepository,
     @inject(TYPES.TransactionsService) private transactionsService: TransactionsService,
@@ -174,12 +172,7 @@ export class ApiSyncService {
   }
 
   private async getEnabledAccounts(): Promise<AccountEntity[]> {
-    const repo = this.dataSource.getRepository(AccountEntity);
-    return repo
-      .createQueryBuilder("account")
-      .where("account.apiEnabled = :enabled", { enabled: true })
-      .andWhere("account.apiKeyEncrypted IS NOT NULL")
-      .getMany();
+    return this.accountsRepo.findEnabledApiSyncAccounts();
   }
 
   private getEarliestTimestamp(transactions: Transaction[]): DateTime {
@@ -189,15 +182,8 @@ export class ApiSyncService {
   }
 
   private async deleteAllTransactions(userId: number, accountId: number): Promise<void> {
-    const repo = this.dataSource.getRepository(TransactionEntity);
-
-    const result = await repo
-      .createQueryBuilder()
-      .delete()
-      .where("user_id = :userId AND provider_account_id = :accountId", { userId, accountId })
-      .execute();
-
-    logger.info({ accountId, deleted: result.affected }, "[ApiSyncService] Deleted all existing transactions");
+    await this.transactionsRepo.deleteAllByAccount(userId, accountId);
+    logger.info({ accountId }, "[ApiSyncService] Deleted all existing transactions");
   }
 
   private async getSavedTransactions(
@@ -210,17 +196,10 @@ export class ApiSyncService {
   }
 
   private async updateSyncSuccess(account: AccountEntity): Promise<void> {
-    const repo = this.dataSource.getRepository(AccountEntity);
-    account.lastSyncAt = DateTime.now();
-    account.syncError = null;
-    await repo.save(account);
+    await this.accountsRepo.updateSyncSuccess(account);
   }
 
   private async updateSyncError(accountId: number, error: string): Promise<void> {
-    const repo = this.dataSource.getRepository(AccountEntity);
-    await repo.update(accountId, {
-      syncError: error,
-      updatedAt: DateTime.now(),
-    });
+    await this.accountsRepo.updateSyncError(accountId, error);
   }
 }

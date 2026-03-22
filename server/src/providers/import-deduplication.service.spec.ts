@@ -2,17 +2,24 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { getDataSource, resetDataSource } from "../database.js";
 import { ImportDeduplicationService } from "./import-deduplication.service.js";
 import { TransactionEntity } from "../modules/transactions/transaction.entity.js";
+import { TransactionsRepository } from "../modules/transactions/transactions.repository.js";
 import { TransactionType, type Transaction } from "@txls/shared";
 import { DateTime } from "luxon";
+import { createContainer, resetContainer, getContainer } from "../di/container.js";
+import { TYPES } from "../di/types.js";
 
 describe("ImportDeduplicationService", () => {
   let deduplicationService: ImportDeduplicationService;
+  let transactionsRepo: TransactionsRepository;
 
   beforeEach(async () => {
     process.env.DB_CONNECTION_STRING = ":memory:";
     resetDataSource();
+    resetContainer();
     const dataSource = await getDataSource();
-    deduplicationService = new ImportDeduplicationService(dataSource);
+    createContainer(dataSource);
+    transactionsRepo = getContainer().get<TransactionsRepository>(TYPES.TransactionsRepository);
+    deduplicationService = getContainer().get<ImportDeduplicationService>(TYPES.ImportDeduplicationService);
   });
 
   afterEach(async () => {
@@ -20,6 +27,7 @@ describe("ImportDeduplicationService", () => {
     if (ds?.isInitialized) {
       await ds.destroy();
     }
+    resetContainer();
     resetDataSource();
     delete process.env.DB_CONNECTION_STRING;
   });

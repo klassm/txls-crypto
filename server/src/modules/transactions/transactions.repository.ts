@@ -417,4 +417,178 @@ async getStatsByProviderAccountIdAndYear(
 
     return result;
   }
+
+  async findTransactionsByAccountOrdered(
+    userId: number,
+    providerAccountId: number
+  ): Promise<TransactionEntity[]> {
+    return this.qb
+      .where("transaction.userId = :userId AND transaction.providerAccountId = :providerAccountId", {
+        userId,
+        providerAccountId,
+      })
+      .orderBy("transaction.timestamp", "ASC")
+      .getMany();
+  }
+
+  async findTransactionsByAccountFromTimestamp(
+    userId: number,
+    providerAccountId: number,
+    fromTimestamp: DateTime
+  ): Promise<TransactionEntity[]> {
+    return this.qb
+      .where("transaction.userId = :userId AND transaction.providerAccountId = :providerAccountId", {
+        userId,
+        providerAccountId,
+      })
+      .andWhere("transaction.timestamp >= :fromTimestamp", {
+        fromTimestamp: fromTimestamp.toMillis(),
+      })
+      .orderBy("transaction.timestamp", "ASC")
+      .getMany();
+  }
+
+  async calculateHoldingsByAccount(
+    userId: number,
+    providerAccountId: number
+  ): Promise<AssetStat[]> {
+    const stats = await this.qb
+      .select([
+        "transaction.asset AS asset",
+        "SUM(CASE WHEN transaction.type IN (:sell, :withdrawal) THEN -ABS(transaction.quantity) ELSE ABS(transaction.quantity) END) AS amount",
+        "SUM(CASE WHEN transaction.type IN (:buy, :deposit) THEN transaction.eurValue ELSE 0 END) AS eurInvested",
+      ])
+      .where(
+        "transaction.userId = :userId AND transaction.providerAccountId = :providerAccountId",
+        {
+          userId,
+          providerAccountId,
+          sell: TransactionType.sell,
+          withdrawal: TransactionType.withdrawal,
+          buy: TransactionType.buy,
+          deposit: TransactionType.deposit,
+        }
+      )
+      .groupBy("transaction.asset")
+      .getRawMany();
+
+    return stats
+      .filter((stat) => stat.amount !== null && Number(stat.amount) !== 0)
+      .map((stat) => ({
+        asset: stat.asset,
+        amount: Number(stat.amount) || 0,
+        eurInvested: Number(stat.eurInvested) || 0,
+        buys: 0,
+        sells: 0,
+      }));
+  }
+
+  async calculateAllHoldingsByUser(
+    userId: number
+  ): Promise<Map<number, AssetStat[]>> {
+    const stats = await this.qb
+      .select([
+        "transaction.providerAccountId AS providerAccountId",
+        "transaction.asset AS asset",
+        "SUM(CASE WHEN transaction.type IN (:sell, :withdrawal) THEN -ABS(transaction.quantity) ELSE ABS(transaction.quantity) END) AS amount",
+        "SUM(CASE WHEN transaction.type IN (:buy, :deposit) THEN transaction.eurValue ELSE 0 END) AS eurInvested",
+      ])
+      .where("transaction.userId = :userId", {
+        userId,
+        sell: TransactionType.sell,
+        withdrawal: TransactionType.withdrawal,
+        buy: TransactionType.buy,
+        deposit: TransactionType.deposit,
+      })
+      .groupBy("transaction.providerAccountId, transaction.asset")
+      .getRawMany();
+
+    const result = new Map<number, AssetStat[]>();
+
+    for (const stat of stats) {
+      const amount = Number(stat.amount) || 0;
+      if (amount === 0) continue;
+
+      const providerAccountId = Number(stat.providerAccountId);
+      if (!result.has(providerAccountId)) {
+        result.set(providerAccountId, []);
+      }
+
+      result.get(providerAccountId)!.push({
+        asset: stat.asset,
+        amount,
+        eurInvested: Number(stat.eurInvested) || 0,
+        buys: 0,
+        sells: 0,
+      });
+    }
+
+    return result;
+  }
+
+  async getDistinctAssets(userId?: number): Promise<string[]> {
+    let query = this.qb
+      .select("DISTINCT transaction.asset", "asset");
+
+    if (userId) {
+      query = query.where("transaction.userId = :userId", { userId });
+    }
+
+    const results = await query.getRawMany();
+    return results.map((r) => r.asset as string).filter((s) => s);
+  }
+
+  async findTransactionsInTimeRange(
+    accountId: number,
+    minTimestamp: number,
+    maxTimestamp: number,
+    userId?: number
+  ): Promise<TransactionEntity[]> {
+    let query = this.qb
+      .where("transaction.providerAccountId = :accountId", { accountId })
+      .andWhere("transaction.timestamp BETWEEN :minTimestamp AND :maxTimestamp", {
+        minTimestamp,
+        maxTimestamp,
+      });
+
+    if (userId !== undefined) {
+      query = query.andWhere("transaction.userId = :userId", { userId });
+    }
+
+    return query.orderBy("transaction.timestamp", "ASC").getMany();
+  }
+
+  async deleteTransactionsInTimeRange(
+    accountId: number,
+    minTimestamp: number,
+    maxTimestamp: number,
+    userId?: number
+  ): Promise<number> {
+    const qb = this.dataSource
+      .getRepository(TransactionEntity)
+      .createQueryBuilder()
+      .delete()
+      .where("provider_account_id = :accountId", { accountId })
+      .andWhere("timestamp BETWEEN :minTimestamp AND :maxTimestamp", {
+        minTimestamp,
+        maxTimestamp,
+      });
+
+    if (userId !== undefined) {
+      qb.andWhere("user_id = :userId", { userId });
+    }
+
+    const result = await qb.execute();
+    return result.affected || 0;
+  }
+
+  async deleteAllByAccount(userId: number, accountId: number): Promise<number> {
+    const result = await this.dataSource
+      .getRepository(TransactionEntity)
+      .createQueryBuilder()
+      .delete()
+      .where("user_id = :userId AND provider_account_id = :accountId", { userId, accountId })
+      .execute();
+    return result.affected || 0;
+  }
 }

@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { DateTime } from "luxon";
 import { ApiSyncService } from "./api-sync.service.js";
-import type { DataSource } from "typeorm";
 import type { AccountEntity } from "../accounts/account.entity.js";
 import { ProviderType } from "@txls/shared";
 import { TransactionType } from "@txls/shared";
@@ -25,7 +24,6 @@ vi.mock("./encryption.service.js", () => ({
 
 describe("ApiSyncService", () => {
   let service: ApiSyncService;
-  let mockDataSource: DataSource;
   let mockAccountsRepo: any;
   let mockTransactionsRepo: any;
   let mockTransactionsService: any;
@@ -39,12 +37,16 @@ describe("ApiSyncService", () => {
     mockAccountsRepo = {
       findById: vi.fn(),
       save: vi.fn(),
+      findEnabledApiSyncAccounts: vi.fn().mockResolvedValue([]),
+      updateSyncSuccess: vi.fn().mockResolvedValue(undefined),
+      updateSyncError: vi.fn().mockResolvedValue(undefined),
     };
 
     mockTransactionsRepo = {
       findByProviderAccountId: vi.fn().mockResolvedValue([]),
       save: vi.fn(),
       findManyByExternalIds: vi.fn().mockResolvedValue([]),
+      deleteAllByAccount: vi.fn().mockResolvedValue(0),
     };
 
     mockTransactionsService = {
@@ -63,14 +65,7 @@ describe("ApiSyncService", () => {
       matchTransfersForUser: vi.fn(),
     };
 
-    mockDataSource = {
-      getRepository: vi.fn().mockReturnValue({
-        update: vi.fn().mockResolvedValue(undefined),
-      }),
-    } as any;
-
     service = new ApiSyncService(
-      mockDataSource,
       mockAccountsRepo as any,
       mockTransactionsRepo as any,
       mockTransactionsService as any,

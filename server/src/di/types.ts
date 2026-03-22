@@ -7,6 +7,7 @@ export const TYPES = {
   AssetHoldingsRepository: Symbol.for("AssetHoldingsRepository"),
   PricesRepository: Symbol.for("PricesRepository"),
   ProvidersRepository: Symbol.for("ProvidersRepository"),
+  CoinGeckoRepository: Symbol.for("CoinGeckoRepository"),
 
   AccountsService: Symbol.for("AccountsService"),
   TransactionsService: Symbol.for("TransactionsService"),
