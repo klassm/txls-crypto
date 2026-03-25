@@ -1,0 +1,285 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v5
+    
+    - uses: pnpm/action-setup@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v5
+      with:
+        node-version: '24'
+        cache: 'pnpm'
+    
+    - name: Install dependencies
+      run: pnpm install --frozen-lockfile
+    
+    - name: Rebuild native modules
+      run: cd node_modules/.pnpm/better-sqlite3@*/node_modules/better-sqlite3 && npx node-gyp rebuild --release
+    
+    - name: Build application
+      run: pnpm run build
+      env:
+        NODE_ENV: production
+        JWT_SECRET: ${{ secrets.JWT_SECRET }}
+    
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v5
+      with:
+        name: build-artifacts
+        path: |
+          shared/dist
+          server/dist
+          client/dist
+        retention-days: 1
+
+  lint:
+    runs-on: ubuntu-latest
+    needs: [build]
+    
+    steps:
+    - uses: actions/checkout@v5
+    
+    - uses: pnpm/action-setup@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v5
+      with:
+        node-version: '24'
+        cache: 'pnpm'
+    
+    - name: Install dependencies
+      run: pnpm install --frozen-lockfile
+    
+    - name: Download build artifacts
+      uses: actions/download-artifact@v5
+      with:
+        name: build-artifacts
+    
+    - name: Run linter
+      run: pnpm run lint
+
+  test-unit:
+    runs-on: ubuntu-latest
+    needs: [build]
+    
+    steps:
+    - uses: actions/checkout@v5
+    
+    - uses: pnpm/action-setup@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v5
+      with:
+        node-version: '24'
+        cache: 'pnpm'
+    
+    - name: Install dependencies
+      run: pnpm install --frozen-lockfile
+    
+    - name: Download build artifacts
+      uses: actions/download-artifact@v5
+      with:
+        name: build-artifacts
+
+    - name: Rebuild native modules
+      run: cd node_modules/.pnpm/better-sqlite3@*/node_modules/better-sqlite3 && npx node-gyp rebuild --release
+
+    - name: Run unit tests
+      run: pnpm run test:unit
+
+  test-integration:
+    runs-on: ubuntu-latest
+    needs: [build]
+    
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_DB: txls_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_USER: testuser
+          MYSQL_PASSWORD: testpass
+          MYSQL_DATABASE: txls_test
+          MYSQL_ROOT_PASSWORD: rootpass
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -u root -prootpass"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+    - uses: actions/checkout@v5
+    
+    - uses: pnpm/action-setup@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v5
+      with:
+        node-version: '24'
+        cache: 'pnpm'
+    
+    - name: Install dependencies
+      run: pnpm install --frozen-lockfile
+    
+    - name: Download build artifacts
+      uses: actions/download-artifact@v5
+      with:
+        name: build-artifacts
+
+    - name: Rebuild native modules
+      run: cd node_modules/.pnpm/better-sqlite3@*/node_modules/better-sqlite3 && npx node-gyp rebuild --release
+    
+    - name: Run SQLite integration tests
+      run: pnpm run test:integration:sqlite
+    
+    - name: Run PostgreSQL integration tests
+      run: pnpm run test:integration:postgres
+      env:
+        JWT_SECRET: test-secret-key-for-jwt-signing-in-tests-sufficiently-long
+    
+    - name: Run MySQL integration tests
+      run: pnpm run test:integration:mysql
+      env:
+        JWT_SECRET: test-secret-key-for-jwt-signing-in-tests-sufficiently-long
+
+  test-gui-local:
+    runs-on: ubuntu-latest
+    needs: [build]
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v5
+        with:
+          name: build-artifacts
+
+      - name: Rebuild native modules
+        run: cd node_modules/.pnpm/better-sqlite3@*/node_modules/better-sqlite3 && npx node-gyp rebuild --release
+
+      - name: Install Playwright Browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run GUI tests (local dev)
+        run: pnpm run test:gui:local
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: playwright-report-local
+          path: gui-tests/playwright-report/
+          retention-days: 30
+
+  test-gui-docker:
+    runs-on: ubuntu-latest
+    needs: [build]
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v5
+        with:
+          name: build-artifacts
+
+      - name: Rebuild native modules
+        run: cd node_modules/.pnpm/better-sqlite3@*/node_modules/better-sqlite3 && npx node-gyp rebuild --release
+
+      - name: Install Playwright Browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run GUI tests (Docker)
+        run: pnpm run test:gui:docker
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: playwright-report-docker
+          path: gui-tests/playwright-report/
+          retention-days: 30
+
+  test-gui-hass:
+    runs-on: ubuntu-latest
+    needs: [build]
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v5
+        with:
+          name: build-artifacts
+
+      - name: Rebuild native modules
+        run: cd node_modules/.pnpm/better-sqlite3@*/node_modules/better-sqlite3 && npx node-gyp rebuild --release
+
+      - name: Install Playwright Browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run GUI tests (Home Assistant ingress)
+        run: pnpm run test:gui:hass
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: playwright-report-hass
+          path: gui-tests/playwright-report/
+          retention-days: 30

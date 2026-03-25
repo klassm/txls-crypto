@@ -1,0 +1,257 @@
+name: Release
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * 1'  # Every Monday at 00:00 UTC
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  check-ci:
+    runs-on: ubuntu-latest
+    outputs:
+      ci-passed: ${{ steps.check.outputs.ci-passed }}
+    
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      
+      - name: Check CI status for current commit
+        id: check
+        run: |
+          COMMIT_SHA=$(git rev-parse HEAD)
+          
+          # Get the CI workflow run status for this commit
+          CI_STATUS=$(gh run list \
+            --workflow=ci.yml \
+            --commit=$COMMIT_SHA \
+            --json conclusion,status \
+            --jq '.[0] // empty')
+          
+          if [ -z "$CI_STATUS" ]; then
+            echo "No CI run found for commit $COMMIT_SHA"
+            echo "ci-passed=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+          
+          STATUS=$(echo "$CI_STATUS" | jq -r '.status')
+          CONCLUSION=$(echo "$CI_STATUS" | jq -r '.conclusion')
+          
+          echo "CI Status: $STATUS, Conclusion: $CONCLUSION"
+          
+          if [ "$STATUS" = "completed" ] && [ "$CONCLUSION" = "success" ]; then
+            echo "CI passed for commit $COMMIT_SHA"
+            echo "ci-passed=true" >> $GITHUB_OUTPUT
+          else
+            echo "CI did not pass for commit $COMMIT_SHA (status: $STATUS, conclusion: $CONCLUSION)"
+            echo "ci-passed=false" >> $GITHUB_OUTPUT
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  check-commits:
+    runs-on: ubuntu-latest
+    needs: check-ci
+    if: needs.check-ci.outputs.ci-passed == 'true'
+    outputs:
+      has-commits: ${{ steps.check.outputs.has-commits }}
+    
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      
+      - name: Check for new commits since last release
+        id: check
+        run: |
+          LAST_RELEASE=$(gh release list --limit 1 --json tagName --jq '.[0].tagName' 2>/dev/null || echo "")
+          
+          if [ -z "$LAST_RELEASE" ]; then
+            echo "No previous release found, proceeding with release"
+            echo "has-commits=true" >> $GITHUB_OUTPUT
+          else
+            COMMITS_SINCE=$(git rev-list $LAST_RELEASE..HEAD --count 2>/dev/null || echo "0")
+            if [ "$COMMITS_SINCE" -gt 0 ]; then
+              echo "Found $COMMITS_SINCE commits since last release ($LAST_RELEASE)"
+              echo "has-commits=true" >> $GITHUB_OUTPUT
+            else
+              echo "No commits since last release ($LAST_RELEASE), skipping"
+              echo "has-commits=false" >> $GITHUB_OUTPUT
+            fi
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  calculate-version:
+    runs-on: ubuntu-latest
+    needs: [check-ci, check-commits]
+    if: needs.check-ci.outputs.ci-passed == 'true' && needs.check-commits.outputs.has-commits == 'true'
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Calculate new version
+        id: version
+        run: |
+          CURRENT_VERSION=$(grep '^version:' hass-addon/config.yaml | sed 's/version: *"\(.*\)"/\1/')
+          echo "Current version: $CURRENT_VERSION"
+          
+          CURRENT_YEAR=$(date +%Y)
+          CURRENT_MONTH=$(date +%-m)
+          
+          if [[ "$CURRENT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] && [[ "${CURRENT_VERSION%%.*}" -lt 2000 ]]; then
+            NEW_VERSION="${CURRENT_YEAR}.${CURRENT_MONTH}"
+          elif [[ "$CURRENT_VERSION" =~ ^([0-9]{4})\.([0-9]+)\.([0-9]+)$ ]]; then
+            YEAR="${BASH_REMATCH[1]}"
+            MONTH="${BASH_REMATCH[2]}"
+            INCREMENT="${BASH_REMATCH[3]}"
+            
+            if [[ "$YEAR" -eq "$CURRENT_YEAR" ]] && [[ "$MONTH" -eq "$CURRENT_MONTH" ]]; then
+              NEW_VERSION="${YEAR}.${MONTH}.$((INCREMENT + 1))"
+            else
+              NEW_VERSION="${CURRENT_YEAR}.${CURRENT_MONTH}"
+            fi
+          elif [[ "$CURRENT_VERSION" =~ ^([0-9]{4})\.([0-9]+)$ ]]; then
+            YEAR="${BASH_REMATCH[1]}"
+            MONTH="${BASH_REMATCH[2]}"
+            
+            if [[ "$YEAR" -eq "$CURRENT_YEAR" ]] && [[ "$MONTH" -eq "$CURRENT_MONTH" ]]; then
+              NEW_VERSION="${YEAR}.${MONTH}.1"
+            else
+              NEW_VERSION="${CURRENT_YEAR}.${CURRENT_MONTH}"
+            fi
+          else
+            echo "Error: Unable to parse version format: $CURRENT_VERSION"
+            exit 1
+          fi
+          
+          echo "New version: $NEW_VERSION"
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+  build-and-test:
+    runs-on: ubuntu-latest
+    needs: [check-ci, check-commits, calculate-version]
+    if: needs.check-ci.outputs.ci-passed == 'true' && needs.check-commits.outputs.has-commits == 'true'
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Rebuild native modules
+        run: cd node_modules/.pnpm/better-sqlite3@*/node_modules/better-sqlite3 && npx node-gyp rebuild --release
+
+      - name: Build application
+        run: pnpm run build
+        env:
+          NODE_ENV: production
+
+      - name: Run unit tests
+        run: pnpm run test:unit
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v5
+        with:
+          name: build-artifacts
+          path: |
+            shared/dist
+            server/dist
+            client/dist
+          retention-days: 1
+
+  release:
+    runs-on: ubuntu-latest
+    needs: [check-ci, check-commits, calculate-version, build-and-test]
+    if: needs.check-ci.outputs.ci-passed == 'true' && needs.check-commits.outputs.has-commits == 'true'
+    permissions:
+      contents: write
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v5
+        with:
+          name: build-artifacts
+
+      - name: Update config.yaml
+        run: |
+          VERSION="${{ needs.calculate-version.outputs.version }}"
+          sed -i "s/^version: *\".*\"/version: \"$VERSION\"/" hass-addon/config.yaml
+
+      - name: Update Dockerfile
+        run: |
+          VERSION="${{ needs.calculate-version.outputs.version }}"
+          sed -i "s|^FROM ghcr.io/klassm/txls-crypto:.*|FROM ghcr.io/klassm/txls-crypto:$VERSION|" hass-addon/Dockerfile
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./docker/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.calculate-version.outputs.version }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Commit and push version bump
+        run: |
+          VERSION="${{ needs.calculate-version.outputs.version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add hass-addon/config.yaml hass-addon/Dockerfile
+          git commit -m "chore: release $VERSION"
+          git push origin HEAD:main
+          echo "Released version $VERSION"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.calculate-version.outputs.version }}
+          name: Release ${{ needs.calculate-version.outputs.version }}
+          generate_release_notes: true

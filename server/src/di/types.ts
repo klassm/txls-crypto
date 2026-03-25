@@ -1,0 +1,26 @@
+export const TYPES = {
+  DataSource: Symbol.for("DataSource"),
+
+  AccountsRepository: Symbol.for("AccountsRepository"),
+  TransactionsRepository: Symbol.for("TransactionsRepository"),
+  UsersRepository: Symbol.for("UsersRepository"),
+  AssetHoldingsRepository: Symbol.for("AssetHoldingsRepository"),
+  PricesRepository: Symbol.for("PricesRepository"),
+  ProvidersRepository: Symbol.for("ProvidersRepository"),
+  CoinGeckoRepository: Symbol.for("CoinGeckoRepository"),
+
+  AccountsService: Symbol.for("AccountsService"),
+  TransactionsService: Symbol.for("TransactionsService"),
+  UsersService: Symbol.for("UsersService"),
+  AssetHoldingsService: Symbol.for("AssetHoldingsService"),
+  PricesService: Symbol.for("PricesService"),
+  PriceFetcherService: Symbol.for("PriceFetcherService"),
+  PriceBackfillService: Symbol.for("PriceBackfillService"),
+  CoinGeckoService: Symbol.for("CoinGeckoService"),
+  ApiSyncService: Symbol.for("ApiSyncService"),
+  TransferMatchingService: Symbol.for("TransferMatchingService"),
+  TaxCalculationService: Symbol.for("TaxCalculationService"),
+  WisoCsvExportService: Symbol.for("WisoCsvExportService"),
+  ImportDeduplicationService: Symbol.for("ImportDeduplicationService"),
+  ApiSyncScheduler: Symbol.for("ApiSyncScheduler"),
+};

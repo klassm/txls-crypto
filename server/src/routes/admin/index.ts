@@ -1,0 +1,286 @@
+import { Router, Request, Response } from "express";
+import { getUsersService, getAssetHoldingsService } from "../../di/service-locator.js";
+import { AUTH_COOKIE_NAME, verifyToken } from "../../utils/password.js";
+import { userSchema, updateUserSchema, resetPasswordSchema } from "../../validation/schemas.js";
+import { getUserIdFromRequest } from "../../utils/session.js";
+import { getDataSource } from "../../database.js";
+import { AccountEntity } from "../../modules/accounts/account.entity.js";
+
+const router = Router();
+
+router.get("/users", async (req: Request, res: Response) => {
+  const token = req.cookies?.[AUTH_COOKIE_NAME];
+
+  if (!token) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  const payload = verifyToken(token);
+
+  if (!payload || !payload.isAdmin) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+
+  const service = getUsersService();
+  const users = await service.findAll();
+
+  return res.json(users);
+});
+
+router.post("/users", async (req: Request, res: Response) => {
+  const token = req.cookies?.[AUTH_COOKIE_NAME];
+
+  if (!token) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  const payload = verifyToken(token);
+
+  if (!payload || !payload.isAdmin) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+
+  try {
+    const parsed = userSchema.safeParse(req.body);
+
+    if (!parsed.success) {
+      return res.status(400).json({ error: "Invalid input", details: parsed.error.issues });
+    }
+
+    const service = getUsersService();
+
+    const user = await service.createUser(parsed.data);
+    return res.status(201).json(user);
+  } catch (error) {
+    if (error instanceof Error) {
+      return res.status(400).json({ error: error.message });
+    }
+    return res.status(500).json({ error: "Failed to create user" });
+  }
+});
+
+router.get("/users/:id", async (req: Request, res: Response) => {
+  const token = req.cookies?.[AUTH_COOKIE_NAME];
+
+  if (!token) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  const payload = verifyToken(token);
+
+  if (!payload || !payload.isAdmin) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+
+  try {
+    const userId = Number.parseInt(req.params.id as string, 10);
+
+    if (isNaN(userId)) {
+      return res.status(400).json({ error: "Invalid user ID" });
+    }
+
+    const service = getUsersService();
+    const user = await service.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    return res.json(user);
+  } catch (error) {
+    return res.status(500).json({ error: "Failed to fetch user" });
+  }
+});
+
+router.put("/users/:id", async (req: Request, res: Response) => {
+  const token = req.cookies?.[AUTH_COOKIE_NAME];
+
+  if (!token) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  const payload = verifyToken(token);
+
+  if (!payload || !payload.isAdmin) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+
+  try {
+    const userId = Number.parseInt(req.params.id as string, 10);
+
+    if (isNaN(userId)) {
+      return res.status(400).json({ error: "Invalid user ID" });
+    }
+
+    const parsed = updateUserSchema.safeParse(req.body);
+
+    if (!parsed.success) {
+      return res.status(400).json({ error: "Invalid input", details: parsed.error.issues });
+    }
+
+    const service = getUsersService();
+    const user = await service.updateUser(userId, parsed.data);
+
+    return res.json(user);
+  } catch (error) {
+    if (error instanceof Error) {
+      return res.status(400).json({ error: error.message });
+    }
+    return res.status(500).json({ error: "Failed to update user" });
+  }
+});
+
+router.delete("/users/:id", async (req: Request, res: Response) => {
+  const token = req.cookies?.[AUTH_COOKIE_NAME];
+
+  if (!token) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  const payload = verifyToken(token);
+
+  if (!payload || !payload.isAdmin) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+
+  try {
+    const userId = Number.parseInt(req.params.id as string, 10);
+
+    if (isNaN(userId)) {
+      return res.status(400).json({ error: "Invalid user ID" });
+    }
+
+    if (userId === payload.userId) {
+      return res.status(400).json({ error: "Cannot delete yourself" });
+    }
+
+    const service = getUsersService();
+    await service.deleteUser(userId);
+
+    return res.json({ success: true });
+  } catch (error) {
+    if (error instanceof Error) {
+      return res.status(400).json({ error: error.message });
+    }
+    return res.status(500).json({ error: "Failed to delete user" });
+  }
+});
+
+router.post("/users/:id/password", async (req: Request, res: Response) => {
+  const userId = await getUserIdFromRequest(req);
+  if (!userId) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  const service = getUsersService();
+  const adminUser = await service.findById(userId);
+
+  if (!adminUser || !adminUser.isAdmin) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+
+  try {
+    const targetUserId = Number.parseInt(req.params.id as string, 10);
+
+    if (isNaN(targetUserId)) {
+      return res.status(400).json({ error: "Invalid user ID" });
+    }
+
+    if (userId === targetUserId) {
+      return res.status(400).json({ error: "Cannot reset your own password via this endpoint" });
+    }
+
+    const parsed = resetPasswordSchema.safeParse(req.body);
+
+    if (!parsed.success) {
+      return res.status(400).json({ error: parsed.error.issues[0].message });
+    }
+
+    await service.updatePassword(Number.parseInt(req.params.id as string, 10), parsed.data.newPassword);
+
+    return res.json({ success: true });
+  } catch (error) {
+    if (error instanceof Error) {
+      return res.status(400).json({ error: error.message });
+    }
+    return res.status(500).json({ error: "Failed to reset password" });
+  }
+});
+
+router.post("/rebuild-holdings", async (req: Request, res: Response) => {
+  const token = req.cookies?.[AUTH_COOKIE_NAME];
+
+  if (!token) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  const payload = verifyToken(token);
+
+  if (!payload || !payload.isAdmin) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+
+  try {
+    const holdingsService = getAssetHoldingsService();
+    const dataSource = await getDataSource();
+    const accountRepo = dataSource.getRepository(AccountEntity);
+    
+    const accounts = await accountRepo.find();
+    
+    let rebuilt = 0;
+    for (const account of accounts) {
+      await holdingsService.rebuildHoldings(account.userId, account.id);
+      rebuilt++;
+    }
+
+    return res.json({ success: true, accountsRebuilt: rebuilt });
+  } catch (error) {
+    if (error instanceof Error) {
+      return res.status(500).json({ error: error.message });
+    }
+    return res.status(500).json({ error: "Failed to rebuild holdings" });
+  }
+});
+
+router.post("/rebuild-holdings/:userId", async (req: Request, res: Response) => {
+  const token = req.cookies?.[AUTH_COOKIE_NAME];
+
+  if (!token) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  const payload = verifyToken(token);
+
+  if (!payload || !payload.isAdmin) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+
+  try {
+    const targetUserId = Number.parseInt(req.params.userId as string, 10);
+
+    if (isNaN(targetUserId)) {
+      return res.status(400).json({ error: "Invalid user ID" });
+    }
+
+    const holdingsService = getAssetHoldingsService();
+    const dataSource = await getDataSource();
+    const accountRepo = dataSource.getRepository(AccountEntity);
+    
+    const accounts = await accountRepo.find({ where: { userId: targetUserId } });
+    
+    let rebuilt = 0;
+    for (const account of accounts) {
+      await holdingsService.rebuildHoldings(account.userId, account.id);
+      rebuilt++;
+    }
+
+    return res.json({ success: true, accountsRebuilt: rebuilt });
+  } catch (error) {
+    if (error instanceof Error) {
+      return res.status(500).json({ error: error.message });
+    }
+    return res.status(500).json({ error: "Failed to rebuild holdings" });
+  }
+});
+
+export default router;

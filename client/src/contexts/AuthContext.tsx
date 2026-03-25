@@ -1,0 +1,188 @@
+import {
+  createContext,
+  useContext,
+  type ReactNode,
+  useEffect,
+  useRef,
+} from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import type { User } from "@txls/shared";
+import { apiUrl } from "../lib/api-base";
+
+interface AuthContextValue {
+  user: User | null;
+  isLoading: boolean;
+  isAuthenticated: boolean;
+  canOnboard: boolean;
+  hassIngress: boolean;
+  authError: string | null;
+  login: (username: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
+  onboardingUser: (data: {
+    name: string;
+    username: string;
+    password: string;
+    email: string;
+  }) => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+
+interface AuthProviderProps {
+  children: ReactNode;
+}
+
+export function AuthProvider({ children }: AuthProviderProps) {
+  const queryClient = useQueryClient();
+  const expirationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const {
+    data: configData,
+    isLoading: isConfigLoading,
+    refetch,
+  } = useQuery({
+    queryKey: ["config"],
+    queryFn: async () => {
+      const response = await fetch(apiUrl("/api/config"), { credentials: "include" });
+      if (!response.ok) {
+        return { user: null, canOnboard: false, hassIngress: false, authError: null, tokenExpiresAt: null };
+      }
+      const data = await response.json();
+      return data;
+    },
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+    refetchOnMount: false,
+  });
+
+  useEffect(() => {
+    if (expirationTimerRef.current) {
+      clearTimeout(expirationTimerRef.current);
+      expirationTimerRef.current = null;
+    }
+
+    const tokenExpiresAt = configData?.tokenExpiresAt;
+    
+    if (!tokenExpiresAt) {
+      return;
+    }
+
+    const expiresAtMs = tokenExpiresAt * 1000;
+    const now = Date.now();
+    const timeUntilExpiry = expiresAtMs - now;
+
+    if (timeUntilExpiry <= 0) {
+      window.location.reload();
+      return;
+    }
+
+    const checkBeforeExpiry = Math.max(timeUntilExpiry - 30000, 0);
+    
+    expirationTimerRef.current = setTimeout(() => {
+      window.location.reload();
+    }, checkBeforeExpiry);
+
+    return () => {
+      if (expirationTimerRef.current) {
+        clearTimeout(expirationTimerRef.current);
+        expirationTimerRef.current = null;
+      }
+    };
+  }, [configData?.tokenExpiresAt]);
+
+  const loginMutation = useMutation({
+    mutationFn: async ({
+      username,
+      password,
+    }: {
+      username: string;
+      password: string;
+    }) => {
+      const response = await fetch(apiUrl("/api/auth/login"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Login failed");
+      }
+
+      return response.json();
+    },
+  });
+
+  const logoutMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(apiUrl("/api/auth/logout"), {
+        method: "POST",
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error("Logout failed");
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.clear();
+    },
+  });
+
+  const onboardingMutation = useMutation({
+    mutationFn: async (data: {
+      name: string;
+      username: string;
+      password: string;
+      email: string;
+    }) => {
+      const response = await fetch(apiUrl("/api/config/onboard"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Onboarding failed");
+      }
+
+      return response.json();
+    },
+  });
+
+  const value: AuthContextValue = {
+    user: configData?.user ?? null,
+    isLoading: isConfigLoading,
+    isAuthenticated: !!configData?.user,
+    canOnboard: configData?.canOnboard ?? false,
+    hassIngress: configData?.hassIngress ?? false,
+    authError: configData?.authError ?? null,
+    login: async (username, password) => {
+      await loginMutation.mutateAsync({ username, password });
+      await refetch();
+    },
+    logout: async () => {
+      await logoutMutation.mutateAsync();
+      await refetch();
+    },
+    onboardingUser: async (data) => {
+      await onboardingMutation.mutateAsync(data);
+      await refetch();
+    },
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
+}

@@ -1,0 +1,44 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "format": {},
+    "lint": {
+      "dependsOn": ["^build"]
+    },
+    "test": {
+      "dependsOn": ["^build"]
+    },
+    "test:unit": {
+      "dependsOn": ["^build"]
+    },
+    "test:integration": {
+      "dependsOn": ["^build"]
+    },
+    "test:integration:sqlite": {
+      "dependsOn": ["^build"]
+    },
+    "test:integration:postgres": {
+      "dependsOn": ["^build"]
+    },
+    "test:integration:mysql": {
+      "dependsOn": ["^build"]
+    },
+    "test:local": {
+      "dependsOn": ["@txls/shared#build"]
+    },
+    "test:docker": {
+      "dependsOn": ["@txls/shared#build"]
+    },
+    "test:hass": {
+      "dependsOn": ["@txls/shared#build"]
+    }
+  }
+}
