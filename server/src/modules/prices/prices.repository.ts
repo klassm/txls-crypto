@@ -227,7 +227,7 @@ export class PricesRepository {
 			}));
 		}
 
-		if (days <= 7) {
+		if (days < 31) {
 			return this.aggregateByHour(results);
 		}
 
