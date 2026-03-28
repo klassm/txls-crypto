@@ -45,6 +45,7 @@ describe("AssetHoldingsService", () => {
 			getPricesInTimeRange: vi.fn().mockResolvedValue([]),
 			getPriceHistory: vi.fn().mockResolvedValue([]),
 			getPriceAtOrBefore: vi.fn().mockResolvedValue(null),
+			getPriceAtOrBeforeWithTolerance: vi.fn().mockResolvedValue(null),
 		} as unknown as PricesRepository;
 
 		service = new AssetHoldingsService(

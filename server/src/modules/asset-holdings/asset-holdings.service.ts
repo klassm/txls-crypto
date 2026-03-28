@@ -736,9 +736,9 @@ export class AssetHoldingsService {
 	): Promise<{ day: PriceChangeStats | null; week: PriceChangeStats | null; month: PriceChangeStats | null }> {
 		const now = DateTime.utc();
 		
-		const dayAgoPrice = await this.pricesRepository.getPriceAtOrBefore(asset, now.minus({ hours: 24 }));
-		const weekAgoPrice = await this.pricesRepository.getPriceAtOrBefore(asset, now.minus({ days: 7 }));
-		const monthAgoPrice = await this.pricesRepository.getPriceAtOrBefore(asset, now.minus({ days: 30 }));
+		const dayAgoPrice = await this.pricesRepository.getPriceAtOrBeforeWithTolerance(asset, now.minus({ hours: 24 }), 6);
+		const weekAgoPrice = await this.pricesRepository.getPriceAtOrBeforeWithTolerance(asset, now.minus({ days: 7 }), 12);
+		const monthAgoPrice = await this.pricesRepository.getPriceAtOrBeforeWithTolerance(asset, now.minus({ days: 30 }), 24);
 
 		return {
 			day: this.calculateChange(currentPrice, dayAgoPrice?.priceEur),

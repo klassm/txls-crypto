@@ -393,4 +393,20 @@ export class PricesRepository {
 			priceEur: Number(result.priceEur),
 		};
 	}
+
+	async getPriceAtOrBeforeWithTolerance(
+		asset: string,
+		targetTime: DateTime,
+		toleranceHours: number
+	): Promise<{ date: DateTime; priceEur: number } | null> {
+		const result = await this.getPriceAtOrBefore(asset, targetTime);
+		if (!result) return null;
+
+		const toleranceMs = toleranceHours * 60 * 60 * 1000;
+		const distanceFromTarget = Math.abs(targetTime.toMillis() - result.date.toMillis());
+		
+		if (distanceFromTarget > toleranceMs) return null;
+
+		return result;
+	}
 }
