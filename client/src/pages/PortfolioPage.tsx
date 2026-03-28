@@ -149,7 +149,7 @@ export default function PortfolioPage() {
 	const [chartTimeSpan, setChartTimeSpan] = useState<TimeSpan>(30);
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const daysParam = chartTimeSpan === "all" ? 3650 : chartTimeSpan;
-	const { data: overview, isLoading } = usePortfolioOverview(daysParam);
+	const { data: overview, isLoading, isFetching } = usePortfolioOverview(daysParam);
 	const { data: sources = [] } = useSources();
 	const navigate = useNavigate();
 
@@ -200,6 +200,7 @@ export default function PortfolioPage() {
 							title="Portfolio Value"
 							initialTimeSpan={chartTimeSpan}
 							onTimeSpanChange={setChartTimeSpan}
+							isLoading={isFetching && dialogOpen}
 						>
 							<PortfolioValueChart data={portfolioHistory} height={400} title="" />
 						</ChartDialog>

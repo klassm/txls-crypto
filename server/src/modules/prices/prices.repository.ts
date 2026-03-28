@@ -221,10 +221,7 @@ export class PricesRepository {
 		const days = endDate.diff(startDate, "days").days;
 
 		if (days <= 1) {
-			return results.map((r) => ({
-				date: r.fetchedAt,
-				priceEur: Number(r.priceEur),
-			}));
+			return this.aggregateByFiveMinutes(results);
 		}
 
 		if (days < 31) {
@@ -252,6 +249,40 @@ export class PricesRepository {
 					sum: Number(price.priceEur),
 					count: 1,
 					date: hourStart,
+				});
+			}
+		}
+
+		const result = Array.from(groups.values()).map((g) => ({
+			date: g.date,
+			priceEur: g.sum / g.count,
+		}));
+
+		result.sort((a, b) => a.date.toMillis() - b.date.toMillis());
+		return result;
+	}
+
+	private aggregateByFiveMinutes(
+		prices: AssetPriceEntity[]
+	): { date: DateTime; priceEur: number }[] {
+		const groups = new Map<string, { sum: number; count: number; date: DateTime }>();
+
+		for (const price of prices) {
+			const timestamp = price.fetchedAt;
+			const minutes = timestamp.minute;
+			const roundedMinutes = Math.floor(minutes / 5) * 5;
+			const fiveMinStart = timestamp.set({ minute: roundedMinutes, second: 0, millisecond: 0 });
+			const key = fiveMinStart.toISO() || "";
+
+			const existing = groups.get(key);
+			if (existing) {
+				existing.sum += Number(price.priceEur);
+				existing.count++;
+			} else {
+				groups.set(key, {
+					sum: Number(price.priceEur),
+					count: 1,
+					date: fiveMinStart,
 				});
 			}
 		}

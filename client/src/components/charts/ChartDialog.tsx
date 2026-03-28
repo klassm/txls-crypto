@@ -10,10 +10,11 @@ import {
 	ToggleButton,
 	Box,
 	useTheme,
+	CircularProgress,
 } from "@mui/material";
 import { useState, useEffect } from "react";
 
-export type TimeSpan = 7 | 30 | 90 | 180 | 365 | "all";
+export type TimeSpan = 1 | 7 | 30 | 90 | 180 | 365 | "all";
 
 interface ChartDialogProps {
 	open: boolean;
@@ -22,9 +23,11 @@ interface ChartDialogProps {
 	initialTimeSpan?: TimeSpan;
 	onTimeSpanChange: (timeSpan: TimeSpan) => void;
 	children: React.ReactNode;
+	isLoading?: boolean;
 }
 
 const TIME_SPAN_OPTIONS: { value: TimeSpan; label: string }[] = [
+	{ value: 1, label: "24h" },
 	{ value: 7, label: "7d" },
 	{ value: 30, label: "30d" },
 	{ value: 90, label: "90d" },
@@ -40,6 +43,7 @@ export function ChartDialog({
 	initialTimeSpan = 30,
 	onTimeSpanChange,
 	children,
+	isLoading = false,
 }: ChartDialogProps) {
 	const theme = useTheme();
 	const [timeSpan, setTimeSpan] = useState<TimeSpan>(initialTimeSpan);
@@ -102,7 +106,15 @@ export function ChartDialog({
 						))}
 					</ToggleButtonGroup>
 				</Box>
-				<Box sx={{ height: "calc(100% - 60px)" }}>{children}</Box>
+				<Box sx={{ height: "calc(100% - 60px)", position: "relative" }}>
+					{isLoading ? (
+						<Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
+							<CircularProgress />
+						</Box>
+					) : (
+						children
+					)}
+				</Box>
 			</DialogContent>
 		</Dialog>
 	);

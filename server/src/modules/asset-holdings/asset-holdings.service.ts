@@ -370,21 +370,39 @@ export class AssetHoldingsService {
 		const latestPrices = await this.pricesRepository.getLatestPrices(assetList);
 
 		const timestamps: DateTime[] = [];
-		const hourlyCutoff = now.minus({ days: hourlyForDays });
 		
-		let current = startDate;
-		while (current <= endDate) {
-			if (current >= hourlyCutoff) {
+		if (days <= 1) {
+			// For 24h view, generate timestamps every 5 minutes
+			let current = startDate;
+			while (current <= endDate) {
 				for (let hour = 0; hour < 24; hour++) {
-					const hourTime = current.plus({ hours: hour });
-					if (hourTime <= now) {
-						timestamps.push(hourTime);
+					for (let minute = 0; minute < 60; minute += 5) {
+						const time = current.plus({ hours: hour, minutes: minute });
+						if (time <= now) {
+							timestamps.push(time);
+						}
 					}
 				}
-			} else {
-				timestamps.push(current.plus({ hours: 12 }));
+				current = current.plus({ days: 1 });
 			}
-			current = current.plus({ days: 1 });
+		} else {
+			// For longer periods, use hourly or daily granularity
+			const hourlyCutoff = now.minus({ days: hourlyForDays });
+			
+			let current = startDate;
+			while (current <= endDate) {
+				if (current >= hourlyCutoff) {
+					for (let hour = 0; hour < 24; hour++) {
+						const hourTime = current.plus({ hours: hour });
+						if (hourTime <= now) {
+							timestamps.push(hourTime);
+						}
+					}
+				} else {
+					timestamps.push(current.plus({ hours: 12 }));
+				}
+				current = current.plus({ days: 1 });
+			}
 		}
 
 		const result: PortfolioHistoryPoint[] = [];

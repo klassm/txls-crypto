@@ -282,6 +282,31 @@ describe("AssetHoldingsService", () => {
 
 			expect(result).toEqual([]);
 		});
+
+		it("generates 5-minute timestamps for 24h view", async () => {
+			const holdings = new Map([
+				["BTC", { asset: "BTC", amount: 1.0, eurInvested: 50000 }],
+			]);
+			(mockHoldingsRepository.findLatestByUser as any).mockResolvedValue(
+				new Map([[1, holdings]])
+			);
+			(mockHoldingsRepository.getAllHoldingsUpToTimestamp as any).mockResolvedValue(
+				new Map([[1, holdings]])
+			);
+			(mockPricesRepository.getPriceHistory as any).mockResolvedValue([
+				{ date: DateTime.utc(2024, 1, 15, 10, 0, 0), priceEur: 50000 },
+				{ date: DateTime.utc(2024, 1, 15, 10, 5, 0), priceEur: 50100 },
+			]);
+			(mockPricesRepository.getLatestPrices as any).mockResolvedValue(
+				new Map([["BTC", { priceEur: 50200 }]])
+			);
+
+			const result = await service.getPortfolioHistoryWithPrices(1, undefined, { days: 1 });
+
+			// With 24h view, we expect timestamps every 5 minutes
+			// That's 288 timestamps per day (24 * 60 / 5)
+			expect(result.length).toBeGreaterThan(0);
+		});
 	});
 
 	describe("getPortfolioOverview", () => {

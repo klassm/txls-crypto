@@ -222,24 +222,29 @@ describe("PricesRepository", () => {
 			return entity;
 		}
 
-		it("should return raw 5-min data for <=1 day range", async () => {
+		it("should aggregate by 5 minutes for <=1 day range", async () => {
 			const startDate = DateTime.utc(2024, 1, 15, 0, 0, 0);
 			const endDate = DateTime.utc(2024, 1, 15, 23, 59, 59);
 
 			const mockPrices = [
 				createMockPrice(DateTime.utc(2024, 1, 15, 10, 0, 0), 50000),
-				createMockPrice(DateTime.utc(2024, 1, 15, 10, 5, 0), 50100),
-				createMockPrice(DateTime.utc(2024, 1, 15, 10, 10, 0), 50200),
+				createMockPrice(DateTime.utc(2024, 1, 15, 10, 3, 0), 50100),
+				createMockPrice(DateTime.utc(2024, 1, 15, 10, 5, 0), 50200),
+				createMockPrice(DateTime.utc(2024, 1, 15, 10, 8, 0), 50300),
+				createMockPrice(DateTime.utc(2024, 1, 15, 10, 10, 0), 50400),
 			];
 
 			mockQueryBuilder.getMany.mockResolvedValue(mockPrices);
 
 			const result = await repository.getPriceHistory("BTC", startDate, endDate);
 
+			// First 5-min bucket (10:00): (50000 + 50100) / 2
+			// Second 5-min bucket (10:05): (50200 + 50300) / 2
+			// Third 5-min bucket (10:10): 50400
 			expect(result).toHaveLength(3);
-			expect(result[0].priceEur).toBe(50000);
-			expect(result[1].priceEur).toBe(50100);
-			expect(result[2].priceEur).toBe(50200);
+			expect(result[0].priceEur).toBe((50000 + 50100) / 2);
+			expect(result[1].priceEur).toBe((50200 + 50300) / 2);
+			expect(result[2].priceEur).toBe(50400);
 		});
 
 		it("should aggregate by hour for <=30 days range", async () => {

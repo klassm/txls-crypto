@@ -16,16 +16,31 @@ interface AssetCardProps {
 }
 
 export function AssetCard({ asset }: AssetCardProps) {
-	const { priceHistory: initialPriceHistory, priceChanges, amount, eurValue, eurInvested, positionHistory } = asset;
+	const { priceHistory: initialPriceHistory, priceChanges, amount, eurValue, eurInvested, positionHistory: initialPositionHistory } = asset;
 	const [priceDialogOpen, setPriceDialogOpen] = useState(false);
 	const [positionDialogOpen, setPositionDialogOpen] = useState(false);
 	const [priceTimeSpan, setPriceTimeSpan] = useState<TimeSpan>(30);
+	const [positionTimeSpan, setPositionTimeSpan] = useState<TimeSpan>(30);
 
 	const priceDays = priceTimeSpan === "all" ? 3650 : priceTimeSpan;
 	const { data: expandedPriceHistory } = useQuery({
 		queryKey: ["asset-price", asset.asset, priceDays],
 		queryFn: () => portfolioApi.getAssetPriceHistory(asset.asset, priceDays),
 		enabled: priceDialogOpen,
+		staleTime: 5 * 60 * 1000,
+	});
+
+	const positionDays = positionTimeSpan === "all" ? 3650 : positionTimeSpan;
+	const { data: expandedPositionHistory, isFetching: isPositionHistoryLoading } = useQuery({
+		queryKey: ["asset-position", asset.asset, positionDays],
+		queryFn: async () => {
+			const priceHistory = await portfolioApi.getAssetPriceHistory(asset.asset, positionDays);
+			return priceHistory.map(p => ({
+				date: p.date,
+				value: amount * p.priceEur,
+			}));
+		},
+		enabled: positionDialogOpen,
 		staleTime: 5 * 60 * 1000,
 	});
 
@@ -91,22 +106,23 @@ export function AssetCard({ asset }: AssetCardProps) {
 						</Typography>
 					)}
 
-					{positionHistory && positionHistory.length > 0 && (
+					{initialPositionHistory && initialPositionHistory.length > 0 && (
 						<Box sx={{ mt: 1 }}>
 							<Box sx={{ display: "flex", justifyContent: "flex-end", mb: 0.5 }}>
 								<ExpandButton onClick={() => setPositionDialogOpen(true)} />
 							</Box>
 							<Box sx={{ height: 120 }}>
-								<PositionChart data={positionHistory} eurInvested={eurInvested} height={120} />
+								<PositionChart data={initialPositionHistory} eurInvested={eurInvested} height={120} />
 							</Box>
 							<ChartDialog
 								open={positionDialogOpen}
 								onClose={() => setPositionDialogOpen(false)}
 								title={`${asset.asset} Position`}
-								initialTimeSpan={30}
-								onTimeSpanChange={() => {}}
+								initialTimeSpan={positionTimeSpan}
+								onTimeSpanChange={setPositionTimeSpan}
+								isLoading={isPositionHistoryLoading}
 							>
-								<PositionChart data={positionHistory} eurInvested={eurInvested} height={400} />
+								<PositionChart data={expandedPositionHistory || initialPositionHistory} eurInvested={eurInvested} height={400} />
 							</ChartDialog>
 						</Box>
 					)}
