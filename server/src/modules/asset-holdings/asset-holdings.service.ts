@@ -711,23 +711,32 @@ export class AssetHoldingsService {
 	private getPriceAtTimestamp(
 		priceHistories: Map<string, { timestamp: DateTime; priceEur: number }[]>,
 		asset: string,
-		timestamp: DateTime
+		timestamp: DateTime,
+		toleranceHours: number = 24
 	): number | null {
 		const history = priceHistories.get(asset);
 		if (!history || history.length === 0) return null;
 
 		const ts = timestamp.toMillis();
-		let closest: { timestamp: DateTime; priceEur: number } | null = null;
+		const toleranceMs = toleranceHours * 60 * 60 * 1000;
+
+		// Find the closest price within tolerance (both before AND after the timestamp)
+		// This handles the case where history timestamps (e.g., midnight) don't align with
+		// price timestamps (e.g., 18:55 on the same or nearby day)
+		let closestPrice: { priceEur: number; distance: number } | null = null;
 
 		for (const point of history) {
-			if (point.timestamp.toMillis() <= ts) {
-				if (!closest || point.timestamp.toMillis() > closest.timestamp.toMillis()) {
-					closest = point;
+			const pointTs = point.timestamp.toMillis();
+			const distance = Math.abs(pointTs - ts);
+
+			if (distance <= toleranceMs) {
+				if (!closestPrice || distance < closestPrice.distance) {
+					closestPrice = { priceEur: point.priceEur, distance };
 				}
 			}
 		}
 
-		return closest?.priceEur ?? null;
+		return closestPrice?.priceEur ?? null;
 	}
 
 	private async calculatePriceChanges(
