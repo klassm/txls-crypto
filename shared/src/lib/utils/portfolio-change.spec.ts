@@ -84,9 +84,11 @@ describe("calculatePortfolioChange", () => {
 	});
 
 	it("should find closest past date when exact match not available", () => {
+		// For 7 days: tolerance = min(24, max(6, 3.5)) = 6 hours
+		// Past entry at 2024-01-07T20:00:00 is 4 hours before target 2024-01-08T00:00:00
 		const history = [
 			createHistoryPoint("2024-01-01", 1000),
-			createHistoryPoint("2024-01-05", 1020),
+			{ date: "2024-01-07T20:00:00", totalEurValue: 1020, totalEurInvested: 0, assets: {} },
 			createHistoryPoint("2024-01-15", 1100),
 		];
 		const result = calculatePortfolioChange(history, 7);
@@ -146,6 +148,20 @@ describe("calculatePortfolioChange", () => {
 		expect(result).not.toBeNull();
 		expect(result!.absolute).toBe(100);
 		expect(result!.relative).toBe(Infinity);
+	});
+
+	it("should return null when closest past date is too far from target (outside tolerance)", () => {
+		// Latest: 2024-01-31, Target for 30d: 2024-01-01
+		// Closest entry on or before target: 2023-12-20 (12 days before target)
+		// That's 42 days before latest instead of 30 - outside tolerance
+		const history = [
+			createHistoryPoint("2023-12-20", 1000),  // 12 days BEFORE target date
+			createHistoryPoint("2024-01-31", 1100),
+		];
+		const result = calculatePortfolioChange(history, 30);
+		// This should return null because the closest entry is 12 days before target
+		// (42 days before latest), but currently it returns a result using Dec 20
+		expect(result).toBeNull();
 	});
 });
 

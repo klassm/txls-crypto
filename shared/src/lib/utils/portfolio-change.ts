@@ -24,6 +24,8 @@ export function calculatePortfolioChange(
 	const latestDate = DateTime.fromISO(latest.date);
 	const targetDate = latestDate.minus({ days });
 
+	const toleranceHours = Math.min(24, Math.max(6, days / 2));
+
 	let past: PortfolioHistoryPoint | null = null;
 	for (let i = history.length - 1; i >= 0; i--) {
 		const entryDate = DateTime.fromISO(history[i].date);
@@ -35,6 +37,10 @@ export function calculatePortfolioChange(
 
 	if (!past || past.totalEurValue === null) return null;
 	if (past.date === latest.date) return null;
+
+	const pastDate = DateTime.fromISO(past.date);
+	const distanceFromTarget = Math.abs(targetDate.diff(pastDate, "hours").hours);
+	if (distanceFromTarget > toleranceHours) return null;
 
 	const absolute = latest.totalEurValue - past.totalEurValue;
 	const relative = (absolute / past.totalEurValue) * 100;
