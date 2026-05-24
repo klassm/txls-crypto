@@ -251,39 +251,16 @@ describe("Portfolio Change Calculation Integration", () => {
 			expect(latestPoint.totalEurValue).toBeCloseTo(54800, 0);
 		});
 
-		it("should ideally calculate 30d change using available historical data for partial assets", async () => {
-			const history = await assetHoldingsService.getPortfolioHistoryWithPrices(userId, accountId, { days: 30 });
+		it("should calculate 30d change using available historical data for partial assets", async () => {
+			const history = await assetHoldingsService.getPortfolioHistoryWithPrices(userId, accountId, { days: 30, hourlyForDays: 30 });
 
-			// KEY INSIGHT: Currently this test will FAIL because buildHistoryPoint returns null
-			// if ANY asset lacks a price at a given timestamp.
-			//
-			// With partial price data:
-			// - At timestamps 30 days ago, only BTC has a price. XRP and SOL don't.
-			// - buildHistoryPoint returns null for those timestamps because totalEurValue becomes null
-			// - This creates gaps in the history array
-			// - calculatePortfolioChange can't find a point exactly 30 days ago, returns null
-			//
-			// DESIRED BEHAVIOR: The 30d change should still be calculated using:
-			// - BTC's historical value for the BTC portion
-			// - XRP/SOL's current value for their portions (assuming no historical change)
-			// OR at minimum, calculate the change for the portion of portfolio with complete data
+			expect(history.length).toBeGreaterThan(0);
+
+			const nonNullPoints = history.filter(p => p.totalEurValue !== null);
+			expect(nonNullPoints.length).toBeGreaterThan(0);
 
 			const monthChange = calculatePortfolioChange(history, 30);
-
-			// This assertion documents the CURRENT BUG:
-			// With the current implementation, monthChange is null because history has gaps
-			// 
-			// EXPECTED BEHAVIOR (currently failing):
-			// The change should be calculated for BTC portion:
-			// BTC 30d ago: 1.0 * 50000 = 50000
-			// BTC now: 1.0 * 53000 = 53000
-			// BTC absolute change: +3000
-			// For XRP and SOL, since we don't have historical data, we could either:
-			// 1. Exclude them from the calculation
-			// 2. Use their current value as historical (0% change assumption)
-			//
-			// For now, we expect null due to the current limitation
-			expect(monthChange).toBeNull();
+			expect(monthChange).not.toBeNull();
 		});
 
 		it("should have gaps in history where price data is missing", async () => {
@@ -294,17 +271,12 @@ describe("Portfolio Change Calculation Integration", () => {
 			// With full data, we'd expect many points; with partial data, many are null and skipped
 
 			// The history should be missing points from 30 days ago
-			// because XRP and SOL didn't have prices back then
 			const firstPointDate = DateTime.fromISO(history[0].date);
 			const lastPointDate = DateTime.fromISO(history[history.length - 1].date);
 
-			// The first point should be more recent than 30 days ago
-			// because older points couldn't be built (missing XRP/SOL prices)
 			const thirtyDaysAgo = DateTime.utc().minus({ days: 30 });
 
-			// This documents the current behavior: history starts later than expected
-			// because buildHistoryPoint returns null for timestamps without all prices
-			expect(firstPointDate.toMillis()).toBeGreaterThan(thirtyDaysAgo.toMillis());
+			expect(firstPointDate.toMillis()).toBeLessThanOrEqual(thirtyDaysAgo.toMillis() + 24 * 60 * 60 * 1000);
 		});
 	});
 
@@ -320,6 +292,7 @@ describe("Portfolio Change Calculation Integration", () => {
 				{ symbol: "BTC", priceEur: 50000, fetchedAt: thirtyDaysAgo },
 				// Gap: no prices from day 20-11
 				{ symbol: "BTC", priceEur: 52000, fetchedAt: tenDaysAgo },
+				{ symbol: "BTC", priceEur: 52500, fetchedAt: now.minus({ days: 7 }) },
 				{ symbol: "BTC", priceEur: 53000, fetchedAt: now },
 			];
 
@@ -338,90 +311,77 @@ describe("Portfolio Change Calculation Integration", () => {
 		});
 
 		it("should gracefully handle history with gaps when calculating 7d change", async () => {
-			const history = await assetHoldingsService.getPortfolioHistoryWithPrices(userId, accountId, { days: 30 });
+			const history = await assetHoldingsService.getPortfolioHistoryWithPrices(userId, accountId, { days: 30, hourlyForDays: 30 });
 
-			// 7d change should work since we have prices from 10 days ago (within 7d tolerance)
 			const weekChange = calculatePortfolioChange(history, 7);
 
-			// Expected: 53000 (now) - 52000 (10 days ago, closest to 7d mark)
 			expect(weekChange).not.toBeNull();
-			expect(weekChange!.absolute).toBeCloseTo(1000, 0);
+			expect(weekChange!.absolute).toBeCloseTo(500, 0);
 		});
 
-		it("should return null for 30d change when history gap prevents finding comparison point", async () => {
-			const history = await assetHoldingsService.getPortfolioHistoryWithPrices(userId, accountId, { days: 30 });
+		it("should calculate 30d change with sparse price data", async () => {
+			const history = await assetHoldingsService.getPortfolioHistoryWithPrices(userId, accountId, { days: 30, hourlyForDays: 30 });
 
-			// 30d change calculation requires finding a point close to 30 days ago
-			// The algorithm looks for the closest point BEFORE the target date
-			// With only sparse data, there may not be a suitable comparison point
-			const monthChange = calculatePortfolioChange(history, 30);
+			expect(history.length).toBeGreaterThan(0);
 
-			// This documents the behavior: with significant gaps, change calculation may fail
-			// The function needs history points spanning at least 30 days to calculate
-			// If the first history point is less than 30 days old, we get null
-			if (history.length > 0) {
-				const firstDate = DateTime.fromISO(history[0].date);
-				const lastDate = DateTime.fromISO(history[history.length - 1].date);
-				const spanDays = lastDate.diff(firstDate, "days").days;
+			const nonNullPoints = history.filter(p => p.totalEurValue !== null);
+			expect(nonNullPoints.length).toBeGreaterThan(0);
 
-				if (spanDays < 30) {
-					expect(monthChange).toBeNull();
-				}
+			const first = history[0];
+			if (first.totalEurValue !== null) {
+				const monthChange = calculatePortfolioChange(history, 30);
+				expect(monthChange).not.toBeNull();
 			}
 		});
+	});
 
-		it("should verify calculatePortfolioChange handles null totalEurValue in history points", () => {
-			// Create synthetic history with null values
-			const historyWithNulls: PortfolioHistoryPoint[] = [
-				{
-					date: "2024-01-01T00:00:00Z",
-					totalEurValue: 10000,
-					totalEurInvested: 9000,
-					assets: {},
-				},
-				{
-					date: "2024-01-15T00:00:00Z",
-					totalEurValue: null, // This point has no value
-					totalEurInvested: 9000,
-					assets: {},
-				},
-				{
-					date: "2024-01-31T00:00:00Z",
-					totalEurValue: 11000,
-					totalEurInvested: 9000,
-					assets: {},
-				},
-			];
+	it("should verify calculatePortfolioChange handles null totalEurValue in history points", () => {
+		const historyWithNulls: PortfolioHistoryPoint[] = [
+			{
+				date: "2024-01-01T00:00:00Z",
+				totalEurValue: 10000,
+				totalEurInvested: 9000,
+				assets: {},
+			},
+			{
+				date: "2024-01-15T00:00:00Z",
+				totalEurValue: null,
+				totalEurInvested: 9000,
+				assets: {},
+			},
+			{
+				date: "2024-01-31T00:00:00Z",
+				totalEurValue: 11000,
+				totalEurInvested: 9000,
+				assets: {},
+			},
+		];
 
-			const result = calculatePortfolioChange(historyWithNulls, 30);
+		const result = calculatePortfolioChange(historyWithNulls, 30);
 
-			// The algorithm should skip the null point and find the first valid one
-			// If the first point is valid and within 30 days, it should work
-			expect(result).not.toBeNull();
-			expect(result!.absolute).toBe(11000 - 10000);
-		});
+		expect(result).not.toBeNull();
+		expect(result!.absolute).toBe(11000 - 10000);
+	});
 
-		it("should return null when latest history point has null totalEurValue", () => {
-			const historyWithNullLatest: PortfolioHistoryPoint[] = [
-				{
-					date: "2024-01-01T00:00:00Z",
-					totalEurValue: 10000,
-					totalEurInvested: 9000,
-					assets: {},
-				},
-				{
-					date: "2024-01-31T00:00:00Z",
-					totalEurValue: null, // Latest point has no value
-					totalEurInvested: 9000,
-					assets: {},
-				},
-			];
+	it("should return null when latest history point has null totalEurValue", () => {
+		const historyWithNullLatest: PortfolioHistoryPoint[] = [
+			{
+				date: "2024-01-01T00:00:00Z",
+				totalEurValue: 10000,
+				totalEurInvested: 9000,
+				assets: {},
+			},
+			{
+				date: "2024-01-31T00:00:00Z",
+				totalEurValue: null,
+				totalEurInvested: 9000,
+				assets: {},
+			},
+		];
 
-			const result = calculatePortfolioChange(historyWithNullLatest, 30);
+		const result = calculatePortfolioChange(historyWithNullLatest, 30);
 
-			// Should return null because latest value is null
-			expect(result).toBeNull();
-		});
+		expect(result).toBeNull();
 	});
 
 	describe("buildHistoryPoint behavior with missing prices", () => {
@@ -558,7 +518,7 @@ describe("Portfolio Change Calculation Integration", () => {
 			}
 		});
 
-		it("should show that all assets need current prices for latest history point", async () => {
+		it("should show that partial data is included when some assets lack prices", async () => {
 			const now = DateTime.utc();
 
 			// BTC has current price, XRP does NOT have any price
@@ -588,15 +548,10 @@ describe("Portfolio Change Calculation Integration", () => {
 
 			const history = await assetHoldingsService.getPortfolioHistoryWithPrices(userId, accountId, { days: 30 });
 
-			// Even the latest point should be null because XRP has no price
-			// So history should be empty or the latest point should have null totalEurValue
+			// Even when XRP has no price, BTC's value should still be included
 			if (history.length > 0) {
 				const latestPoint = history[history.length - 1];
-				// With current implementation, this point wouldn't exist (buildHistoryPoint returns null)
-				expect(latestPoint.totalEurValue).toBeNull();
-			} else {
-				// History is empty because no valid history points could be built
-				expect(history.length).toBe(0);
+				expect(latestPoint.totalEurValue).toBe(53000);
 			}
 		});
 	});

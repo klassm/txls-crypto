@@ -344,7 +344,7 @@ export class AssetHoldingsService {
 		providerAccountId?: number,
 		options: PortfolioHistoryOptions = {}
 	): Promise<PortfolioHistoryPoint[]> {
-		const { days = 30, hourlyForDays = 30 } = options;
+		const { days = 30, hourlyForDays = 7 } = options;
 		const now = DateTime.utc();
 		const endDate = now;
 		const startDate = endDate.minus({ days }).startOf("day");
@@ -486,7 +486,7 @@ export class AssetHoldingsService {
 		timestamp: DateTime,
 		latestPrices?: Map<string, AssetPriceEntity>
 	): PortfolioHistoryPoint | null {
-		let totalEurValue: number | null = 0;
+		let totalEurValue: number | null = null;
 		let totalEurInvested = 0;
 		const assetsObj: Record<string, { amount: number; eurValue: number | null }> = {};
 
@@ -507,9 +507,7 @@ export class AssetHoldingsService {
 			totalEurInvested += data.eurInvested;
 
 			if (eurValue !== null) {
-				totalEurValue = (totalEurValue || 0) + eurValue;
-			} else {
-				totalEurValue = null;
+				totalEurValue = (totalEurValue ?? 0) + eurValue;
 			}
 		}
 
@@ -561,6 +559,7 @@ export class AssetHoldingsService {
 
 		const portfolioHistory = await this.getPortfolioHistoryWithPrices(userId, undefined, { days });
 
+		const maxChartPoints = 200;
 		const assetsOverview: AssetOverview[] = [];
 
 		for (const asset of assetList) {
@@ -581,6 +580,11 @@ export class AssetHoldingsService {
 				});
 			}
 
+			const priceHistoryFull = assetHistory.map(p => ({
+				date: p.timestamp.toISO() || "",
+				priceEur: p.priceEur,
+			}));
+
 			const priceChanges = await this.calculatePriceChanges(asset, currentPrice);
 
 			assetsOverview.push({
@@ -588,11 +592,8 @@ export class AssetHoldingsService {
 				amount: holding.amount,
 				eurValue,
 				eurInvested: holding.eurInvested,
-				priceHistory: assetHistory.map(p => ({
-					date: p.timestamp.toISO() || "",
-					priceEur: p.priceEur,
-				})),
-				positionHistory,
+				priceHistory: this.downsamplePoints(priceHistoryFull, maxChartPoints),
+				positionHistory: this.downsamplePoints(positionHistory, maxChartPoints),
 				priceChanges,
 			});
 		}
@@ -648,6 +649,7 @@ export class AssetHoldingsService {
 		const priceHistories = await this.getPriceHistoriesHourly(assetList, startDate, now);
 		const latestPrices = await this.pricesRepository.getLatestPrices(assetList);
 
+		const maxChartPoints = 200;
 		const assetsOverview: AssetOverview[] = [];
 
 		for (const [asset, holding] of holdings) {
@@ -665,6 +667,11 @@ export class AssetHoldingsService {
 				});
 			}
 
+			const priceHistoryFull = assetHistory.map(p => ({
+				date: p.timestamp.toISO() || "",
+				priceEur: p.priceEur,
+			}));
+
 			const priceChanges = await this.calculatePriceChanges(asset, currentPrice);
 
 			assetsOverview.push({
@@ -672,11 +679,8 @@ export class AssetHoldingsService {
 				amount: holding.amount,
 				eurValue,
 				eurInvested: holding.eurInvested,
-				priceHistory: assetHistory.map(p => ({
-					date: p.timestamp.toISO() || "",
-					priceEur: p.priceEur,
-				})),
-				positionHistory,
+				priceHistory: this.downsamplePoints(priceHistoryFull, maxChartPoints),
+				positionHistory: this.downsamplePoints(positionHistory, maxChartPoints),
 				priceChanges,
 			});
 		}
@@ -763,5 +767,19 @@ export class AssetHoldingsService {
 		const relative = (absolute / pastPrice) * 100;
 		
 		return { absolute, relative };
+	}
+
+	private downsamplePoints<T extends { date: string }>(points: T[], maxPoints: number): T[] {
+		if (points.length <= maxPoints) return points;
+
+		const result: T[] = [];
+		const step = (points.length - 1) / (maxPoints - 1);
+
+		for (let i = 0; i < maxPoints; i++) {
+			const index = Math.round(i * step);
+			result.push(points[index]);
+		}
+
+		return result;
 	}
 }

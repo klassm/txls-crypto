@@ -875,6 +875,135 @@ describe("Portfolio Consistency Integration", () => {
 		});
 	});
 
+	describe("30d portfolio history with partial price data", () => {
+		beforeEach(async () => {
+			const now = DateTime.utc();
+			const tenDaysAgo = now.minus({ days: 10 });
+			const fiveDaysAgo = now.minus({ days: 5 });
+			const yesterday = now.minus({ days: 1 });
+
+			await dataSource.getRepository(AssetPriceEntity).save([
+				{ asset: "BTC", priceEur: 50000, fetchedAt: tenDaysAgo } as AssetPriceEntity,
+				{ asset: "BTC", priceEur: 55000, fetchedAt: now } as AssetPriceEntity,
+			]);
+
+			await dataSource.getRepository(TransactionEntity).save([
+				{
+					userId,
+					providerAccountId: accountId1,
+					externalId: "tx-btc",
+					asset: "BTC",
+					type: TransactionType.buy,
+					quantity: 1.0,
+					eurValue: 50000,
+					eurFee: 0,
+					timestamp: tenDaysAgo,
+				} as TransactionEntity,
+			]);
+
+			await dataSource.getRepository(AssetHoldingEntity).save([
+				{
+					userId,
+					providerAccountId: accountId1,
+					asset: "BTC",
+					amount: 1.0,
+					eurInvested: 50000,
+					timestamp: tenDaysAgo,
+				} as AssetHoldingEntity,
+			]);
+		});
+
+		it("should return portfolio history data for 30d view", async () => {
+			const response = await request(app)
+				.get("/api/portfolio/overview?days=30")
+				.set("Cookie", [`${AUTH_COOKIE_NAME}=${authToken}`]);
+
+			expect(response.status).toBe(200);
+			expect(response.body.portfolioHistory.length).toBeGreaterThan(0);
+		});
+
+		it("should not return empty portfolio history when holdings exist", async () => {
+			const response = await request(app)
+				.get("/api/portfolio/overview?days=30")
+				.set("Cookie", [`${AUTH_COOKIE_NAME}=${authToken}`]);
+
+			expect(response.status).toBe(200);
+			const history = response.body.portfolioHistory;
+			const nonNullPoints = history.filter((p: any) => p.totalEurValue !== null);
+			expect(nonNullPoints.length).toBeGreaterThan(0);
+		});
+
+		it("should include partial data when some assets lack price at a timestamp", async () => {
+			const now = DateTime.utc();
+			await dataSource.getRepository(AssetPriceEntity).save([
+				{ asset: "ETH", priceEur: 3000, fetchedAt: now } as AssetPriceEntity,
+			]);
+			await dataSource.getRepository(AssetHoldingEntity).save([
+				{
+					userId,
+					providerAccountId: accountId1,
+					asset: "ETH",
+					amount: 5.0,
+					eurInvested: 15000,
+					timestamp: now.minus({ hours: 1 }),
+				} as AssetHoldingEntity,
+			]);
+
+			const response = await request(app)
+				.get("/api/portfolio/overview?days=30")
+				.set("Cookie", [`${AUTH_COOKIE_NAME}=${authToken}`]);
+
+			expect(response.status).toBe(200);
+			const history = response.body.portfolioHistory;
+			const nonNullPoints = history.filter((p: any) => p.totalEurValue !== null);
+			expect(nonNullPoints.length).toBeGreaterThan(0);
+		});
+	});
+
+	describe("30d overview response size", () => {
+		beforeEach(async () => {
+			const now = DateTime.utc();
+			const tenDaysAgo = now.minus({ days: 10 });
+
+			await dataSource.getRepository(AssetPriceEntity).save([
+				{ asset: "BTC", priceEur: 50000, fetchedAt: tenDaysAgo } as AssetPriceEntity,
+				{ asset: "BTC", priceEur: 55000, fetchedAt: now } as AssetPriceEntity,
+			]);
+
+			await dataSource.getRepository(AssetHoldingEntity).save([
+				{
+					userId,
+					providerAccountId: accountId1,
+					asset: "BTC",
+					amount: 1.0,
+					eurInvested: 50000,
+					timestamp: tenDaysAgo,
+				} as AssetHoldingEntity,
+			]);
+		});
+
+		it("should limit priceHistory to at most 200 points per asset", async () => {
+			const response = await request(app)
+				.get("/api/portfolio/overview?days=30")
+				.set("Cookie", [`${AUTH_COOKIE_NAME}=${authToken}`]);
+
+			expect(response.status).toBe(200);
+			for (const asset of response.body.assets) {
+				expect(asset.priceHistory.length).toBeLessThanOrEqual(200);
+				expect(asset.positionHistory.length).toBeLessThanOrEqual(200);
+			}
+		});
+
+		it("should use daily granularity for days beyond hourlyForDays", async () => {
+			const response = await request(app)
+				.get("/api/portfolio/overview?days=30")
+				.set("Cookie", [`${AUTH_COOKIE_NAME}=${authToken}`]);
+
+			expect(response.status).toBe(200);
+			expect(response.body.portfolioHistory.length).toBeLessThan(200);
+		});
+	});
+
 	describe("Holdings with very old timestamps", () => {
 		beforeEach(async () => {
 			const now = DateTime.utc();

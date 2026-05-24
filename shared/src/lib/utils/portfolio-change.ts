@@ -24,15 +24,19 @@ export function calculatePortfolioChange(
 	const latestDate = DateTime.fromISO(latest.date);
 	const targetDate = latestDate.minus({ days });
 
-	const toleranceHours = Math.min(24, Math.max(6, days / 2));
+	const toleranceHours = Math.min(48, Math.max(6, days / 2));
 
 	let past: PortfolioHistoryPoint | null = null;
+	let minDistance = Infinity;
 	for (let i = history.length - 1; i >= 0; i--) {
+		if (history[i].totalEurValue === null) continue;
 		const entryDate = DateTime.fromISO(history[i].date);
-		if (entryDate <= targetDate) {
+		const distance = Math.abs(targetDate.diff(entryDate, "hours").hours);
+		if (distance < minDistance) {
+			minDistance = distance;
 			past = history[i];
-			break;
 		}
+		if (entryDate <= targetDate) break;
 	}
 
 	if (!past || past.totalEurValue === null) return null;

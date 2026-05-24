@@ -330,6 +330,52 @@ describe("AssetHoldingsService", () => {
 		});
 	});
 
+	describe("downsamplePoints", () => {
+		it("returns all points when under maxPoints", () => {
+			const points = [
+				{ date: "2024-01-01", value: 1 },
+				{ date: "2024-01-02", value: 2 },
+				{ date: "2024-01-03", value: 3 },
+			];
+
+			const result = (service as any).downsamplePoints(points, 10);
+
+			expect(result).toEqual(points);
+		});
+
+		it("returns exactly maxPoints when over maxPoints", () => {
+			const points = Array.from({ length: 100 }, (_, i) => ({
+				date: `2024-01-${String(i + 1).padStart(2, "0")}`,
+				value: i,
+			}));
+
+			const result = (service as any).downsamplePoints(points, 20);
+
+			expect(result).toHaveLength(20);
+		});
+
+		it("includes first and last points", () => {
+			const points = Array.from({ length: 100 }, (_, i) => ({
+				date: `2024-01-${String(i + 1).padStart(2, "0")}`,
+				value: i,
+			}));
+
+			const result = (service as any).downsamplePoints(points, 20);
+
+			expect(result[0]).toEqual(points[0]);
+			expect(result[result.length - 1]).toEqual(points[points.length - 1]);
+		});
+
+		it("handles single point", () => {
+			const points = [{ date: "2024-01-01", value: 1 }];
+
+			const result = (service as any).downsamplePoints(points, 200);
+
+			expect(result).toHaveLength(1);
+			expect(result[0]).toEqual(points[0]);
+		});
+	});
+
 	describe("getAccountAssetOverview", () => {
 		it("returns empty array when no holdings exist", async () => {
 			(mockHoldingsRepository.findLatestByAccount as any).mockResolvedValue(new Map());
@@ -337,6 +383,29 @@ describe("AssetHoldingsService", () => {
 			const result = await service.getAccountAssetOverview(1, 1);
 
 			expect(result).toEqual([]);
+		});
+
+		it("downsamples priceHistory and positionHistory to max 200 points", async () => {
+			const holdings = new Map([
+				["BTC", { asset: "BTC", amount: 1.5, eurInvested: 50000 }],
+			]);
+			(mockHoldingsRepository.findLatestByAccount as any).mockResolvedValue(holdings);
+
+			const latestPrices = new Map([
+				["BTC", { priceEur: 50000 }],
+			]);
+			(mockPricesRepository.getLatestPrices as any).mockResolvedValue(latestPrices);
+
+			const manyPricePoints = Array.from({ length: 500 }, (_, i) => ({
+				date: DateTime.fromISO("2024-06-01T00:00:00Z").plus({ hours: i }),
+				priceEur: 48000 + i * 10,
+			}));
+			(mockPricesRepository.getPriceHistory as any).mockResolvedValue(manyPricePoints);
+
+			const result = await service.getAccountAssetOverview(1, 1);
+
+			expect(result[0].priceHistory.length).toBeLessThanOrEqual(200);
+			expect(result[0].positionHistory.length).toBeLessThanOrEqual(200);
 		});
 
 		it("returns asset overview with price data", async () => {

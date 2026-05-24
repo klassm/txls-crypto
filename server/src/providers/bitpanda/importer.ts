@@ -28,12 +28,12 @@ const BitpandaRowSchema = z.object({
   "Asset market price currency": z.string(),
   "Asset class": z.string(),
   "Product ID": z.string(),
-  Fee: z.string().or(z.literal("")).or(z.undefined()),
-  "Fee asset": z.string().or(z.literal("")).or(z.undefined()),
-  "Fee percent": z.string().or(z.literal("")).or(z.undefined()),
-  Spread: z.string().or(z.undefined()),
-  "Spread Currency": z.string().or(z.undefined()),
-  "Tax Fiat": z.string().or(z.literal("")).or(z.undefined()),
+  Fee: z.string().or(z.literal("")).optional(),
+  "Fee asset": z.string().or(z.literal("")).optional(),
+  "Fee percent": z.string().or(z.literal("")).optional(),
+  Spread: z.string().optional(),
+  "Spread Currency": z.string().optional(),
+  "Tax Fiat": z.string().or(z.literal("")).optional(),
 });
 
 type BitpandaRow = z.infer<typeof BitpandaRowSchema>;
