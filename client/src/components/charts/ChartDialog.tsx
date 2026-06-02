@@ -107,13 +107,12 @@ export function ChartDialog({
 					</ToggleButtonGroup>
 				</Box>
 				<Box sx={{ height: "calc(100% - 60px)", position: "relative" }}>
-					{isLoading ? (
-						<Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
+					{isLoading && (
+						<Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", position: "absolute", inset: 0, zIndex: 1, backgroundColor: theme.palette.background.paper, opacity: 0.7 }}>
 							<CircularProgress />
 						</Box>
-					) : (
-						children
 					)}
+					{children}
 				</Box>
 			</DialogContent>
 		</Dialog>

@@ -1,6 +1,6 @@
 "use client";
 
-import { Box, Typography, Grid, Card, Button } from "@mui/material";
+import { Box, Typography, Grid, Card, Button, CircularProgress } from "@mui/material";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { Add as AddIcon } from "@mui/icons-material";
@@ -52,8 +52,8 @@ export default function AccountDetailPage() {
 	const { data: transactionsData, isLoading: isTransactionsLoading, refetch: refetchTransactions } = useAccountTransactions(Number(id), selectedYear);
 
 	const chartDays = chartTimeSpan === "all" ? 3650 : chartTimeSpan;
-	const { data: portfolioHistory } = usePortfolioHistory(Number(id), chartDays);
-	const { data: accountAssets } = useAccountAssets(Number(id), chartDays);
+	const { data: portfolioHistory, isFetching: isChartFetching } = usePortfolioHistory(Number(id), chartDays);
+	const { data: accountAssets, isFetching: isAssetsFetching } = useAccountAssets(Number(id), chartDays);
 
 	const importMutation = useImportCsv(Number(id));
 
@@ -137,7 +137,7 @@ export default function AccountDetailPage() {
 					/>
 					<Box>
 						{portfolioHistory && portfolioHistory.length > 0 && (
-							<Box sx={{ mb: 3 }}>
+							<Box sx={{ mb: 3, position: "relative" }}>
 								<Box sx={{ display: "flex", justifyContent: "flex-end", mb: 1 }}>
 									<ExpandButton onClick={() => setChartDialogOpen(true)} />
 								</Box>
@@ -146,12 +146,18 @@ export default function AccountDetailPage() {
 									height={250}
 									title="Portfolio Value"
 								/>
+								{(isChartFetching || isAssetsFetching) && (
+									<Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", position: "absolute", inset: 0, zIndex: 1, backgroundColor: "background.paper", opacity: 0.7, borderRadius: 1 }}>
+										<CircularProgress size={32} />
+									</Box>
+								)}
 								<ChartDialog
 									open={chartDialogOpen}
 									onClose={() => setChartDialogOpen(false)}
 									title="Portfolio Value"
 									initialTimeSpan={chartTimeSpan}
 									onTimeSpanChange={setChartTimeSpan}
+									isLoading={(isChartFetching || isAssetsFetching) && chartDialogOpen}
 								>
 									<PortfolioValueChart data={portfolioHistory} height={400} title="" />
 								</ChartDialog>

@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { portfolioApi } from "../lib/client/prices-api";
 
 export function usePortfolioHistory(accountId?: number, days = 30) {
@@ -10,6 +10,7 @@ export function usePortfolioHistory(accountId?: number, days = 30) {
 				: portfolioApi.getAllHistory(days),
 		staleTime: 5 * 60 * 1000,
 		refetchOnMount: false,
+		placeholderData: keepPreviousData,
 	});
 }
 
@@ -19,6 +20,7 @@ export function usePortfolioOverview(days = 30) {
 		queryFn: () => portfolioApi.getOverview(days),
 		staleTime: 5 * 60 * 1000,
 		refetchOnMount: false,
+		placeholderData: keepPreviousData,
 	});
 }
 
@@ -28,5 +30,6 @@ export function useAccountAssets(accountId: number, days = 30) {
 		queryFn: () => portfolioApi.getAccountAssets(accountId, days),
 		staleTime: 5 * 60 * 1000,
 		refetchOnMount: false,
+		placeholderData: keepPreviousData,
 	});
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { Box, Card, Grid, Typography, Stack } from "@mui/material";
+import { Box, Card, Grid, Typography, Stack, CircularProgress } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { usePortfolioOverview, useSources } from "../hooks";
@@ -158,6 +158,7 @@ export default function PortfolioPage() {
 	const accounts = overview?.accounts || [];
 	const currentYearStakingRewards = overview?.currentYearStakingRewards || { eurValue: 0, count: 0 };
 	const totalStakingRewards = overview?.totalStakingRewards || { eurValue: 0, count: 0 };
+	const isChartLoading = isFetching;
 
 	const getProviderName = (provider: string) => {
 		const source = sources.find(s => s.source === provider);
@@ -185,7 +186,7 @@ export default function PortfolioPage() {
 					<PortfolioStats history={portfolioHistory} assets={assets} currentYearStakingRewards={currentYearStakingRewards} totalStakingRewards={totalStakingRewards} />
 
 				{portfolioHistory.length > 0 && (
-					<Box sx={{ mb: 4 }}>
+					<Box sx={{ mb: 4, position: "relative" }}>
 						<Box sx={{ display: "flex", justifyContent: "flex-end", mb: 1 }}>
 							<ExpandButton onClick={() => setDialogOpen(true)} />
 						</Box>
@@ -194,13 +195,18 @@ export default function PortfolioPage() {
 							height={250}
 							title="Portfolio Value"
 						/>
+						{isChartLoading && (
+							<Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", position: "absolute", inset: 0, zIndex: 1, backgroundColor: "background.paper", opacity: 0.7, borderRadius: 1 }}>
+								<CircularProgress size={32} />
+							</Box>
+						)}
 						<ChartDialog
 							open={dialogOpen}
 							onClose={() => setDialogOpen(false)}
 							title="Portfolio Value"
 							initialTimeSpan={chartTimeSpan}
 							onTimeSpanChange={setChartTimeSpan}
-							isLoading={isFetching && dialogOpen}
+							isLoading={isChartLoading && dialogOpen}
 						>
 							<PortfolioValueChart data={portfolioHistory} height={400} title="" />
 						</ChartDialog>

@@ -2,7 +2,7 @@
 
 import { Box, Card, Grid, Typography, Divider } from "@mui/material";
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { AssetPriceChart } from "../charts/AssetPriceChart";
 import { PositionChart } from "../charts/PositionChart";
 import { ChartDialog, type TimeSpan } from "../charts/ChartDialog";
@@ -23,11 +23,12 @@ export function AssetCard({ asset }: AssetCardProps) {
 	const [positionTimeSpan, setPositionTimeSpan] = useState<TimeSpan>(30);
 
 	const priceDays = priceTimeSpan === "all" ? 3650 : priceTimeSpan;
-	const { data: expandedPriceHistory } = useQuery({
+	const { data: expandedPriceHistory, isFetching: isPriceHistoryLoading } = useQuery({
 		queryKey: ["asset-price", asset.asset, priceDays],
 		queryFn: () => portfolioApi.getAssetPriceHistory(asset.asset, priceDays),
 		enabled: priceDialogOpen,
 		staleTime: 5 * 60 * 1000,
+		placeholderData: keepPreviousData,
 	});
 
 	const positionDays = positionTimeSpan === "all" ? 3650 : positionTimeSpan;
@@ -42,6 +43,7 @@ export function AssetCard({ asset }: AssetCardProps) {
 		},
 		enabled: positionDialogOpen,
 		staleTime: 5 * 60 * 1000,
+		placeholderData: keepPreviousData,
 	});
 
 	if (!initialPriceHistory || initialPriceHistory.length === 0) {
@@ -152,6 +154,7 @@ export function AssetCard({ asset }: AssetCardProps) {
 								title={`${asset.asset} Price`}
 								initialTimeSpan={priceTimeSpan}
 								onTimeSpanChange={setPriceTimeSpan}
+								isLoading={isPriceHistoryLoading}
 							>
 								<AssetPriceChart data={priceHistory} height={400} />
 							</ChartDialog>
