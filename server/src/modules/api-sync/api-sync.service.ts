@@ -178,7 +178,7 @@ export class ApiSyncService {
   private getEarliestTimestamp(transactions: Transaction[]): DateTime {
     const timestamps = transactions.map((t) => t.timestamp.toMillis());
     const earliest = Math.min(...timestamps);
-    return DateTime.fromMillis(earliest);
+    return DateTime.fromMillis(earliest, { zone: "utc" });
   }
 
   private async deleteAllTransactions(userId: number, accountId: number): Promise<void> {

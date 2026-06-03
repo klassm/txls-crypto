@@ -8,7 +8,7 @@ export function toDateTime(value: Date | string | DateTime | null | undefined): 
   }
   
   if (value instanceof Date) {
-    return DateTime.fromJSDate(value);
+    return DateTime.fromJSDate(value, { zone: "utc" });
   }
   
   if (typeof value === "string") {

@@ -266,6 +266,6 @@ export class AssetHoldingsRepository {
 
 		const results = await query.orderBy("holding.timestamp", "ASC").getRawMany();
 
-		return results.map((r: any) => DateTime.fromMillis(Number(r.timestamp)));
+		return results.map((r: any) => DateTime.fromMillis(Number(r.timestamp), { zone: "utc" }));
 	}
 }

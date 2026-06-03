@@ -84,9 +84,9 @@ export class PricesRepository {
 			entity.id = row.id;
 			entity.asset = row.asset;
 			entity.priceEur = Number(row.price_eur);
-			entity.fetchedAt = DateTime.fromMillis(Number(row.fetched_at));
+			entity.fetchedAt = DateTime.fromMillis(Number(row.fetched_at), { zone: "utc" });
 			entity.source = row.source;
-			entity.createdAt = DateTime.fromMillis(Number(row.created_at));
+			entity.createdAt = DateTime.fromMillis(Number(row.created_at), { zone: "utc" });
 			map.set(entity.asset, entity);
 		}
 
@@ -110,9 +110,9 @@ export class PricesRepository {
 			entity.id = row.id;
 			entity.asset = row.asset;
 			entity.priceEur = Number(row.price_eur);
-			entity.fetchedAt = DateTime.fromMillis(Number(row.fetched_at));
+			entity.fetchedAt = DateTime.fromMillis(Number(row.fetched_at), { zone: "utc" });
 			entity.source = row.source;
-			entity.createdAt = DateTime.fromMillis(Number(row.created_at));
+			entity.createdAt = DateTime.fromMillis(Number(row.created_at), { zone: "utc" });
 			map.set(entity.asset, entity);
 		}
 
@@ -162,9 +162,9 @@ export class PricesRepository {
 		entity.id = row.id;
 		entity.asset = row.asset;
 		entity.priceEur = Number(row.price_eur);
-		entity.fetchedAt = DateTime.fromMillis(Number(row.fetched_at));
+		entity.fetchedAt = DateTime.fromMillis(Number(row.fetched_at), { zone: "utc" });
 		entity.source = row.source;
-		entity.createdAt = DateTime.fromMillis(Number(row.created_at));
+		entity.createdAt = DateTime.fromMillis(Number(row.created_at), { zone: "utc" });
 		return entity;
 	}
 
@@ -192,9 +192,9 @@ export class PricesRepository {
 			entity.id = row.id;
 			entity.asset = row.asset;
 			entity.priceEur = Number(row.price_eur);
-			entity.fetchedAt = DateTime.fromMillis(Number(row.fetched_at));
+			entity.fetchedAt = DateTime.fromMillis(Number(row.fetched_at), { zone: "utc" });
 			entity.source = row.source;
-			entity.createdAt = DateTime.fromMillis(Number(row.created_at));
+			entity.createdAt = DateTime.fromMillis(Number(row.created_at), { zone: "utc" });
 			map.set(entity.asset, entity);
 		}
 
