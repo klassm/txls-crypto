@@ -226,6 +226,7 @@ describe.each(testConfigs)("$displayName UsersRepository Integration", ({ name, 
       const saved = await repository.save(user);
 
       saved.name = "Updated Name";
+      saved.updatedAt = DateTime.now();
       const updated = await repository.save(saved);
 
       expect(updated.name).toBe("Updated Name");
