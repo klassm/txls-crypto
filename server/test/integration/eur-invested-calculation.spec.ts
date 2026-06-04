@@ -227,7 +227,7 @@ describe.each(testConfigs)("$displayName eurInvested Calculation", ({ displayNam
 			const holdingsRepo = new AssetHoldingsRepository(dataSource);
 			const holdings = await holdingsRepo.findLatestByAccount(userId, providerAccountId);
 
-		expect(Number(holdings.get("SOL")?.amount)).toBeGreaterThanOrEqual(10);
+		expect(Number(holdings.get("SOL")?.amount)).toBe(11);
 		expect(Number(holdings.get("SOL")?.eurInvested)).toBe(1000);
 		});
 
