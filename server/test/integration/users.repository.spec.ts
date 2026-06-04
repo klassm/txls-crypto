@@ -61,6 +61,12 @@ describe.each(testConfigs)("$displayName UsersRepository Integration", ({ name, 
     }
   });
 
+  beforeEach(async () => {
+    if (dataSource && dataSource.isInitialized) {
+      await dataSource.query("DELETE FROM users");
+    }
+  });
+
   describe("count", () => {
     it("should return 0 when database is empty", async () => {
       const count = await repository.count();
