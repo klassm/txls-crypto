@@ -24,9 +24,6 @@ jobs:
     - name: Install dependencies
       run: pnpm install --frozen-lockfile
     
-    - name: Rebuild native modules
-      run: cd node_modules/.pnpm/better-sqlite3@*/node_modules/better-sqlite3 && npx node-gyp rebuild --release
-    
     - name: Build application
       run: pnpm run build
       env:
@@ -92,11 +89,25 @@ jobs:
       with:
         name: build-artifacts
 
-    - name: Rebuild native modules
-      run: cd node_modules/.pnpm/better-sqlite3@*/node_modules/better-sqlite3 && npx node-gyp rebuild --release
-
     - name: Run unit tests
       run: pnpm run test:unit
+      env:
+        DB_CONNECTION_STRING: mysql://root:root@127.0.0.1:3306/txls_test
+        JWT_SECRET: test-secret-key-for-jwt-signing-in-tests-sufficiently-long
+
+    services:
+      mysql:
+        image: mariadb:11
+        env:
+          MARIADB_ROOT_PASSWORD: root
+          MARIADB_DATABASE: txls_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --user=root --password=root"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
   test-integration:
     runs-on: ubuntu-latest
@@ -118,16 +129,16 @@ jobs:
           --health-retries 5
 
       mysql:
-        image: mysql:8.0
+        image: mariadb:11
         env:
-          MYSQL_USER: testuser
-          MYSQL_PASSWORD: testpass
-          MYSQL_DATABASE: txls_test
-          MYSQL_ROOT_PASSWORD: rootpass
+          MARIADB_USER: testuser
+          MARIADB_PASSWORD: testpass
+          MARIADB_DATABASE: txls_test
+          MARIADB_ROOT_PASSWORD: rootpass
         ports:
           - 3306:3306
         options: >-
-          --health-cmd="mysqladmin ping -h localhost -u root -prootpass"
+          --health-cmd="healthcheck.sh --connect --user=root --password=rootpass"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -150,12 +161,6 @@ jobs:
       uses: actions/download-artifact@v5
       with:
         name: build-artifacts
-
-    - name: Rebuild native modules
-      run: cd node_modules/.pnpm/better-sqlite3@*/node_modules/better-sqlite3 && npx node-gyp rebuild --release
-    
-    - name: Run SQLite integration tests
-      run: pnpm run test:integration:sqlite
     
     - name: Run PostgreSQL integration tests
       run: pnpm run test:integration:postgres
@@ -171,6 +176,20 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build]
 
+    services:
+      mysql:
+        image: mariadb:11
+        env:
+          MARIADB_ROOT_PASSWORD: root
+          MARIADB_DATABASE: txls_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --user=root --password=root"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - uses: actions/checkout@v5
 
@@ -189,14 +208,13 @@ jobs:
         with:
           name: build-artifacts
 
-      - name: Rebuild native modules
-        run: cd node_modules/.pnpm/better-sqlite3@*/node_modules/better-sqlite3 && npx node-gyp rebuild --release
-
       - name: Install Playwright Browsers
         run: pnpm exec playwright install --with-deps chromium
 
       - name: Run GUI tests (local dev)
         run: pnpm run test:gui:local
+        env:
+          DB_CONNECTION_STRING: mysql://root:root@127.0.0.1:3306/txls_test
 
       - name: Upload test results
         if: always()
@@ -210,6 +228,20 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build]
 
+    services:
+      mysql:
+        image: mariadb:11
+        env:
+          MARIADB_ROOT_PASSWORD: root
+          MARIADB_DATABASE: txls_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --user=root --password=root"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - uses: actions/checkout@v5
 
@@ -228,14 +260,13 @@ jobs:
         with:
           name: build-artifacts
 
-      - name: Rebuild native modules
-        run: cd node_modules/.pnpm/better-sqlite3@*/node_modules/better-sqlite3 && npx node-gyp rebuild --release
-
       - name: Install Playwright Browsers
         run: pnpm exec playwright install --with-deps chromium
 
       - name: Run GUI tests (Docker)
         run: pnpm run test:gui:docker
+        env:
+          DB_CONNECTION_STRING: mysql://root:root@127.0.0.1:3306/txls_test
 
       - name: Upload test results
         if: always()
@@ -249,6 +280,20 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build]
 
+    services:
+      mysql:
+        image: mariadb:11
+        env:
+          MARIADB_ROOT_PASSWORD: root
+          MARIADB_DATABASE: txls_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --user=root --password=root"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - uses: actions/checkout@v5
 
@@ -267,14 +312,13 @@ jobs:
         with:
           name: build-artifacts
 
-      - name: Rebuild native modules
-        run: cd node_modules/.pnpm/better-sqlite3@*/node_modules/better-sqlite3 && npx node-gyp rebuild --release
-
       - name: Install Playwright Browsers
         run: pnpm exec playwright install --with-deps chromium
 
       - name: Run GUI tests (Home Assistant ingress)
         run: pnpm run test:gui:hass
+        env:
+          DB_CONNECTION_STRING: mysql://root:root@127.0.0.1:3306/txls_test
 
       - name: Upload test results
         if: always()

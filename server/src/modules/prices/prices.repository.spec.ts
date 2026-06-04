@@ -4,301 +4,321 @@ import { AssetPriceEntity } from "./asset-price.entity.js";
 import { DateTime } from "luxon";
 import type { CoinPrice } from "./coingecko.service.js";
 
+function createSubqueryMock(returnedQuery: string, returnedParams: Record<string, any>) {
+  return {
+    select: vi.fn().mockReturnThis(),
+    addSelect: vi.fn().mockReturnThis(),
+    where: vi.fn().mockReturnThis(),
+    andWhere: vi.fn().mockReturnThis(),
+    groupBy: vi.fn().mockReturnThis(),
+    getQuery: vi.fn().mockReturnValue(returnedQuery),
+    getParameters: vi.fn().mockReturnValue(returnedParams),
+  };
+}
+
 describe("PricesRepository", () => {
-	let repository: PricesRepository;
-	let mockDataSource: any;
-	let mockQueryBuilder: any;
-	let mockRepository: any;
+  let repository: PricesRepository;
+  let mockDataSource: any;
+  let mockQueryBuilder: any;
+  let mockRepository: any;
 
-	beforeEach(() => {
-		const insertBuilder = {
-			into: vi.fn().mockReturnThis(),
-			values: vi.fn().mockReturnThis(),
-			execute: vi.fn().mockResolvedValue({}),
-		};
+  beforeEach(() => {
+    const insertBuilder = {
+      into: vi.fn().mockReturnThis(),
+      values: vi.fn().mockReturnThis(),
+      execute: vi.fn().mockResolvedValue({}),
+    };
 
-		mockQueryBuilder = {
-			insert: vi.fn().mockReturnValue(insertBuilder),
-			where: vi.fn().mockReturnThis(),
-			andWhere: vi.fn().mockReturnThis(),
-			orderBy: vi.fn().mockReturnThis(),
-			limit: vi.fn().mockReturnThis(),
-			getOne: vi.fn(),
-			getMany: vi.fn(),
-			delete: vi.fn().mockReturnThis(),
-			execute: vi.fn(),
-		};
+    mockQueryBuilder = {
+      insert: vi.fn().mockReturnValue(insertBuilder),
+      where: vi.fn().mockReturnThis(),
+      andWhere: vi.fn().mockReturnThis(),
+      orderBy: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      getOne: vi.fn(),
+      getMany: vi.fn(),
+      innerJoin: vi.fn().mockReturnThis(),
+      setParameters: vi.fn().mockReturnThis(),
+      delete: vi.fn().mockReturnThis(),
+      execute: vi.fn(),
+    };
 
-		mockRepository = {
-			createQueryBuilder: vi.fn().mockReturnValue(mockQueryBuilder),
-		};
+    mockRepository = {
+      createQueryBuilder: vi.fn().mockReturnValue(mockQueryBuilder),
+    };
 
-		mockDataSource = {
-			getRepository: vi.fn().mockReturnValue(mockRepository),
-			query: vi.fn(),
-		};
+    mockDataSource = {
+      getRepository: vi.fn().mockReturnValue(mockRepository),
+    };
 
-		repository = new PricesRepository(mockDataSource);
-	});
+    repository = new PricesRepository(mockDataSource);
+  });
 
-	describe("savePrices", () => {
-		it("should save multiple prices", async () => {
-			const prices: CoinPrice[] = [
-				{ symbol: "BTC", priceEur: 50000, fetchedAt: DateTime.utc() },
-				{ symbol: "ETH", priceEur: 3000, fetchedAt: DateTime.utc() },
-			];
+  describe("savePrices", () => {
+    it("should save multiple prices", async () => {
+      const prices: CoinPrice[] = [
+        { symbol: "BTC", priceEur: 50000, fetchedAt: DateTime.utc() },
+        { symbol: "ETH", priceEur: 3000, fetchedAt: DateTime.utc() },
+      ];
 
-			await repository.savePrices(prices);
+      await repository.savePrices(prices);
 
-			expect(mockRepository.createQueryBuilder).toHaveBeenCalled();
-		});
+      expect(mockRepository.createQueryBuilder).toHaveBeenCalled();
+    });
 
-		it("should do nothing if prices array is empty", async () => {
-			await repository.savePrices([]);
-			expect(mockRepository.createQueryBuilder).not.toHaveBeenCalled();
-		});
-	});
+    it("should do nothing if prices array is empty", async () => {
+      await repository.savePrices([]);
+      expect(mockRepository.createQueryBuilder).not.toHaveBeenCalled();
+    });
+  });
 
-	describe("getLatestPrice", () => {
-		it("should return latest price for asset", async () => {
-			const mockEntity = new AssetPriceEntity();
-			mockEntity.id = 1;
-			mockEntity.asset = "BTC";
-			mockEntity.priceEur = 50000;
-			mockEntity.fetchedAt = DateTime.utc();
-			mockEntity.source = "coingecko";
+  describe("getLatestPrice", () => {
+    it("should return latest price for asset", async () => {
+      const mockEntity = new AssetPriceEntity();
+      mockEntity.id = 1;
+      mockEntity.asset = "BTC";
+      mockEntity.priceEur = 50000;
+      mockEntity.fetchedAt = DateTime.utc();
+      mockEntity.source = "coingecko";
 
-			mockQueryBuilder.getOne.mockResolvedValue(mockEntity);
+      mockQueryBuilder.getOne.mockResolvedValue(mockEntity);
 
-			const result = await repository.getLatestPrice("BTC");
+      const result = await repository.getLatestPrice("BTC");
 
-			expect(result).toEqual(mockEntity);
-			expect(mockQueryBuilder.where).toHaveBeenCalledWith(
-				"price.asset = :asset",
-				{ asset: "BTC" }
-			);
-		});
+      expect(result).toEqual(mockEntity);
+      expect(mockQueryBuilder.where).toHaveBeenCalledWith(
+        "price.asset = :asset",
+        { asset: "BTC" }
+      );
+    });
 
-		it("should return null if no price found", async () => {
-			mockQueryBuilder.getOne.mockResolvedValue(null);
+    it("should return null if no price found", async () => {
+      mockQueryBuilder.getOne.mockResolvedValue(null);
 
-			const result = await repository.getLatestPrice("UNKNOWN");
+      const result = await repository.getLatestPrice("UNKNOWN");
 
-			expect(result).toBeNull();
-		});
-	});
+      expect(result).toBeNull();
+    });
+  });
 
-	describe("getLatestPrices", () => {
-		it("should return map of latest prices", async () => {
-			mockDataSource.query.mockResolvedValue([
-				{ id: 1, asset: "BTC", price_eur: 50000, fetched_at: Date.now(), source: "coingecko", created_at: Date.now() },
-				{ id: 2, asset: "ETH", price_eur: 3000, fetched_at: Date.now(), source: "coingecko", created_at: Date.now() },
-			]);
+  describe("getLatestPrices", () => {
+    it("should return map of latest prices via QueryBuilder", async () => {
+      const btcEntity = new AssetPriceEntity();
+      btcEntity.id = 1;
+      btcEntity.asset = "BTC";
+      btcEntity.priceEur = 50000;
+      btcEntity.fetchedAt = DateTime.utc();
+      btcEntity.source = "coingecko";
 
-			const result = await repository.getLatestPrices(["BTC", "ETH"]);
+      const ethEntity = new AssetPriceEntity();
+      ethEntity.id = 2;
+      ethEntity.asset = "ETH";
+      ethEntity.priceEur = 3000;
+      ethEntity.fetchedAt = DateTime.utc();
+      ethEntity.source = "coingecko";
 
-			expect(result.size).toBe(2);
-			expect(result.get("BTC")?.priceEur).toBe(50000);
-			expect(result.get("ETH")?.priceEur).toBe(3000);
-		});
+      const subquery = createSubqueryMock("subquery", { assets: ["BTC", "ETH"] });
+      mockRepository.createQueryBuilder
+        .mockReturnValueOnce(subquery)
+        .mockReturnValueOnce(mockQueryBuilder);
+      mockQueryBuilder.getMany.mockResolvedValue([btcEntity, ethEntity]);
 
-		it("should return empty map for empty assets array", async () => {
-			const result = await repository.getLatestPrices([]);
-			expect(result.size).toBe(0);
-		});
-	});
+      const result = await repository.getLatestPrices(["BTC", "ETH"]);
 
-	describe("getAllLatestPrices", () => {
-		it("should return all latest prices", async () => {
-			mockDataSource.query.mockResolvedValue([
-				{ id: 1, asset: "BTC", price_eur: 50000, fetched_at: Date.now(), source: "coingecko", created_at: Date.now() },
-			]);
+      expect(result.size).toBe(2);
+      expect(result.get("BTC")?.priceEur).toBe(50000);
+      expect(result.get("ETH")?.priceEur).toBe(3000);
+    });
 
-			const result = await repository.getAllLatestPrices();
+    it("should return empty map for empty assets array", async () => {
+      const result = await repository.getLatestPrices([]);
+      expect(result.size).toBe(0);
+    });
+  });
 
-			expect(result.size).toBe(1);
-			expect(result.get("BTC")?.priceEur).toBe(50000);
-		});
-	});
+  describe("getAllLatestPrices", () => {
+    it("should return all latest prices via QueryBuilder", async () => {
+      const btcEntity = new AssetPriceEntity();
+      btcEntity.id = 1;
+      btcEntity.asset = "BTC";
+      btcEntity.priceEur = 50000;
+      btcEntity.fetchedAt = DateTime.utc();
+      btcEntity.source = "coingecko";
 
-	describe("deleteOldPrices", () => {
-		it("should delete prices older than specified days", async () => {
-			mockQueryBuilder.execute.mockResolvedValue({ affected: 5 });
+      const subquery = createSubqueryMock("subquery", {});
+      mockRepository.createQueryBuilder
+        .mockReturnValueOnce(subquery)
+        .mockReturnValueOnce(mockQueryBuilder);
+      mockQueryBuilder.getMany.mockResolvedValue([btcEntity]);
 
-			const result = await repository.deleteOldPrices(30);
+      const result = await repository.getAllLatestPrices();
 
-			expect(result).toBe(5);
-		});
+      expect(result.size).toBe(1);
+      expect(result.get("BTC")?.priceEur).toBe(50000);
+    });
+  });
 
-		it("should return 0 if no prices deleted", async () => {
-			mockQueryBuilder.execute.mockResolvedValue({ affected: 0 });
+  describe("deleteOldPrices", () => {
+    it("should delete prices older than specified days", async () => {
+      mockQueryBuilder.execute.mockResolvedValue({ affected: 5 });
 
-			const result = await repository.deleteOldPrices(30);
+      const result = await repository.deleteOldPrices(30);
 
-			expect(result).toBe(0);
-		});
-	});
+      expect(result).toBe(5);
+    });
 
-	describe("getPriceForDate", () => {
-		it("should return price when price exists on the same day", async () => {
-			const testDate = DateTime.utc(2024, 1, 15, 12, 0, 0);
-			const mockPrice = {
-				id: 1,
-				asset: "BTC",
-				price_eur: 50000,
-				fetched_at: testDate.toMillis(),
-				source: "coingecko",
-				created_at: testDate.toMillis(),
-			};
+    it("should return 0 if no prices deleted", async () => {
+      mockQueryBuilder.execute.mockResolvedValue({ affected: 0 });
 
-			mockDataSource.query.mockResolvedValue([mockPrice]);
+      const result = await repository.deleteOldPrices(30);
 
-			const result = await repository.getPriceForDate("BTC", testDate);
+      expect(result).toBe(0);
+    });
+  });
 
-			expect(result).not.toBeNull();
-			expect(result?.asset).toBe("BTC");
-			expect(result?.priceEur).toBe(50000);
-		});
+  describe("getPriceForDate", () => {
+    it("should return price when price exists on the same day", async () => {
+      const testDate = DateTime.utc(2024, 1, 15, 12, 0, 0);
+      const mockPrice = new AssetPriceEntity();
+      mockPrice.id = 1;
+      mockPrice.asset = "BTC";
+      mockPrice.priceEur = 50000;
+      mockPrice.fetchedAt = testDate;
+      mockPrice.source = "coingecko";
 
-		it("should return null when price is from a different day", async () => {
-			const queryDate = DateTime.utc(2024, 1, 15, 12, 0, 0);
-			mockDataSource.query.mockResolvedValue([]);
+      mockQueryBuilder.getOne.mockResolvedValue(mockPrice);
 
-			const result = await repository.getPriceForDate("BTC", queryDate);
+      const result = await repository.getPriceForDate("BTC", testDate);
 
-			expect(result).toBeNull();
-		});
+      expect(result).not.toBeNull();
+      expect(result?.asset).toBe("BTC");
+      expect(result?.priceEur).toBe(50000);
+    });
 
-		it("should return null when no price exists for asset", async () => {
-			const testDate = DateTime.utc(2024, 1, 15);
-			mockDataSource.query.mockResolvedValue([]);
+    it("should return null when price is from a different day", async () => {
+      const queryDate = DateTime.utc(2024, 1, 15, 12, 0, 0);
+      mockQueryBuilder.getOne.mockResolvedValue(null);
 
-			const result = await repository.getPriceForDate("UNKNOWN", testDate);
+      const result = await repository.getPriceForDate("BTC", queryDate);
 
-			expect(result).toBeNull();
-		});
+      expect(result).toBeNull();
+    });
 
-		it("should return latest price when multiple prices exist on same day", async () => {
-			const testDate = DateTime.utc(2024, 1, 15, 12, 0, 0);
-			const mockPrices = [
-				{
-					id: 2,
-					asset: "BTC",
-					price_eur: 51000,
-					fetched_at: testDate.toMillis(),
-					source: "coingecko",
-					created_at: testDate.toMillis(),
-				},
-				{
-					id: 1,
-					asset: "BTC",
-					price_eur: 50000,
-					fetched_at: testDate.minus({ hours: 2 }).toMillis(),
-					source: "coingecko",
-					created_at: testDate.minus({ hours: 2 }).toMillis(),
-				},
-			];
+    it("should return null when no price exists for asset", async () => {
+      const testDate = DateTime.utc(2024, 1, 15);
+      mockQueryBuilder.getOne.mockResolvedValue(null);
 
-			mockDataSource.query.mockResolvedValue([mockPrices[0]]);
+      const result = await repository.getPriceForDate("UNKNOWN", testDate);
 
-			const result = await repository.getPriceForDate("BTC", testDate);
+      expect(result).toBeNull();
+    });
 
-			expect(result).not.toBeNull();
-			expect(result?.priceEur).toBe(51000);
-		});
-	});
+    it("should return latest price when multiple prices exist on same day", async () => {
+      const testDate = DateTime.utc(2024, 1, 15, 12, 0, 0);
+      const mockPrice = new AssetPriceEntity();
+      mockPrice.id = 2;
+      mockPrice.asset = "BTC";
+      mockPrice.priceEur = 51000;
+      mockPrice.fetchedAt = testDate;
+      mockPrice.source = "coingecko";
 
-	describe("getPriceHistory", () => {
-		function createMockPrice(
-			date: DateTime,
-			priceEur: number
-		): AssetPriceEntity {
-			const entity = new AssetPriceEntity();
-			entity.id = Math.random();
-			entity.asset = "BTC";
-			entity.priceEur = priceEur;
-			entity.fetchedAt = date;
-			entity.source = "coingecko";
-			return entity;
-		}
+      mockQueryBuilder.getOne.mockResolvedValue(mockPrice);
 
-		it("should aggregate by 5 minutes for <=1 day range", async () => {
-			const startDate = DateTime.utc(2024, 1, 15, 0, 0, 0);
-			const endDate = DateTime.utc(2024, 1, 15, 23, 59, 59);
+      const result = await repository.getPriceForDate("BTC", testDate);
 
-			const mockPrices = [
-				createMockPrice(DateTime.utc(2024, 1, 15, 10, 0, 0), 50000),
-				createMockPrice(DateTime.utc(2024, 1, 15, 10, 3, 0), 50100),
-				createMockPrice(DateTime.utc(2024, 1, 15, 10, 5, 0), 50200),
-				createMockPrice(DateTime.utc(2024, 1, 15, 10, 8, 0), 50300),
-				createMockPrice(DateTime.utc(2024, 1, 15, 10, 10, 0), 50400),
-			];
+      expect(result).not.toBeNull();
+      expect(result?.priceEur).toBe(51000);
+    });
+  });
 
-			mockQueryBuilder.getMany.mockResolvedValue(mockPrices);
+  describe("getPriceHistory", () => {
+    function createMockPrice(
+      date: DateTime,
+      priceEur: number
+    ): AssetPriceEntity {
+      const entity = new AssetPriceEntity();
+      entity.id = Math.random();
+      entity.asset = "BTC";
+      entity.priceEur = priceEur;
+      entity.fetchedAt = date;
+      entity.source = "coingecko";
+      return entity;
+    }
 
-			const result = await repository.getPriceHistory("BTC", startDate, endDate);
+    it("should aggregate by 5 minutes for <=1 day range", async () => {
+      const startDate = DateTime.utc(2024, 1, 15, 0, 0, 0);
+      const endDate = DateTime.utc(2024, 1, 15, 23, 59, 59);
 
-			// First 5-min bucket (10:00): (50000 + 50100) / 2
-			// Second 5-min bucket (10:05): (50200 + 50300) / 2
-			// Third 5-min bucket (10:10): 50400
-			expect(result).toHaveLength(3);
-			expect(result[0].priceEur).toBe((50000 + 50100) / 2);
-			expect(result[1].priceEur).toBe((50200 + 50300) / 2);
-			expect(result[2].priceEur).toBe(50400);
-		});
+      const mockPrices = [
+        createMockPrice(DateTime.utc(2024, 1, 15, 10, 0, 0), 50000),
+        createMockPrice(DateTime.utc(2024, 1, 15, 10, 3, 0), 50100),
+        createMockPrice(DateTime.utc(2024, 1, 15, 10, 5, 0), 50200),
+        createMockPrice(DateTime.utc(2024, 1, 15, 10, 8, 0), 50300),
+        createMockPrice(DateTime.utc(2024, 1, 15, 10, 10, 0), 50400),
+      ];
 
-		it("should aggregate by hour for <=30 days range", async () => {
-			const startDate = DateTime.utc(2024, 1, 1, 0, 0, 0);
-			const endDate = DateTime.utc(2024, 1, 15, 23, 59, 59);
+      mockQueryBuilder.getMany.mockResolvedValue(mockPrices);
 
-			const mockPrices = [
-				createMockPrice(DateTime.utc(2024, 1, 10, 10, 0, 0), 50000),
-				createMockPrice(DateTime.utc(2024, 1, 10, 10, 15, 0), 50200),
-				createMockPrice(DateTime.utc(2024, 1, 10, 10, 45, 0), 50400),
-				createMockPrice(DateTime.utc(2024, 1, 10, 11, 0, 0), 50600),
-				createMockPrice(DateTime.utc(2024, 1, 10, 11, 30, 0), 50800),
-			];
+      const result = await repository.getPriceHistory("BTC", startDate, endDate);
 
-			mockQueryBuilder.getMany.mockResolvedValue(mockPrices);
+      expect(result).toHaveLength(3);
+      expect(result[0].priceEur).toBe((50000 + 50100) / 2);
+      expect(result[1].priceEur).toBe((50200 + 50300) / 2);
+      expect(result[2].priceEur).toBe(50400);
+    });
 
-			const result = await repository.getPriceHistory("BTC", startDate, endDate);
+    it("should aggregate by hour for <=30 days range", async () => {
+      const startDate = DateTime.utc(2024, 1, 1, 0, 0, 0);
+      const endDate = DateTime.utc(2024, 1, 15, 23, 59, 59);
 
-			expect(result).toHaveLength(2);
-			expect(result[0].priceEur).toBe((50000 + 50200 + 50400) / 3);
-			expect(result[1].priceEur).toBe((50600 + 50800) / 2);
-		});
+      const mockPrices = [
+        createMockPrice(DateTime.utc(2024, 1, 10, 10, 0, 0), 50000),
+        createMockPrice(DateTime.utc(2024, 1, 10, 10, 15, 0), 50200),
+        createMockPrice(DateTime.utc(2024, 1, 10, 10, 45, 0), 50400),
+        createMockPrice(DateTime.utc(2024, 1, 10, 11, 0, 0), 50600),
+        createMockPrice(DateTime.utc(2024, 1, 10, 11, 30, 0), 50800),
+      ];
 
-		it("should aggregate by day for >=31 days range", async () => {
-			const startDate = DateTime.utc(2024, 1, 1, 0, 0, 0);
-			const endDate = DateTime.utc(2024, 2, 20, 23, 59, 59);
+      mockQueryBuilder.getMany.mockResolvedValue(mockPrices);
 
-			const mockPrices = [
-				createMockPrice(DateTime.utc(2024, 2, 10, 10, 0, 0), 50000),
-				createMockPrice(DateTime.utc(2024, 2, 10, 14, 0, 0), 50400),
-				createMockPrice(DateTime.utc(2024, 2, 10, 18, 0, 0), 50800),
-				createMockPrice(DateTime.utc(2024, 2, 11, 10, 0, 0), 51000),
-				createMockPrice(DateTime.utc(2024, 2, 11, 14, 0, 0), 51400),
-			];
+      const result = await repository.getPriceHistory("BTC", startDate, endDate);
 
-			mockQueryBuilder.getMany.mockResolvedValue(mockPrices);
+      expect(result).toHaveLength(2);
+      expect(result[0].priceEur).toBe((50000 + 50200 + 50400) / 3);
+      expect(result[1].priceEur).toBe((50600 + 50800) / 2);
+    });
 
-			const result = await repository.getPriceHistory("BTC", startDate, endDate);
+    it("should aggregate by day for >=31 days range", async () => {
+      const startDate = DateTime.utc(2024, 1, 1, 0, 0, 0);
+      const endDate = DateTime.utc(2024, 2, 20, 23, 59, 59);
 
-			expect(result).toHaveLength(2);
-			expect(result[0].priceEur).toBe((50000 + 50400 + 50800) / 3);
-			expect(result[1].priceEur).toBe((51000 + 51400) / 2);
-		});
+      const mockPrices = [
+        createMockPrice(DateTime.utc(2024, 2, 10, 10, 0, 0), 50000),
+        createMockPrice(DateTime.utc(2024, 2, 10, 14, 0, 0), 50400),
+        createMockPrice(DateTime.utc(2024, 2, 10, 18, 0, 0), 50800),
+        createMockPrice(DateTime.utc(2024, 2, 11, 10, 0, 0), 51000),
+        createMockPrice(DateTime.utc(2024, 2, 11, 14, 0, 0), 51400),
+      ];
 
-		it("should return empty array when no prices found", async () => {
-			mockQueryBuilder.getMany.mockResolvedValue([]);
+      mockQueryBuilder.getMany.mockResolvedValue(mockPrices);
 
-			const result = await repository.getPriceHistory(
-				"BTC",
-				DateTime.utc(2024, 1, 1),
-				DateTime.utc(2024, 1, 15)
-			);
+      const result = await repository.getPriceHistory("BTC", startDate, endDate);
 
-			expect(result).toHaveLength(0);
-		});
-	});
+      expect(result).toHaveLength(2);
+      expect(result[0].priceEur).toBe((50000 + 50400 + 50800) / 3);
+      expect(result[1].priceEur).toBe((51000 + 51400) / 2);
+    });
+
+    it("should return empty array when no prices found", async () => {
+      mockQueryBuilder.getMany.mockResolvedValue([]);
+
+      const result = await repository.getPriceHistory(
+        "BTC",
+        DateTime.utc(2024, 1, 1),
+        DateTime.utc(2024, 1, 15)
+      );
+
+      expect(result).toHaveLength(0);
+    });
+  });
 });

@@ -1,6 +1,6 @@
 import { getDataSource, resetDataSource } from "../src/database.js";
 
-export async function createTestDataSource(dbConnectionString: string = ":memory:"): Promise<void> {
+export async function createTestDataSource(dbConnectionString: string = "mysql://testuser:testpass@localhost:3306/txls_test"): Promise<void> {
   process.env.DB_CONNECTION_STRING = dbConnectionString;
   resetDataSource();
   await getDataSource();

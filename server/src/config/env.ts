@@ -5,7 +5,7 @@ export const config = {
   nodeEnv: process.env.NODE_ENV || "development",
   database: {
     get connectionString() {
-      return process.env.DB_CONNECTION_STRING || "./data/txls.db";
+      return process.env.DB_CONNECTION_STRING || "mysql://root:root@localhost:3306/txls";
     },
   },
   logging: {

@@ -1,7 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll, afterEach, beforeEach } from "vitest";
 import { getDataSource, resetDataSource } from "../../src/database.js";
-import { rmSync, existsSync } from "fs";
-import path from "path";
 import { AccountsRepository } from "../../src/modules/accounts/accounts.repository.js";
 import { TransactionsRepository } from "../../src/modules/transactions/transactions.repository.js";
 import { TransactionsService } from "../../src/modules/transactions/transactions.service.js";
@@ -17,21 +15,6 @@ const dbConnectionString = process.env.DB_CONNECTION_STRING;
 
 const allConfigs = [
   {
-    name: "better-sqlite3",
-    displayName: "SQLite",
-    match: (cs: string) => cs.includes(":memory:") || cs.endsWith(".db") || !cs.includes("://"),
-    connectionString: dbConnectionString || "./data/test-csv-endpoint.db",
-    setup: async () => {
-      process.env.DB_CONNECTION_STRING = dbConnectionString || "./data/test-csv-endpoint.db";
-    },
-    teardown: async () => {
-      const dbPath = path.join(process.cwd(), "data/test-csv-endpoint.db");
-      try {
-        rmSync(dbPath, { force: true });
-      } catch (e) {}
-    },
-  },
-  {
     name: "postgres",
     displayName: "PostgreSQL",
     match: (cs: string) => cs.startsWith("postgresql://") || cs.startsWith("postgres://"),
@@ -44,7 +27,7 @@ const allConfigs = [
   {
     name: "mysql",
     displayName: "MySQL",
-    match: (cs: string) => cs.startsWith("mysql://"),
+    match: (cs: string) => cs.startsWith("mysql://") || cs.startsWith("mariadb://"),
     connectionString: dbConnectionString || "mysql://testuser:testpass@localhost:3306/txls_test",
     setup: async () => {
       process.env.DB_CONNECTION_STRING = dbConnectionString || "mysql://testuser:testpass@localhost:3306/txls_test";

@@ -45,17 +45,10 @@ export async function getDataSource(): Promise<DataSource> {
   const { type, options } = getDatabaseConfiguration();
   const migrations = await getMigrations();
 
+  const entities = [UserEntity, TransactionEntity, AccountEntity, AssetHoldingEntity, CoinGeckoIdEntity, AssetPriceEntity];
+
   try {
-    if (type === "better-sqlite3") {
-      dataSource = new DataSource({
-        type: "better-sqlite3",
-        database: options.path || "./data/txls.db",
-        entities: [UserEntity, TransactionEntity, AccountEntity, AssetHoldingEntity, CoinGeckoIdEntity, AssetPriceEntity],
-        migrations,
-        synchronize: false,
-        logging: ["error", "migration"],
-      });
-    } else if (type === "postgres") {
+    if (type === "postgres") {
       dataSource = new DataSource({
         type: "postgres",
         host: options.host || "localhost",
@@ -63,7 +56,7 @@ export async function getDataSource(): Promise<DataSource> {
         username: options.username || "postgres",
         password: options.password || "",
         database: options.database || "txls",
-        entities: [UserEntity, TransactionEntity, AccountEntity, AssetHoldingEntity, CoinGeckoIdEntity, AssetPriceEntity],
+        entities,
         migrations,
         synchronize: false,
         logging: ["error", "migration"],
@@ -76,7 +69,7 @@ export async function getDataSource(): Promise<DataSource> {
         username: options.username || "root",
         password: options.password || "",
         database: options.database || "txls",
-        entities: [UserEntity, TransactionEntity, AccountEntity, AssetHoldingEntity, CoinGeckoIdEntity, AssetPriceEntity],
+        entities,
         migrations,
         synchronize: false,
         logging: ["migration"],

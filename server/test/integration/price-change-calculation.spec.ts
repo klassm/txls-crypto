@@ -16,7 +16,7 @@ describe("Price Change Calculation Integration", () => {
 	let assetHoldingsService: AssetHoldingsService;
 
 	beforeAll(async () => {
-		process.env.DB_CONNECTION_STRING = ":memory:";
+		process.env.DB_CONNECTION_STRING = process.env.DB_CONNECTION_STRING || "mysql://testuser:testpass@localhost:3306/txls_test";
 		resetDataSource();
 		dataSource = await getDataSource();
 		pricesRepository = new PricesRepository(dataSource);

@@ -12,7 +12,7 @@ describe("Prices Repository Integration", () => {
 	let repository: PricesRepository;
 
 	beforeAll(async () => {
-		process.env.DB_CONNECTION_STRING = ":memory:";
+		process.env.DB_CONNECTION_STRING = process.env.DB_CONNECTION_STRING || "mysql://testuser:testpass@localhost:3306/txls_test";
 		resetDataSource();
 		dataSource = await getDataSource();
 		repository = new PricesRepository(dataSource);
@@ -307,7 +307,7 @@ describe("Prices Repository Integration", () => {
 				const result = await repository.getPriceAtOrBefore("BTC", now.minus({ hours: 24 }));
 
 				expect(result).not.toBeNull();
-				expect(result?.priceEur).toBe(49000);
+				expect(Number(result?.priceEur)).toBe(49000);
 			});
 
 			it("should return null when no price exists before target time", async () => {

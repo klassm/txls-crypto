@@ -45,8 +45,8 @@ describe("Transfer Flow Integration Tests", () => {
   const createTestUser = (userId: number): string => {
     const authJwtToken = generateToken({
       userId,
-      username: "testuser",
-      email: "test@example.com",
+      username: `testuser-${Date.now()}`,
+      email: `test-${Date.now()}@example.com`,
       isAdmin: false,
     });
     return authJwtToken;
@@ -120,7 +120,7 @@ describe("Transfer Flow Integration Tests", () => {
 
       expect(matches).toHaveLength(1);
       expect(matches[0].asset).toBe("BTC");
-      expect(matches[0].quantity).toBeCloseTo(0.1, 5);
+      expect(Number(matches[0].quantity)).toBeCloseTo(0.1, 5);
     });
 
     it("should not match transfers from same account", async () => {
@@ -240,7 +240,7 @@ describe("Transfer Flow Integration Tests", () => {
       expect(result.size).toBe(1);
       const btcCalc = result.get("BTC");
       expect(btcCalc?.transactions).toHaveLength(1);
-      expect(btcCalc?.transactions[0].costBasis).toBe(0);
+			expect(Number(btcCalc?.transactions[0].costBasis)).toBe(0);
       expect(btcCalc?.totalGain).toBeCloseTo(1500, 2);
     });
 

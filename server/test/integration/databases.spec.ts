@@ -1,27 +1,9 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { getDataSource, resetDataSource } from "../../src/database.js";
-import { rmSync } from "fs";
-import path from "path";
 
 const dbConnectionString = process.env.DB_CONNECTION_STRING;
 
 const allConfigs = [
-  {
-    name: "better-sqlite3",
-    displayName: "SQLite",
-    match: (cs: string) => cs.includes(":memory:") || cs.endsWith(".db") || !cs.includes("://"),
-    connectionString: dbConnectionString || "./data/test-txls.db",
-    setup: async () => {
-      process.env.DB_CONNECTION_STRING = dbConnectionString || "./data/test-txls.db";
-    },
-    teardown: async () => {
-      const dbPath = path.join(process.cwd(), "data/test-txls.db");
-      try {
-        rmSync(dbPath, { force: true });
-      } catch (e) {
-      }
-    },
-  },
   {
     name: "postgres",
     displayName: "PostgreSQL",
@@ -35,7 +17,7 @@ const allConfigs = [
   {
     name: "mysql",
     displayName: "MySQL",
-    match: (cs: string) => cs.startsWith("mysql://"),
+    match: (cs: string) => cs.startsWith("mysql://") || cs.startsWith("mariadb://"),
     connectionString: dbConnectionString || "mysql://testuser:testpass@localhost:3306/txls_test",
     setup: async () => {
       process.env.DB_CONNECTION_STRING = dbConnectionString || "mysql://testuser:testpass@localhost:3306/txls_test";
@@ -44,7 +26,7 @@ const allConfigs = [
   },
 ];
 
-const testConfigs = dbConnectionString 
+const testConfigs = dbConnectionString
   ? allConfigs.filter(c => c.match(dbConnectionString))
   : allConfigs;
 
@@ -68,17 +50,14 @@ describe.each(testConfigs)("$displayName Database Integration", ({ name, display
 
   it("should initialize database and run migrations", async () => {
     const ds = await getDataSource();
-    
+
     expect(ds).toBeDefined();
     expect(ds.isInitialized).toBe(true);
     expect(ds.options.type).toBe(name as any);
 
     let tables: string[] = [];
 
-    if (name === "better-sqlite3") {
-      const result = await ds.query("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name");
-      tables = result.map((t: any) => t.name);
-    } else if (name === "postgres") {
+    if (name === "postgres") {
       const result = await ds.query("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name");
       tables = result.map((t: any) => t.table_name);
     } else if (name === "mysql") {
@@ -107,14 +86,7 @@ describe.each(testConfigs)("$displayName Database Integration", ({ name, display
   it("should track migration in migrations table", async () => {
     const ds = await getDataSource();
 
-    let migrationCheck;
-    if (name === "better-sqlite3") {
-      migrationCheck = await ds.query(`SELECT * FROM migrations`);
-    } else if (name === "postgres") {
-      migrationCheck = await ds.query(`SELECT * FROM migrations`);
-    } else if (name === "mysql") {
-      migrationCheck = await ds.query(`SELECT * FROM migrations`);
-    }
+    const migrationCheck = await ds.query(`SELECT * FROM migrations`);
 
     expect(migrationCheck).toBeDefined();
     expect(migrationCheck.length).toBeGreaterThan(0);

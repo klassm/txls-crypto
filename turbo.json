@@ -22,9 +22,6 @@
     "test:integration": {
       "dependsOn": ["^build"]
     },
-    "test:integration:sqlite": {
-      "dependsOn": ["^build"]
-    },
     "test:integration:postgres": {
       "dependsOn": ["^build"]
     },

@@ -4,7 +4,7 @@
 
 - **Frontend**: React, Vite, TypeScript, Material-UI
 - **Backend**: Express, TypeScript, TypeORM
-- **Database**: SQLite (default), PostgreSQL, MySQL
+- **Database**: MariaDB (default), PostgreSQL
 - **Package Manager**: pnpm 10
 - **Build**: Turborepo monorepo
 
@@ -37,22 +37,33 @@ pnpm run build
 
 ## Environment Variables
 
-| Variable               | Required | Default                   | Description                                              |
-|------------------------|----------|---------------------------|----------------------------------------------------------|
-| `JWT_SECRET`           | Yes*     | -                         | Secret key for JWT token signing                         |
-| `DB_CONNECTION_STRING` | No       | `/data/txls.db`           | Database connection string                               |
-| `NODE_ENV`             | No       | `development`             | Environment mode                                         |
-| `LOG_LEVEL`            | No       | `info`                    | Logging level (fatal, error, warn, info, debug, trace)   |
-| `SUPERVISOR_TOKEN`     | Auto     | -                         | Home Assistant Supervisor API token (auto-injected)      |
+| Variable               | Required | Default                                       | Description                                              |
+|------------------------|----------|-----------------------------------------------|----------------------------------------------------------|
+| `JWT_SECRET`           | Yes*     | -                                             | Secret key for JWT token signing                         |
+| `DB_CONNECTION_STRING` | No       | `mysql://root:root@localhost:3306/txls`       | Database connection string                               |
+| `NODE_ENV`             | No       | `development`                                 | Environment mode                                         |
+| `LOG_LEVEL`            | No       | `info`                                        | Logging level (fatal, error, warn, info, debug, trace)   |
+| `SUPERVISOR_TOKEN`     | Auto     | -                                             | Home Assistant Supervisor API token (auto-injected)      |
 
 *Auto-generated in Home Assistant add-on
 
 ## Database Options
 
-### SQLite (Default)
+### MariaDB / MySQL (Default)
 
 ```env
-DB_CONNECTION_STRING=/data/txls.db
+DB_CONNECTION_STRING=mysql://username:password@localhost:3306/database_name
+```
+
+```bash
+pnpm add mysql2
+mysql -u root -p -e "CREATE DATABASE txls;"
+```
+
+For local development with Docker:
+
+```bash
+docker compose up -d mariadb
 ```
 
 ### PostgreSQL
@@ -66,15 +77,10 @@ pnpm add pg
 createdb txls
 ```
 
-### MySQL / MariaDB
-
-```env
-DB_CONNECTION_STRING=mysql://username:password@localhost:3306/database_name
-```
+For local development with Docker:
 
 ```bash
-pnpm add mysql2
-mysql -u root -p -e "CREATE DATABASE txls;"
+docker compose up -d postgres
 ```
 
 ## Testing
@@ -87,16 +93,16 @@ pnpm run test:unit
 
 ### Integration Tests
 
-Requires Docker for PostgreSQL/MySQL tests:
+Requires Docker for database services:
 
 ```bash
-# SQLite (in-memory)
-pnpm run test:integration:sqlite
+# Start database containers
+docker compose -f docker-compose.integration.yml up -d
 
-# PostgreSQL (requires running container)
+# PostgreSQL
 pnpm run test:integration:postgres
 
-# MySQL (requires running container)
+# MySQL / MariaDB
 pnpm run test:integration:mysql
 ```
 
@@ -183,8 +189,8 @@ docker build -t txls-hass -f docker/Dockerfile.hass .
 
 ```bash
 docker run -d -p 3000:3000 \
-  -v /path/to/data:/data \
   -e JWT_SECRET=your-secret \
+  -e DB_CONNECTION_STRING=mysql://user:pass@db-host:3306/txls \
   txls
 ```
 

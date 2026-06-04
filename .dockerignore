@@ -5,7 +5,6 @@ node_modules
 *.test.ts
 *.test.tsx
 .env*
-data/*.db
 README.md
 AGENTS.md
 .github

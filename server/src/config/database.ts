@@ -8,36 +8,30 @@ import { getDatabaseConfiguration } from "./database-config.js";
 
 const { type, options } = getDatabaseConfiguration();
 
+const entities = [TransactionEntity, AccountEntity, UserEntity, AssetHoldingEntity];
+
 export const dataSource = new DataSource(
-  type === "better-sqlite3"
+  type === "postgres"
     ? {
-        type: "better-sqlite3",
-        database: options.path || "./data/txls.db",
-        entities: [TransactionEntity, AccountEntity, UserEntity, AssetHoldingEntity],
+        type: "postgres",
+        host: options.host || "localhost",
+        port: options.port || 5432,
+        username: options.username || "postgres",
+        password: options.password || "",
+        database: options.database || "txls",
+        entities,
         synchronize: false,
         logging: false,
       }
-    : type === "postgres"
-      ? {
-          type: "postgres",
-          host: options.host || "localhost",
-          port: options.port || 5432,
-          username: options.username || "postgres",
-          password: options.password || "",
-          database: options.database || "txls",
-          entities: [TransactionEntity, AccountEntity, UserEntity, AssetHoldingEntity],
-          synchronize: false,
-          logging: false,
-        }
-      : {
-          type: "mysql",
-          host: options.host || "localhost",
-          port: options.port || 3306,
-          username: options.username || "root",
-          password: options.password || "",
-          database: options.database || "txls",
-          entities: [TransactionEntity, AccountEntity, UserEntity, AssetHoldingEntity],
-          synchronize: false,
-          logging: false,
-        },
+    : {
+        type: "mysql",
+        host: options.host || "localhost",
+        port: options.port || 3306,
+        username: options.username || "root",
+        password: options.password || "",
+        database: options.database || "txls",
+        entities,
+        synchronize: false,
+        logging: false,
+      },
 );

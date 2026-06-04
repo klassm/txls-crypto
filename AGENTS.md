@@ -32,7 +32,6 @@ server/                   # Express backend
 │   │   ├── sources/      # CSV source configuration
 │   │   └── tax/          # Tax calculation API
 │   └── utils/            # Server utilities
-└── data/                 # SQLite database files
 
 shared/                   # Shared code between client and server
 ├── src/
@@ -138,15 +137,16 @@ if (!validationResult.success) {
 
 ## Important Notes
 
-- Database supports SQLite, PostgreSQL, and MySQL (configured via `DB_CONNECTION_STRING` environment variable)
-- Default database is SQLite at `./server/data/txls.db`
+- Database supports MariaDB/MySQL and PostgreSQL (configured via `DB_CONNECTION_STRING` environment variable)
+- Default database is MariaDB at `mysql://root:root@localhost:3306/txls`
 - Frontend runs on port 3000, backend on port 3001
 - All financial values should be in EUR
 - Transaction types are defined in `shared/src/lib/types/index.ts`
 - Use TypeORM decorators for database entities
 - Always use the `useAccounts` hook for fetching accounts data
 - All environment variables are centralized in `shared/src/server/config/env.ts`
-- Never commit `.env` files or database files
+- Never commit `.env` files
+- Integration tests require a running database container (MariaDB or PostgreSQL)
 
 ## Development Flow
 

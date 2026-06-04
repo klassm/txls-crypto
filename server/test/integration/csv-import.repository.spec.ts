@@ -1,7 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll, afterEach } from "vitest";
 import { getDataSource, resetDataSource } from "../../src/database.js";
-import { rmSync } from "fs";
-import path from "path";
 import { TransactionsRepository } from "../../src/modules/transactions/transactions.repository.js";
 import { TransactionsService } from "../../src/modules/transactions/transactions.service.js";
 import { TransactionType } from "@txls/shared";
@@ -13,21 +11,6 @@ import { ProviderType } from "@txls/shared";
 const dbConnectionString = process.env.DB_CONNECTION_STRING;
 
 const allConfigs = [
-  {
-    name: "better-sqlite3",
-    displayName: "SQLite",
-    match: (cs: string) => cs.includes(":memory:") || cs.endsWith(".db") || !cs.includes("://"),
-    connectionString: dbConnectionString || "./data/test-txls.db",
-    setup: async () => {
-      process.env.DB_CONNECTION_STRING = dbConnectionString || "./data/test-txls.db";
-    },
-    teardown: async () => {
-      const dbPath = path.join(process.cwd(), "data/test-txls.db");
-      try {
-        rmSync(dbPath, { force: true });
-      } catch (e) {}
-    },
-  },
   {
     name: "postgres",
     displayName: "PostgreSQL",
@@ -41,7 +24,7 @@ const allConfigs = [
   {
     name: "mysql",
     displayName: "MySQL",
-    match: (cs: string) => cs.startsWith("mysql://"),
+    match: (cs: string) => cs.startsWith("mysql://") || cs.startsWith("mariadb://"),
     connectionString: dbConnectionString || "mysql://testuser:testpass@localhost:3306/txls_test",
     setup: async () => {
       process.env.DB_CONNECTION_STRING = dbConnectionString || "mysql://testuser:testpass@localhost:3306/txls_test";
@@ -85,7 +68,7 @@ describe.each(testConfigs)("$displayName CSV Import Repository Integration", ({ 
     const service = new TransactionsService(repository);
 
     const testTimestamp = DateTime.fromISO("2025-01-05T09:30:22.123Z");
-    
+
     const entity = new TransactionEntity();
     entity.userId = userId;
     entity.providerAccountId = providerAccountId;
@@ -108,7 +91,7 @@ describe.each(testConfigs)("$displayName CSV Import Repository Integration", ({ 
     const repository = new TransactionsRepository(ds);
 
     const testTimestamp = DateTime.fromISO("2025-01-05T09:30:22");
-    
+
     const entity = new TransactionEntity();
     entity.userId = userId;
     entity.providerAccountId = providerAccountId;
@@ -131,7 +114,7 @@ describe.each(testConfigs)("$displayName CSV Import Repository Integration", ({ 
     const repository = new TransactionsRepository(ds);
 
     const testTimestamp = DateTime.fromISO("2026-02-17T17:51:55");
-    
+
     const entity = new TransactionEntity();
     entity.userId = userId;
     entity.providerAccountId = providerAccountId;
@@ -154,7 +137,7 @@ describe.each(testConfigs)("$displayName CSV Import Repository Integration", ({ 
     const repository = new TransactionsRepository(ds);
 
     const testTimestamp = DateTime.fromISO("2030-12-31T23:59:59.999Z");
-    
+
     const entity = new TransactionEntity();
     entity.userId = userId;
     entity.providerAccountId = providerAccountId;
@@ -192,7 +175,7 @@ T2026-001,2026-01-10 10:00:00,sell,incoming,2000,EUR,0.02,BTC,100000,EUR,Cryptoc
 
     const saved = await repository.findByProviderAccountId(userId, providerAccountId);
     expect(saved).toHaveLength(3);
-    
+
     const sorted = [...saved].sort((a, b) => a.timestamp.toMillis() - b.timestamp.toMillis());
     expect(sorted[0].timestamp.year).toBe(2025);
     expect(sorted[1].timestamp.year).toBe(2025);
@@ -210,7 +193,7 @@ T2026-001,2026-01-10 10:00:00,sell,incoming,2000,EUR,0.02,BTC,100000,EUR,Cryptoc
     if (!csvImporter) {
       return;
     }
-    
+
     const parseResult = csvImporter.parseCsv(csvContent, providerAccountId);
 
     const repository = new TransactionsRepository(ds);
@@ -223,7 +206,7 @@ T2026-001,2026-01-10 10:00:00,sell,incoming,2000,EUR,0.02,BTC,100000,EUR,Cryptoc
 
     const saved = await repository.findByProviderAccountId(userId, providerAccountId);
     expect(saved).toHaveLength(3);
-    
+
     const sorted = [...saved].sort((a, b) => a.timestamp.toMillis() - b.timestamp.toMillis());
     expect(sorted[0].timestamp.year).toBe(2025);
     expect(sorted[1].timestamp.year).toBe(2025);

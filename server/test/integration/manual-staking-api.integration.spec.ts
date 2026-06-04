@@ -42,8 +42,8 @@ describe("Manual Staking API Integration", () => {
     const userRepo = dataSource.getRepository(UserEntity);
     const user = new UserEntity();
     user.name = "Test User";
-    user.username = "testuser";
-    user.email = "test@example.com";
+    user.username = `testuser-${Date.now()}`;
+    user.email = `test-${Date.now()}@example.com`;
     user.password = "hashedpassword123";
     user.isAdmin = false;
     await userRepo.save(user);
@@ -196,8 +196,8 @@ describe("Manual Staking API Integration", () => {
       expect(transactions).toHaveLength(1);
       expect(transactions[0].type).toBe(TransactionType.reward);
       expect(transactions[0].asset).toBe("SOL");
-      expect(transactions[0].quantity).toBe(0.5);
-      expect(transactions[0].eurValue).toBe(75.0);
+      expect(Number(transactions[0].quantity)).toBeCloseTo(0.5, 5);
+      expect(Number(transactions[0].eurValue)).toBeCloseTo(75.0, 5);
     });
 
     it("should generate unique externalId", async () => {

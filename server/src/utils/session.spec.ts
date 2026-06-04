@@ -41,7 +41,7 @@ vi.mock("./password.js", () => ({
   AUTH_COOKIE_NAME: "txls_auth",
   verifyToken: vi.fn((token: string) => {
     if (token === "valid-token") {
-      return { userId: 123, username: "testuser", email: "test@example.com", isAdmin: false };
+      return { userId: 123, username: `testuser-${Date.now()}`, email: `test-${Date.now()}@example.com`, isAdmin: false };
     }
     return null;
   }),

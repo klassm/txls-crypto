@@ -1,8 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, afterEach, beforeEach } from "vitest";
 import { getDataSource, resetDataSource } from "../../src/database.js";
-import { rmSync } from "fs";
-import path from "path";
 import { readFileSync } from "fs";
+import path from "path";
 import { TransactionsRepository } from "../../src/modules/transactions/transactions.repository.js";
 import { TransactionsService } from "../../src/modules/transactions/transactions.service.js";
 import { AssetHoldingsService } from "../../src/modules/asset-holdings/asset-holdings.service.js";
@@ -21,21 +20,6 @@ const dbConnectionString = process.env.DB_CONNECTION_STRING;
 
 const allConfigs = [
 	{
-		name: "better-sqlite3",
-		displayName: "SQLite",
-		match: (cs: string) => cs.includes(":memory:") || cs.endsWith(".db") || !cs.includes("://"),
-		connectionString: dbConnectionString || "./data/test-eur-invested.db",
-		setup: async () => {
-			process.env.DB_CONNECTION_STRING = dbConnectionString || "./data/test-eur-invested.db";
-		},
-		teardown: async () => {
-			const dbPath = path.join(process.cwd(), "data/test-eur-invested.db");
-			try {
-				rmSync(dbPath, { force: true });
-			} catch (e) {}
-		},
-	},
-	{
 		name: "postgres",
 		displayName: "PostgreSQL",
 		match: (cs: string) => cs.startsWith("postgresql://") || cs.startsWith("postgres://"),
@@ -48,7 +32,7 @@ const allConfigs = [
 	{
 		name: "mysql",
 		displayName: "MySQL",
-		match: (cs: string) => cs.startsWith("mysql://"),
+		match: (cs: string) => cs.startsWith("mysql://") || cs.startsWith("mariadb://"),
 		connectionString: dbConnectionString || "mysql://testuser:testpass@localhost:3306/txls_test",
 		setup: async () => {
 			process.env.DB_CONNECTION_STRING = dbConnectionString || "mysql://testuser:testpass@localhost:3306/txls_test";
@@ -95,8 +79,8 @@ describe.each(testConfigs)("$displayName eurInvested Calculation", ({ displayNam
 		const userRepo = dataSource.getRepository(UserEntity);
 		const user = new UserEntity();
 		user.name = "Test User";
-		user.username = "testuser";
-		user.email = "test@example.com";
+		user.username = `testuser-${Date.now()}`;
+		user.email = `test-${Date.now()}@example.com`;
 		user.password = "hashedpassword123";
 		user.isAdmin = false;
 		await userRepo.save(user);
@@ -159,10 +143,10 @@ describe.each(testConfigs)("$displayName eurInvested Calculation", ({ displayNam
 			const holdings = await holdingsRepo.findLatestByAccount(userId, providerAccountId);
 
 			expect(holdings.size).toBe(2);
-			expect(holdings.get("BTC")?.eurInvested).toBe(50000);
-			expect(holdings.get("ETH")?.eurInvested).toBe(30000);
+			expect(Number(holdings.get("BTC")?.eurInvested)).toBe(50000);
+			expect(Number(holdings.get("ETH")?.eurInvested)).toBe(30000);
 
-			const totalEurInvested = Array.from(holdings.values()).reduce((sum, h) => sum + h.eurInvested, 0);
+			const totalEurInvested = Array.from(holdings.values()).reduce((sum, h) => sum + Number(h.eurInvested), 0);
 			expect(totalEurInvested).toBe(80000);
 		});
 
@@ -201,10 +185,10 @@ describe.each(testConfigs)("$displayName eurInvested Calculation", ({ displayNam
 			const holdingsRepo = new AssetHoldingsRepository(dataSource);
 			const holdings = await holdingsRepo.findLatestByAccount(userId, providerAccountId);
 
-			expect(holdings.get("BTC")?.eurInvested).toBe(50000);
-			expect(holdings.get("ETH")?.eurInvested).toBe(15000);
+			expect(Number(holdings.get("BTC")?.eurInvested)).toBe(50000);
+			expect(Number(holdings.get("ETH")?.eurInvested)).toBe(15000);
 
-			const totalEurInvested = Array.from(holdings.values()).reduce((sum, h) => sum + h.eurInvested, 0);
+			const totalEurInvested = Array.from(holdings.values()).reduce((sum, h) => sum + Number(h.eurInvested), 0);
 			expect(totalEurInvested).toBe(65000);
 		});
 
@@ -243,8 +227,8 @@ describe.each(testConfigs)("$displayName eurInvested Calculation", ({ displayNam
 			const holdingsRepo = new AssetHoldingsRepository(dataSource);
 			const holdings = await holdingsRepo.findLatestByAccount(userId, providerAccountId);
 
-			expect(holdings.get("SOL")?.amount).toBe(10);
-			expect(holdings.get("SOL")?.eurInvested).toBe(1000);
+			expect(Number(holdings.get("SOL")?.amount)).toBe(10);
+			expect(Number(holdings.get("SOL")?.eurInvested)).toBe(1000);
 		});
 
 		it("should reduce eurInvested proportionally when selling", async () => {
@@ -282,8 +266,8 @@ describe.each(testConfigs)("$displayName eurInvested Calculation", ({ displayNam
 			const holdingsRepo = new AssetHoldingsRepository(dataSource);
 			const holdings = await holdingsRepo.findLatestByAccount(userId, providerAccountId);
 
-			expect(holdings.get("BTC")?.amount).toBe(1.0);
-			expect(holdings.get("BTC")?.eurInvested).toBe(50000);
+			expect(Number(holdings.get("BTC")?.amount)).toBeCloseTo(1.0, 5);
+			expect(Number(holdings.get("BTC")?.eurInvested)).toBe(50000);
 		});
 	});
 
@@ -318,7 +302,7 @@ describe.each(testConfigs)("$displayName eurInvested Calculation", ({ displayNam
 			expect(buyTx.length).toBe(1);
 			expect(depositTx.length).toBe(0);
 
-			const totalEurInvested = Array.from(holdings.values()).reduce((sum, h) => sum + h.eurInvested, 0);
+			const totalEurInvested = Array.from(holdings.values()).reduce((sum, h) => sum + Number(h.eurInvested), 0);
 			expect(totalEurInvested).toBe(1000);
 		});
 
@@ -340,7 +324,7 @@ describe.each(testConfigs)("$displayName eurInvested Calculation", ({ displayNam
 			await repository.save(tx);
 
 			const saved = await repository.findOneByExternalId(userId, "type-test-buy");
-			
+
 			expect(saved).not.toBeNull();
 			expect(saved!.type).toBe("buy");
 			expect(saved!.type).toBe(TransactionType.buy);
@@ -372,7 +356,7 @@ describe.each(testConfigs)("$displayName eurInvested Calculation", ({ displayNam
 
 		it("should correctly calculate eurInvested for production Bitpanda CSV", async () => {
 			const csvPath = path.join(process.cwd(), "../bitpanda-trades-2026-03-15-10-28.csv");
-			
+
 			let csvContent: string;
 			try {
 				csvContent = readFileSync(csvPath, "utf-8");
@@ -416,7 +400,7 @@ describe.each(testConfigs)("$displayName eurInvested Calculation", ({ displayNam
 			const holdingsRepo = new AssetHoldingsRepository(dataSource);
 			const holdings = await holdingsRepo.findLatestByAccount(userId, providerAccountId);
 
-			const totalEurInvested = Array.from(holdings.values()).reduce((sum, h) => sum + h.eurInvested, 0);
+			const totalEurInvested = Array.from(holdings.values()).reduce((sum, h) => sum + Number(h.eurInvested), 0);
 			console.log(`Total eurInvested: ${totalEurInvested}`);
 
 			const expectedEurInvested = totalBuyEurValue + totalDepositEurValue;

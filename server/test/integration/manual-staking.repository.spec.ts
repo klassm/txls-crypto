@@ -13,15 +13,15 @@ describe("Manual Staking Repository Integration", () => {
   let accountId: number;
 
   beforeAll(async () => {
-    process.env.DB_CONNECTION_STRING = ":memory:";
+    process.env.DB_CONNECTION_STRING = process.env.DB_CONNECTION_STRING || "mysql://testuser:testpass@localhost:3306/txls_test";
     resetDataSource();
     dataSource = await getDataSource();
 
     const userRepo = dataSource.getRepository(UserEntity);
     const user = await userRepo.save({
       name: "Test User",
-      username: "testuser",
-      email: "test@example.com",
+      username: `testuser-${Date.now()}`,
+      email: `test-${Date.now()}@example.com`,
       password: "password123",
       isAdmin: false,
     });
@@ -63,9 +63,9 @@ describe("Manual Staking Repository Integration", () => {
     expect(saved).toBeDefined();
     expect(saved.type).toBe(TransactionType.reward);
     expect(saved.asset).toBe("SOL");
-    expect(saved.quantity).toBe(0.5);
-    expect(saved.eurValue).toBe(75.0);
-    expect(saved.eurRate).toBe(150.0);
+    expect(Number(saved.quantity)).toBeCloseTo(0.5, 5);
+    expect(Number(saved.eurValue)).toBeCloseTo(75.0, 5);
+    expect(Number(saved.eurRate)).toBeCloseTo(150.0, 5);
   });
 
   it("should find manual staking transactions by account", async () => {
@@ -99,8 +99,8 @@ describe("Manual Staking Repository Integration", () => {
     const transactions = await transactionsRepo.findByProviderAccountId(userId, accountId);
     const rewards = transactions.filter(t => t.type === TransactionType.reward);
     
-    const totalQuantity = rewards.reduce((sum, t) => sum + t.quantity, 0);
-    const totalEurValue = rewards.reduce((sum, t) => sum + t.eurValue, 0);
+    const totalQuantity = rewards.reduce((sum, t) => sum + Number(t.quantity), 0);
+    const totalEurValue = rewards.reduce((sum, t) => sum + Number(t.eurValue), 0);
     
     expect(totalQuantity).toBeCloseTo(0.8, 5);
     expect(totalEurValue).toBeCloseTo(120.0, 5);

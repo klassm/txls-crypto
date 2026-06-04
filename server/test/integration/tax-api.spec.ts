@@ -35,8 +35,8 @@ describe("Tax API Integration Tests", () => {
   const createTestUser = async (userId: number): Promise<string> => {
     const authJwtToken = generateToken({
       userId,
-      username: "testuser",
-      email: "test@example.com",
+      username: `testuser-${Date.now()}`,
+      email: `test-${Date.now()}@example.com`,
       isAdmin: false,
     });
     return authJwtToken;

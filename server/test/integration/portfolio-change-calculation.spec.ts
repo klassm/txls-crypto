@@ -24,7 +24,7 @@ describe("Portfolio Change Calculation Integration", () => {
 	let accountId: number;
 
 	beforeAll(async () => {
-		process.env.DB_CONNECTION_STRING = ":memory:";
+		process.env.DB_CONNECTION_STRING = process.env.DB_CONNECTION_STRING || "mysql://testuser:testpass@localhost:3306/txls_test";
 		resetDataSource();
 		dataSource = await getDataSource();
 		pricesRepository = new PricesRepository(dataSource);
@@ -54,8 +54,8 @@ describe("Portfolio Change Calculation Integration", () => {
 		const userRepo = dataSource.getRepository(UserEntity);
 		const user = new UserEntity();
 		user.name = "Test User";
-		user.username = "testuser";
-		user.email = "test@example.com";
+		user.username = `testuser-${Date.now()}`;
+		user.email = `test-${Date.now()}@example.com`;
 		user.password = "hashedpassword123";
 		user.isAdmin = false;
 		await userRepo.save(user);
@@ -551,7 +551,7 @@ describe("Portfolio Change Calculation Integration", () => {
 			// Even when XRP has no price, BTC's value should still be included
 			if (history.length > 0) {
 				const latestPoint = history[history.length - 1];
-				expect(latestPoint.totalEurValue).toBe(53000);
+				expect(Number(latestPoint.totalEurValue)).toBe(53000);
 			}
 		});
 	});

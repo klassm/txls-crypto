@@ -22,7 +22,7 @@ map:
   - share:rw
 options:
   jwt_secret: ""
-  db_connection_string: "/data/txls.db"
+  db_connection_string: "mysql://root@127.0.0.1:3306/txls"
   log_level: "info"
   api_sync_enabled: true
   api_sync_interval: "0 3 * * *"

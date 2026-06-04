@@ -47,8 +47,8 @@ describe("Portfolio Consistency Integration", () => {
 		const userRepo = dataSource.getRepository(UserEntity);
 		const user = new UserEntity();
 		user.name = "Test User";
-		user.username = "testuser";
-		user.email = "test@example.com";
+		user.username = `testuser-${Date.now()}`;
+		user.email = `test-${Date.now()}@example.com`;
 		user.password = "hashedpassword123";
 		user.isAdmin = false;
 		await userRepo.save(user);
@@ -162,10 +162,10 @@ describe("Portfolio Consistency Integration", () => {
 			const btc = response.body.assets.find((a: any) => a.asset === "BTC");
 			const eth = response.body.assets.find((a: any) => a.asset === "ETH");
 
-			expect(btc.amount).toBe(1.0);
-			expect(btc.eurInvested).toBe(50000);
-			expect(eth.amount).toBe(10.0);
-			expect(eth.eurInvested).toBe(30000);
+			expect(Number(btc.amount)).toBe(1.0);
+			expect(Number(btc.eurInvested)).toBe(50000);
+			expect(Number(eth.amount)).toBe(10.0);
+			expect(Number(eth.eurInvested)).toBe(30000);
 		});
 
 		it("should calculate correct 24h change with hourly data", async () => {
@@ -179,7 +179,7 @@ describe("Portfolio Consistency Integration", () => {
 			if (history.length >= 2) {
 				const latest = history[history.length - 1];
 				expect(latest.assets["BTC"]).toBeDefined();
-				expect(latest.assets["BTC"].amount).toBe(1.0);
+				expect(Number(latest.assets["BTC"].amount)).toBeCloseTo(1.0, 5);
 			}
 		});
 	});
@@ -249,8 +249,8 @@ describe("Portfolio Consistency Integration", () => {
 
 			const btc = response.body.assets[0];
 			expect(btc.asset).toBe("BTC");
-			expect(btc.amount).toBe(1.0);
-			expect(btc.eurInvested).toBe(55000);
+			expect(Number(btc.amount)).toBeCloseTo(1.0, 5);
+			expect(Number(btc.eurInvested)).toBe(55000);
 		});
 
 		it("should show correct eurInvested for each individual account", async () => {
@@ -270,12 +270,12 @@ describe("Portfolio Consistency Integration", () => {
 
 			if (history1.length > 0) {
 				const latest1 = history1[history1.length - 1];
-				expect(latest1.totalEurInvested).toBe(25000);
+				expect(Number(latest1.totalEurInvested)).toBe(25000);
 			}
 
 			if (history2.length > 0) {
 				const latest2 = history2[history2.length - 1];
-				expect(latest2.totalEurInvested).toBe(30000);
+				expect(Number(latest2.totalEurInvested)).toBe(30000);
 			}
 		});
 	});
@@ -340,8 +340,8 @@ describe("Portfolio Consistency Integration", () => {
 
 			const sol = response.body.assets[0];
 			expect(sol.asset).toBe("SOL");
-			expect(sol.amount).toBe(15);
-			expect(sol.eurInvested).toBe(1500);
+			expect(Number(sol.amount)).toBe(15);
+			expect(Number(sol.eurInvested)).toBe(1500);
 		});
 
 		it("should not include rewards in eurInvested", async () => {
@@ -391,8 +391,8 @@ describe("Portfolio Consistency Integration", () => {
 			expect(response.status).toBe(200);
 
 			const sol = response.body.assets[0];
-			expect(sol.amount).toBe(11);
-			expect(sol.eurInvested).toBe(1000);
+			expect(Number(sol.amount)).toBe(11);
+			expect(Number(sol.eurInvested)).toBe(1000);
 		});
 	});
 
@@ -457,8 +457,8 @@ describe("Portfolio Consistency Integration", () => {
 
 			const btc = response.body.assets[0];
 			expect(btc.asset).toBe("BTC");
-			expect(btc.amount).toBe(1.0);
-			expect(btc.eurInvested).toBe(50000);
+			expect(Number(btc.amount)).toBeCloseTo(1.0, 5);
+			expect(Number(btc.eurInvested)).toBe(50000);
 		});
 
 		it("should calculate correct overall change after sell", async () => {
@@ -484,10 +484,10 @@ describe("Portfolio Consistency Integration", () => {
 			const btc = response.body.assets[0];
 			const eurValue = btc.eurValue;
 			const eurInvested = btc.eurInvested;
-			const overallChange = eurValue - eurInvested;
+			const overallChange = Number(eurValue) - Number(eurInvested);
 
-			expect(eurValue).toBe(1.0 * 50000);
-			expect(eurInvested).toBe(50000);
+			expect(Number(eurValue)).toBe(1.0 * 50000);
+			expect(Number(eurInvested)).toBe(50000);
 			expect(overallChange).toBe(0);
 		});
 	});
@@ -553,8 +553,8 @@ describe("Portfolio Consistency Integration", () => {
 
 			const btc = response.body.assets[0];
 			expect(btc.asset).toBe("BTC");
-			expect(btc.amount).toBe(1.0);
-			expect(btc.eurInvested).toBe(50000);
+			expect(Number(btc.amount)).toBeCloseTo(1.0, 5);
+			expect(Number(btc.eurInvested)).toBe(50000);
 		});
 	});
 
@@ -676,9 +676,9 @@ describe("Portfolio Consistency Integration", () => {
 
 			const latest = response.body[response.body.length - 1];
 			
-			const btcValue = latest.assets["BTC"].eurValue;
-			const ethValue = latest.assets["ETH"].eurValue;
-			const xrpValue = latest.assets["XRP"].eurValue;
+			const btcValue = Number(latest.assets["BTC"].eurValue);
+			const ethValue = Number(latest.assets["ETH"].eurValue);
+			const xrpValue = Number(latest.assets["XRP"].eurValue);
 
 			const expectedTotal = btcValue + ethValue + xrpValue;
 
@@ -791,9 +791,9 @@ describe("Portfolio Consistency Integration", () => {
 			const btcValue = latest.assets["BTC"].eurValue;
 			const solValue = latest.assets["SOL"].eurValue;
 
-			expect(btcValue).toBe(1.0 * 55000);
-			expect(solValue).toBe(10.0 * 120);
-			expect(latest.totalEurValue).toBe(btcValue + solValue);
+			expect(Number(btcValue)).toBe(1.0 * 55000);
+			expect(Number(solValue)).toBe(10.0 * 120);
+			expect(latest.totalEurValue).toBeCloseTo(Number(btcValue) + Number(solValue), 2);
 		});
 	});
 
@@ -1069,9 +1069,9 @@ describe("Portfolio Consistency Integration", () => {
 			expect(response.status).toBe(200);
 
 			const latest = response.body[response.body.length - 1];
-			const btcValue = latest.assets["BTC"].eurValue;
-			const solValue = latest.assets["SOL"].eurValue;
-			const xrpValue = latest.assets["XRP"].eurValue;
+			const btcValue = Number(latest.assets["BTC"].eurValue);
+			const solValue = Number(latest.assets["SOL"].eurValue);
+			const xrpValue = Number(latest.assets["XRP"].eurValue);
 
 			const expectedTotal = btcValue + solValue + xrpValue;
 			expect(latest.totalEurValue).toBeCloseTo(expectedTotal, 2);

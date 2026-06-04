@@ -13,7 +13,7 @@ describe("AssetHoldings Repository Integration", () => {
 	const accountId2 = 200;
 
 	beforeAll(async () => {
-		process.env.DB_CONNECTION_STRING = ":memory:";
+		process.env.DB_CONNECTION_STRING = process.env.DB_CONNECTION_STRING || "mysql://testuser:testpass@localhost:3306/txls_test";
 		resetDataSource();
 		dataSource = await getDataSource();
 		repository = new AssetHoldingsRepository(dataSource);
@@ -49,9 +49,9 @@ describe("AssetHoldings Repository Integration", () => {
 			const result = await repository.findLatestByAccount(userId, accountId1);
 
 			expect(result.size).toBe(2);
-			expect(result.get("BTC")?.amount).toBe(1.5);
-			expect(result.get("BTC")?.eurInvested).toBe(75000);
-			expect(result.get("ETH")?.amount).toBe(10.0);
+			expect(Number(result.get("BTC")?.amount)).toBeCloseTo(1.5, 5);
+			expect(Number(result.get("BTC")?.eurInvested)).toBe(75000);
+			expect(Number(result.get("ETH")?.amount)).toBe(10.0);
 		});
 
 		it("should return holdings with different timestamps", async () => {
@@ -138,7 +138,7 @@ describe("AssetHoldings Repository Integration", () => {
 			const result = await repository.findLatestByUser(userId);
 
 			expect(result.size).toBe(1);
-			expect(result.get(accountId1)?.get("BTC")?.amount).toBe(2.0);
+			expect(Number(result.get(accountId1)?.get("BTC")?.amount)).toBe(2.0);
 		});
 
 		it("should not return holdings from other users", async () => {
@@ -191,7 +191,7 @@ describe("AssetHoldings Repository Integration", () => {
 			const result = await repository.getHoldingsUpToTimestamp(userId, accountId1, yesterday);
 
 			expect(result.size).toBe(1);
-			expect(result.get("BTC")?.amount).toBe(1.5);
+			expect(Number(result.get("BTC")?.amount)).toBeCloseTo(1.5, 5);
 		});
 
 		it("should return empty map when no holdings exist before timestamp", async () => {
@@ -243,7 +243,7 @@ describe("AssetHoldings Repository Integration", () => {
 
 			const result = await repository.findLatestByAccount(userId, accountId1);
 			expect(result.size).toBe(1);
-			expect(result.get("BTC")?.amount).toBe(1.0);
+			expect(Number(result.get("BTC")?.amount)).toBeCloseTo(1.0, 5);
 		});
 
 		it("should save multiple holdings", async () => {

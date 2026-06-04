@@ -32,11 +32,13 @@ describe("UsersService", () => {
       mockRepository.existsByUsername.mockResolvedValue(false);
       mockRepository.existsByEmail.mockResolvedValue(false);
       
+      const username = `testuser-${Date.now()}`;
+      const email = `test-${Date.now()}@example.com`;
       const savedUser = new UserEntity();
       savedUser.id = 1;
       savedUser.name = "Test User";
-      savedUser.username = "testuser";
-      savedUser.email = "test@example.com";
+      savedUser.username = username;
+      savedUser.email = email;
       savedUser.isAdmin = true;
       savedUser.createdAt = DateTime.now();
       savedUser.updatedAt = DateTime.now();
@@ -44,9 +46,9 @@ describe("UsersService", () => {
 
       const result = await service.createOnboardingUser({
         name: "Test User",
-        username: "testuser",
+        username: username,
         password: "password123",
-        email: "test@example.com",
+        email: email,
       });
 
       expect(result.isAdmin).toBe(true);
@@ -57,13 +59,15 @@ describe("UsersService", () => {
 
     it("should throw error if username exists", async () => {
       mockRepository.existsByUsername.mockResolvedValue(true);
+      const username = `testuser-${Date.now()}`;
+      const email = `test-${Date.now()}@example.com`;
 
       await expect(
         service.createOnboardingUser({
           name: "Test User",
-          username: "testuser",
+          username: username,
           password: "password123",
-          email: "test@example.com",
+          email: email,
         })
       ).rejects.toThrow("Username already exists");
     });
@@ -71,13 +75,15 @@ describe("UsersService", () => {
     it("should throw error if email exists", async () => {
       mockRepository.existsByUsername.mockResolvedValue(false);
       mockRepository.existsByEmail.mockResolvedValue(true);
+      const username = `testuser-${Date.now()}`;
+      const email = `test-${Date.now()}@example.com`;
 
       await expect(
         service.createOnboardingUser({
           name: "Test User",
-          username: "testuser",
+          username: username,
           password: "password123",
-          email: "test@example.com",
+          email: email,
         })
       ).rejects.toThrow("Email already exists");
     });
@@ -88,8 +94,10 @@ describe("UsersService", () => {
       const user = new UserEntity();
       user.id = 1;
       user.name = "Test User";
-      user.username = "testuser";
-      user.email = "test@example.com";
+      const username = `testuser-${Date.now()}`;
+      const email = `test-${Date.now()}@example.com`;
+      user.username = username;
+      user.email = email;
       user.salt = "";
       user.password = await bcrypt.hash("password123", 12);
       user.isAdmin = false;
@@ -98,18 +106,20 @@ describe("UsersService", () => {
 
       mockRepository.findByUsername.mockResolvedValue(user);
 
-      const result = await service.verifyPassword("testuser", "password123");
+      const result = await service.verifyPassword(username, "password123");
 
       expect(result).not.toBeNull();
-      expect(result?.username).toBe("testuser");
+      expect(result?.username).toBe(username);
     });
 
     it("should return null with wrong password", async () => {
       const user = new UserEntity();
       user.id = 1;
       user.name = "Test User";
-      user.username = "testuser";
-      user.email = "test@example.com";
+      const username = `testuser-${Date.now()}`;
+      const email = `test-${Date.now()}@example.com`;
+      user.username = username;
+      user.email = email;
       user.salt = "";
       user.password = await bcrypt.hash("password123", 12);
       user.isAdmin = false;
@@ -118,7 +128,7 @@ describe("UsersService", () => {
 
       mockRepository.findByUsername.mockResolvedValue(user);
 
-      const result = await service.verifyPassword("testuser", "wrongpassword");
+      const result = await service.verifyPassword(username, "wrongpassword");
 
       expect(result).toBeNull();
     });
@@ -200,7 +210,7 @@ describe("UsersService", () => {
           name: "Test User",
           username: "existinguser",
           password: "password123",
-          email: "test@example.com",
+          email: `test-${Date.now()}@example.com`,
         })
       ).rejects.toThrow("Username already exists");
     });
@@ -212,9 +222,9 @@ describe("UsersService", () => {
       await expect(
         service.createUser({
           name: "Test User",
-          username: "testuser",
+          username: `testuser-${Date.now()}`,
           password: "password123",
-          email: "existing@example.com",
+          email: `test-${Date.now()}@example.com`,
         })
       ).rejects.toThrow("Email already exists");
     });
@@ -229,7 +239,8 @@ describe("UsersService", () => {
       const existingUser = new UserEntity();
       existingUser.id = 1;
       existingUser.name = "Old Name";
-      existingUser.username = "testuser";
+      const username = `testuser-${Date.now()}`;
+      existingUser.username = username;
       existingUser.email = "old@example.com";
       existingUser.password = "hash";
       existingUser.salt = "salt";
@@ -240,7 +251,7 @@ describe("UsersService", () => {
       const updatedUser = new UserEntity();
       updatedUser.id = 1;
       updatedUser.name = "New Name";
-      updatedUser.username = "testuser";
+      updatedUser.username = username;
       updatedUser.email = "new@example.com";
       updatedUser.password = "hash";
       updatedUser.salt = "salt";
@@ -300,8 +311,10 @@ describe("UsersService", () => {
       const existingUser = new UserEntity();
       existingUser.id = 1;
       existingUser.name = "Test User";
-      existingUser.username = "testuser";
-      existingUser.email = "test@example.com";
+      const username = `testuser-${Date.now()}`;
+      const email = `test-${Date.now()}@example.com`;
+      existingUser.username = username;
+      existingUser.email = email;
       existingUser.password = "oldhash";
       existingUser.salt = "oldsalt";
       existingUser.isAdmin = false;
@@ -311,8 +324,8 @@ describe("UsersService", () => {
       const updatedUser = new UserEntity();
       updatedUser.id = 1;
       updatedUser.name = "Test User";
-      updatedUser.username = "testuser";
-      updatedUser.email = "test@example.com";
+      updatedUser.username = username;
+      updatedUser.email = email;
       updatedUser.password = "newhash";
       updatedUser.salt = "newsalt";
       updatedUser.isAdmin = false;
@@ -347,8 +360,8 @@ describe("UsersService", () => {
       const user = new UserEntity();
       user.id = 1;
       user.name = "Test User";
-      user.username = "testuser";
-      user.email = "test@example.com";
+      user.username = `testuser-${Date.now()}`;
+      user.email = `test-${Date.now()}@example.com`;
       user.password = "hash";
       user.salt = "salt";
       user.isAdmin = false;

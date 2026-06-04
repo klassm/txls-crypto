@@ -28,7 +28,7 @@ export default defineConfig({
       timeout: 120000,
       env: {
         JWT_SECRET: process.env.JWT_SECRET || 'test-secret-key-for-jwt-signing-in-tests-sufficiently-long',
-        DB_CONNECTION_STRING: ':memory:',
+        DB_CONNECTION_STRING: process.env.DB_CONNECTION_STRING || 'mysql://root:root@127.0.0.1:3306/txls_test',
       },
     },
     {

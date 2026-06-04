@@ -1,7 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll, afterEach, beforeEach } from "vitest";
 import { getDataSource, resetDataSource } from "../../src/database.js";
-import { rmSync } from "fs";
-import path from "path";
 import { TransactionEntity } from "../../src/modules/transactions/transaction.entity.js";
 import { AccountEntity } from "../../src/modules/accounts/account.entity.js";
 import { UserEntity } from "../../src/modules/users/user.entity.js";
@@ -12,21 +10,6 @@ import type { DataSource } from "typeorm";
 const dbConnectionString = process.env.DB_CONNECTION_STRING;
 
 const allConfigs = [
-	{
-		name: "better-sqlite3",
-		displayName: "SQLite",
-		match: (cs: string) => cs.includes(":memory:") || cs.endsWith(".db") || !cs.includes("://"),
-		connectionString: dbConnectionString || "./data/test-type-comparison.db",
-		setup: async () => {
-			process.env.DB_CONNECTION_STRING = dbConnectionString || "./data/test-type-comparison.db";
-		},
-		teardown: async () => {
-			const dbPath = path.join(process.cwd(), "data/test-type-comparison.db");
-			try {
-				rmSync(dbPath, { force: true });
-			} catch (e) {}
-		},
-	},
 	{
 		name: "postgres",
 		displayName: "PostgreSQL",
@@ -40,7 +23,7 @@ const allConfigs = [
 	{
 		name: "mysql",
 		displayName: "MySQL",
-		match: (cs: string) => cs.startsWith("mysql://"),
+		match: (cs: string) => cs.startsWith("mysql://") || cs.startsWith("mariadb://"),
 		connectionString: dbConnectionString || "mysql://testuser:testpass@localhost:3306/txls_test",
 		setup: async () => {
 			process.env.DB_CONNECTION_STRING = dbConnectionString || "mysql://testuser:testpass@localhost:3306/txls_test";
@@ -86,8 +69,8 @@ describe.each(testConfigs)("$displayName TransactionType Comparison", ({ display
 		const userRepo = dataSource.getRepository(UserEntity);
 		const user = new UserEntity();
 		user.name = "Test User";
-		user.username = "testuser";
-		user.email = "test@example.com";
+		user.username = `testuser-${Date.now()}`;
+		user.email = `test-${Date.now()}@example.com`;
 		user.password = "hashedpassword123";
 		user.isAdmin = false;
 		await userRepo.save(user);
