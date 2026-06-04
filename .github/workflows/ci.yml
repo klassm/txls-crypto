@@ -92,22 +92,7 @@ jobs:
     - name: Run unit tests
       run: pnpm run test:unit
       env:
-        DB_CONNECTION_STRING: mysql://root:root@127.0.0.1:3306/txls_test
         JWT_SECRET: test-secret-key-for-jwt-signing-in-tests-sufficiently-long
-
-    services:
-      mysql:
-        image: mariadb:11
-        env:
-          MARIADB_ROOT_PASSWORD: root
-          MARIADB_DATABASE: txls_test
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="healthcheck.sh --connect --user=root --password=root"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
 
   test-integration:
     runs-on: ubuntu-latest
