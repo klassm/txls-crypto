@@ -21,9 +21,11 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'docker build -t txls-docker-test -f ../docker/Dockerfile .. && docker rm -f txls-docker-test-container 2>/dev/null || true && docker run -d --name txls-docker-test-container -p 3002:3000 -e JWT_SECRET=test-secret-key-for-jwt-signing-in-tests-sufficiently-long -e NODE_ENV=test txls-docker-test && sleep 5',
+    command: process.env.CI
+      ? 'docker rm -f txls-docker-test-container 2>/dev/null || true && docker run -d --add-host=host.docker.internal:host-gateway --name txls-docker-test-container -p 3002:3000 -e JWT_SECRET=test-secret-key-for-jwt-signing-in-tests-sufficiently-long -e NODE_ENV=test -e DB_CONNECTION_STRING=mysql://root:root@host.docker.internal:3306/txls_test txls-docker-test'
+      : 'docker build -t txls-docker-test -f ../docker/Dockerfile .. && docker rm -f txls-docker-test-container 2>/dev/null || true && docker run -d --name txls-docker-test-container -p 3002:3000 -e JWT_SECRET=test-secret-key-for-jwt-signing-in-tests-sufficiently-long -e NODE_ENV=test txls-docker-test',
     url: 'http://localhost:3002',
     reuseExistingServer: !process.env.CI,
-    timeout: 300000,
+    timeout: 120000,
   },
 })

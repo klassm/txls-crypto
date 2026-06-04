@@ -24,9 +24,11 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `docker build -t txls-hass-test -f ../docker/Dockerfile.hass .. && docker rm -f txls-hass-test-container 2>/dev/null || true && docker run -d --name txls-hass-test-container -p 3003:3000 -e JWT_SECRET=test-secret-key-for-jwt-signing-in-tests-sufficiently-long -e SUPERVISOR_TOKEN=test-supervisor-token txls-hass-test && sleep 5`,
+    command: process.env.CI
+      ? `docker rm -f txls-hass-test-container 2>/dev/null || true && docker run -d --add-host=host.docker.internal:host-gateway --name txls-hass-test-container -p 3003:3000 -e JWT_SECRET=test-secret-key-for-jwt-signing-in-tests-sufficiently-long -e SUPERVISOR_TOKEN=test-supervisor-token -e DB_CONNECTION_STRING=mysql://root:root@host.docker.internal:3306/txls_test txls-hass-test`
+      : `docker build -t txls-hass-test -f ../docker/Dockerfile.hass .. && docker rm -f txls-hass-test-container 2>/dev/null || true && docker run -d --name txls-hass-test-container -p 3003:3000 -e JWT_SECRET=test-secret-key-for-jwt-signing-in-tests-sufficiently-long -e SUPERVISOR_TOKEN=test-supervisor-token txls-hass-test`,
     url: BASE_URL,
     reuseExistingServer: true,
-    timeout: 300000,
+    timeout: 120000,
   },
 })
