@@ -222,7 +222,7 @@ jobs:
           path: gui-tests/playwright-report/
           retention-days: 30
 
-   test-gui-docker:
+  test-gui-docker:
     runs-on: ubuntu-latest
     needs: [build]
 
