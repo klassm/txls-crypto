@@ -138,7 +138,7 @@ jobs:
         ports:
           - 3306:3306
         options: >-
-          --health-cmd="healthcheck.sh --connect --user=root --password=rootpass"
+          --health-cmd="mysqladmin ping -p rootpass"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -185,7 +185,7 @@ jobs:
         ports:
           - 3306:3306
         options: >-
-          --health-cmd="healthcheck.sh --connect --user=root --password=root"
+          --health-cmd="mysqladmin ping -p root"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -237,7 +237,7 @@ jobs:
         ports:
           - 3306:3306
         options: >-
-          --health-cmd="healthcheck.sh --connect --user=root --password=root"
+          --health-cmd="mysqladmin ping -p root"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -289,7 +289,7 @@ jobs:
         ports:
           - 3306:3306
         options: >-
-          --health-cmd="healthcheck.sh --connect --user=root --password=root"
+          --health-cmd="mysqladmin ping -p root"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5

@@ -23,7 +23,7 @@ services:
     ports:
       - "3306:3306"
     healthcheck:
-      test: ["CMD", "healthcheck.sh", "--connect", "--user=root", "--password=rootpass"]
+      test: ["CMD", "mysqladmin", "ping", "-p", "rootpass"]
       interval: 5s
       timeout: 5s
       retries: 5
