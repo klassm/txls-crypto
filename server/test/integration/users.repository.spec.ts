@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, afterAll, afterEach, beforeEach } from
 import { getDataSource, resetDataSource } from "../../src/database.js";
 import { UsersRepository } from "../../src/modules/users/users.repository.js";
 import { UserEntity } from "../../src/modules/users/user.entity.js";
+import { DateTime } from "luxon";
 import type { DataSource } from "typeorm";
 
 const dbConnectionString = process.env.DB_CONNECTION_STRING;
