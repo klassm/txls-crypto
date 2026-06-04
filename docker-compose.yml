@@ -13,17 +13,17 @@ services:
       timeout: 5s
       retries: 5
 
-  mariadb:
-    image: mariadb:11
+  mysql:
+    image: mysql:8.0
     environment:
-      MARIADB_USER: testuser
-      MARIADB_PASSWORD: testpass
-      MARIADB_DATABASE: txls_test
-      MARIADB_ROOT_PASSWORD: rootpass
+      MYSQL_USER: testuser
+      MYSQL_PASSWORD: testpass
+      MYSQL_DATABASE: txls_test
+      MYSQL_ROOT_PASSWORD: rootpass
     ports:
       - "3306:3306"
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-p", "rootpass"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p", "rootpass"]
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10

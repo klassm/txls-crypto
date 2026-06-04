@@ -137,8 +137,8 @@ if (!validationResult.success) {
 
 ## Important Notes
 
-- Database supports MariaDB/MySQL and PostgreSQL (configured via `DB_CONNECTION_STRING` environment variable)
-- Default database is MariaDB at `mysql://root:root@localhost:3306/txls`
+- Database supports MySQL and PostgreSQL (configured via `DB_CONNECTION_STRING` environment variable)
+- Default database is MySQL at `mysql://root:root@localhost:3306/txls`
 - Frontend runs on port 3000, backend on port 3001
 - All financial values should be in EUR
 - Transaction types are defined in `shared/src/lib/types/index.ts`
@@ -146,7 +146,7 @@ if (!validationResult.success) {
 - Always use the `useAccounts` hook for fetching accounts data
 - All environment variables are centralized in `shared/src/server/config/env.ts`
 - Never commit `.env` files
-- Integration tests require a running database container (MariaDB or PostgreSQL)
+- Integration tests require a running database container (MySQL or PostgreSQL)
 
 ## Development Flow
 

@@ -20,7 +20,7 @@ Cryptocurrency transaction analysis platform for Home Assistant. Import CSV data
 
 ### Database Options
 
-- **MariaDB/MySQL**: `mysql://user:pass@host:3306/dbname` (default)
+- **MySQL**: `mysql://user:pass@host:3306/dbname` (default)
 - **PostgreSQL**: `postgresql://user:pass@host:5432/dbname`
 
 ## Access

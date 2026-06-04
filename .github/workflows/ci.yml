@@ -114,19 +114,19 @@ jobs:
           --health-retries 5
 
       mysql:
-        image: mariadb:11
+        image: mysql:8.0
         env:
-          MARIADB_USER: testuser
-          MARIADB_PASSWORD: testpass
-          MARIADB_DATABASE: txls_test
-          MARIADB_ROOT_PASSWORD: rootpass
+          MYSQL_USER: testuser
+          MYSQL_PASSWORD: testpass
+          MYSQL_DATABASE: txls_test
+          MYSQL_ROOT_PASSWORD: rootpass
         ports:
           - 3306:3306
         options: >-
-          --health-cmd="mysqladmin ping -p rootpass"
+          --health-cmd="mysqladmin ping --silent"
           --health-interval 10s
           --health-timeout 5s
-          --health-retries 5
+          --health-retries 10
     
     steps:
     - uses: actions/checkout@v5
@@ -163,17 +163,17 @@ jobs:
 
     services:
       mysql:
-        image: mariadb:11
+        image: mysql:8.0
         env:
-          MARIADB_ROOT_PASSWORD: root
-          MARIADB_DATABASE: txls_test
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: txls_test
         ports:
           - 3306:3306
         options: >-
-          --health-cmd="mysqladmin ping -p root"
+          --health-cmd="mysqladmin ping --silent"
           --health-interval 10s
           --health-timeout 5s
-          --health-retries 5
+          --health-retries 10
 
     steps:
       - uses: actions/checkout@v5
@@ -215,17 +215,17 @@ jobs:
 
     services:
       mysql:
-        image: mariadb:11
+        image: mysql:8.0
         env:
-          MARIADB_ROOT_PASSWORD: root
-          MARIADB_DATABASE: txls_test
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: txls_test
         ports:
           - 3306:3306
         options: >-
-          --health-cmd="mysqladmin ping -p root"
+          --health-cmd="mysqladmin ping --silent"
           --health-interval 10s
           --health-timeout 5s
-          --health-retries 5
+          --health-retries 10
 
     steps:
       - uses: actions/checkout@v5
@@ -267,17 +267,17 @@ jobs:
 
     services:
       mysql:
-        image: mariadb:11
+        image: mysql:8.0
         env:
-          MARIADB_ROOT_PASSWORD: root
-          MARIADB_DATABASE: txls_test
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: txls_test
         ports:
           - 3306:3306
         options: >-
-          --health-cmd="mysqladmin ping -p root"
+          --health-cmd="mysqladmin ping --silent"
           --health-interval 10s
           --health-timeout 5s
-          --health-retries 5
+          --health-retries 10
 
     steps:
       - uses: actions/checkout@v5

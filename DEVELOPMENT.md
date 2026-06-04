@@ -4,7 +4,7 @@
 
 - **Frontend**: React, Vite, TypeScript, Material-UI
 - **Backend**: Express, TypeScript, TypeORM
-- **Database**: MariaDB (default), PostgreSQL
+- **Database**: MySQL (default), PostgreSQL
 - **Package Manager**: pnpm 10
 - **Build**: Turborepo monorepo
 
@@ -49,7 +49,7 @@ pnpm run build
 
 ## Database Options
 
-### MariaDB / MySQL (Default)
+### MySQL (Default)
 
 ```env
 DB_CONNECTION_STRING=mysql://username:password@localhost:3306/database_name
@@ -63,7 +63,7 @@ mysql -u root -p -e "CREATE DATABASE txls;"
 For local development with Docker:
 
 ```bash
-docker compose up -d mariadb
+docker compose up -d mysql
 ```
 
 ### PostgreSQL
@@ -102,7 +102,7 @@ docker compose -f docker-compose.integration.yml up -d
 # PostgreSQL
 pnpm run test:integration:postgres
 
-# MySQL / MariaDB
+# MySQL
 pnpm run test:integration:mysql
 ```
 
