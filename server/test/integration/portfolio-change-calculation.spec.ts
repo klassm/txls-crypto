@@ -76,7 +76,7 @@ describe("Portfolio Change Calculation Integration", () => {
 			// Use startOf("day") to ensure holdings exist from midnight of 30 days ago
 			// This aligns with how getPortfolioHistoryWithPrices generates timestamps
 			const thirtyDaysAgo = now.minus({ days: 30 }).startOf("day");
-			const sevenDaysAgo = now.minus({ days: 7 });
+			const sevenDaysAgo = now.minus({ days: 7 }).startOf("day");
 			const oneDayAgo = now.minus({ hours: 24 });
 
 			// Save price history for BTC, XRP, and SOL - all with complete 30-day history
@@ -186,8 +186,8 @@ describe("Portfolio Change Calculation Integration", () => {
 	describe("Portfolio with partial price data", () => {
 		beforeEach(async () => {
 			const now = DateTime.utc();
-			const thirtyDaysAgo = now.minus({ days: 30 });
-			const sevenDaysAgo = now.minus({ days: 7 });
+			const thirtyDaysAgo = now.minus({ days: 30 }).startOf("day");
+			const sevenDaysAgo = now.minus({ days: 7 }).startOf("day");
 
 			// BTC has complete 30-day price history
 			const btcPrices: CoinPrice[] = [
@@ -283,16 +283,16 @@ describe("Portfolio Change Calculation Integration", () => {
 	describe("Portfolio with gaps in history", () => {
 		beforeEach(async () => {
 			const now = DateTime.utc();
-			const thirtyDaysAgo = now.minus({ days: 30 });
-			const twentyDaysAgo = now.minus({ days: 20 });
-			const tenDaysAgo = now.minus({ days: 10 });
+			const thirtyDaysAgo = now.minus({ days: 30 }).startOf("day");
+			const twentyDaysAgo = now.minus({ days: 20 }).startOf("day");
+			const tenDaysAgo = now.minus({ days: 10 }).startOf("day");
 
 			// BTC has sparse price data with gaps
 			const btcPrices: CoinPrice[] = [
 				{ symbol: "BTC", priceEur: 50000, fetchedAt: thirtyDaysAgo },
 				// Gap: no prices from day 20-11
 				{ symbol: "BTC", priceEur: 52000, fetchedAt: tenDaysAgo },
-				{ symbol: "BTC", priceEur: 52500, fetchedAt: now.minus({ days: 7 }) },
+				{ symbol: "BTC", priceEur: 52500, fetchedAt: now.minus({ days: 7 }).startOf("day") },
 				{ symbol: "BTC", priceEur: 53000, fetchedAt: now },
 			];
 
@@ -387,9 +387,7 @@ describe("Portfolio Change Calculation Integration", () => {
 	describe("buildHistoryPoint behavior with missing prices", () => {
 		it("should demonstrate that buildHistoryPoint returns null when any asset lacks a price", async () => {
 			const now = DateTime.utc();
-			const thirtyDaysAgo = now.minus({ days: 30 });
-
-			// Only BTC has historical price
+			const thirtyDaysAgo = now.minus({ days: 30 }).startOf("day");
 			await pricesRepository.savePrices([
 				{ symbol: "BTC", priceEur: 50000, fetchedAt: thirtyDaysAgo },
 				{ symbol: "BTC", priceEur: 53000, fetchedAt: now },
