@@ -58,13 +58,13 @@ importers:
         version: 11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react@19.2.4)
       '@mui/icons-material':
         specifier: ^7.3.9
-        version: 7.3.11(@mui/material@7.3.11(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(@types/react@19.2.14)(react@19.2.4)
+        version: 7.3.11(@mui/material@7.3.11(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react-dom@19.2.8(react@19.2.4))(react@19.2.4))(@types/react@19.2.14)(react@19.2.4)
       '@mui/material':
         specifier: ^7.3.9
-        version: 7.3.11(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+        version: 7.3.11(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react-dom@19.2.8(react@19.2.4))(react@19.2.4)
       '@mui/x-date-pickers':
         specifier: ^8.27.2
-        version: 8.29.2(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react@19.2.4))(@mui/material@7.3.11(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(@mui/system@7.3.11(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(dayjs@1.11.20)(luxon@3.7.2)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+        version: 8.29.2(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react@19.2.4))(@mui/material@7.3.11(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react-dom@19.2.8(react@19.2.4))(react@19.2.4))(@mui/system@7.3.11(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(dayjs@1.11.20)(luxon@3.7.2)(react-dom@19.2.8(react@19.2.4))(react@19.2.4)
       '@tanstack/react-query':
         specifier: ^5.90.21
         version: 5.90.21(react@19.2.4)
@@ -76,22 +76,22 @@ importers:
         version: 3.7.2
       material-react-table:
         specifier: ^3.2.1
-        version: 3.2.1(ff386cbda6fea6530b377c4b90eb54c8)
+        version: 3.2.1(23649fae809f3fc161bbfea3f8faed65)
       react:
         specifier: ^19.2.4
         version: 19.2.4
       react-dom:
         specifier: ^19.2.4
-        version: 19.2.4(react@19.2.4)
+        version: 19.2.8(react@19.2.4)
       react-markdown:
         specifier: ^10.1.0
         version: 10.1.0(@types/react@19.2.14)(react@19.2.4)
       react-router-dom:
         specifier: ^7.13.1
-        version: 7.13.1(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+        version: 7.13.1(react-dom@19.2.8(react@19.2.4))(react@19.2.4)
       recharts:
         specifier: ^3.8.0
-        version: 3.8.0(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react-is@19.2.7)(react@19.2.4)(redux@5.0.1)
+        version: 3.8.0(@types/react@19.2.14)(react-dom@19.2.8(react@19.2.4))(react-is@19.2.7)(react@19.2.4)(redux@5.0.1)
       socket.io-client:
         specifier: ^4.8.3
         version: 4.8.3
@@ -101,7 +101,7 @@ importers:
         version: 6.9.1
       '@testing-library/react':
         specifier: ^16.3.2
-        version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+        version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.8(react@19.2.4))(react@19.2.4)
       '@types/node':
         specifier: ^25.5.0
         version: 25.5.0
@@ -2887,10 +2887,10 @@ packages:
     resolution: {integrity: sha512-y3bGgqKj3QBdxLbLkomlohkvsA8gdAiUQlSBJnBhfn+BPxg4bc62d8TcBW15wavDfgexCgccckhcZvywyQYPOw==}
     hasBin: true
 
-  react-dom@19.2.4:
-    resolution: {integrity: sha512-AXJdLo8kgMbimY95O2aKQqsz2iWi9jMgKJhRBAxECE4IFxfcazB2LmzloIoibJI3C12IlY20+KFaLv+71bUJeQ==}
+  react-dom@19.2.8:
+    resolution: {integrity: sha512-rVprimfGBG3DR+Tq0IQG2DT5PxKth1WIGDmj5yPmlzr4YBe7uyE+Du4oVqTDXZSHGGGXRtTJEGSSePyQCMBglQ==}
     peerDependencies:
-      react: ^19.2.4
+      react: ^19.2.8
 
   react-is@16.13.1:
     resolution: {integrity: sha512-24e6ynE2H+OKt4kqsOvNd8kBpV65zoxbA4BVsEOB3ARVWQki/DHzaUoC5KuON/BiccDaCCTZBuOcfZs70kR8bQ==}
@@ -4098,15 +4098,15 @@ snapshots:
 
   '@mui/core-downloads-tracker@7.3.11': {}
 
-  '@mui/icons-material@7.3.11(@mui/material@7.3.11(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(@types/react@19.2.14)(react@19.2.4)':
+  '@mui/icons-material@7.3.11(@mui/material@7.3.11(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react-dom@19.2.8(react@19.2.4))(react@19.2.4))(@types/react@19.2.14)(react@19.2.4)':
     dependencies:
       '@babel/runtime': 7.29.7
-      '@mui/material': 7.3.11(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@mui/material': 7.3.11(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react-dom@19.2.8(react@19.2.4))(react@19.2.4)
       react: 19.2.4
     optionalDependencies:
       '@types/react': 19.2.14
 
-  '@mui/material@7.3.11(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)':
+  '@mui/material@7.3.11(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react-dom@19.2.8(react@19.2.4))(react@19.2.4)':
     dependencies:
       '@babel/runtime': 7.29.7
       '@mui/core-downloads-tracker': 7.3.11
@@ -4119,9 +4119,9 @@ snapshots:
       csstype: 3.2.3
       prop-types: 15.8.1
       react: 19.2.4
-      react-dom: 19.2.4(react@19.2.4)
+      react-dom: 19.2.8(react@19.2.4)
       react-is: 19.2.7
-      react-transition-group: 4.4.5(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      react-transition-group: 4.4.5(react-dom@19.2.8(react@19.2.4))(react@19.2.4)
     optionalDependencies:
       '@emotion/react': 11.14.0(@types/react@19.2.14)(react@19.2.4)
       '@emotion/styled': 11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react@19.2.4)
@@ -4183,10 +4183,10 @@ snapshots:
     optionalDependencies:
       '@types/react': 19.2.14
 
-  '@mui/x-date-pickers@8.29.2(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react@19.2.4))(@mui/material@7.3.11(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(@mui/system@7.3.11(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(dayjs@1.11.20)(luxon@3.7.2)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)':
+  '@mui/x-date-pickers@8.29.2(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react@19.2.4))(@mui/material@7.3.11(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react-dom@19.2.8(react@19.2.4))(react@19.2.4))(@mui/system@7.3.11(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(dayjs@1.11.20)(luxon@3.7.2)(react-dom@19.2.8(react@19.2.4))(react@19.2.4)':
     dependencies:
       '@babel/runtime': 7.29.7
-      '@mui/material': 7.3.11(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@mui/material': 7.3.11(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react-dom@19.2.8(react@19.2.4))(react@19.2.4)
       '@mui/system': 7.3.11(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react@19.2.4)
       '@mui/utils': 7.3.11(@types/react@19.2.14)(react@19.2.4)
       '@mui/x-internals': 8.29.2(@types/react@19.2.14)(react@19.2.4)
@@ -4194,8 +4194,8 @@ snapshots:
       clsx: 2.1.1
       prop-types: 15.8.1
       react: 19.2.4
-      react-dom: 19.2.4(react@19.2.4)
-      react-transition-group: 4.4.5(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      react-dom: 19.2.8(react@19.2.4)
+      react-transition-group: 4.4.5(react-dom@19.2.8(react@19.2.4))(react@19.2.4)
     optionalDependencies:
       '@emotion/react': 11.14.0(@types/react@19.2.14)(react@19.2.4)
       '@emotion/styled': 11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react@19.2.4)
@@ -4372,17 +4372,17 @@ snapshots:
       '@tanstack/query-core': 5.90.20
       react: 19.2.4
 
-  '@tanstack/react-table@8.20.6(react-dom@19.2.4(react@19.2.4))(react@19.2.4)':
+  '@tanstack/react-table@8.20.6(react-dom@19.2.8(react@19.2.4))(react@19.2.4)':
     dependencies:
       '@tanstack/table-core': 8.20.5
       react: 19.2.4
-      react-dom: 19.2.4(react@19.2.4)
+      react-dom: 19.2.8(react@19.2.4)
 
-  '@tanstack/react-virtual@3.11.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4)':
+  '@tanstack/react-virtual@3.11.2(react-dom@19.2.8(react@19.2.4))(react@19.2.4)':
     dependencies:
       '@tanstack/virtual-core': 3.11.2
       react: 19.2.4
-      react-dom: 19.2.4(react@19.2.4)
+      react-dom: 19.2.8(react@19.2.4)
 
   '@tanstack/table-core@8.20.5': {}
 
@@ -4408,12 +4408,12 @@ snapshots:
       picocolors: 1.1.1
       redent: 3.0.0
 
-  '@testing-library/react@16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)':
+  '@testing-library/react@16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.8(react@19.2.4))(react@19.2.4)':
     dependencies:
       '@babel/runtime': 7.28.6
       '@testing-library/dom': 10.4.1
       react: 19.2.4
-      react-dom: 19.2.4(react@19.2.4)
+      react-dom: 19.2.8(react@19.2.4)
     optionalDependencies:
       '@types/react': 19.2.14
       '@types/react-dom': 19.2.3(@types/react@19.2.14)
@@ -5860,19 +5860,19 @@ snapshots:
     dependencies:
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  material-react-table@3.2.1(ff386cbda6fea6530b377c4b90eb54c8):
+  material-react-table@3.2.1(23649fae809f3fc161bbfea3f8faed65):
     dependencies:
       '@emotion/react': 11.14.0(@types/react@19.2.14)(react@19.2.4)
       '@emotion/styled': 11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react@19.2.4)
-      '@mui/icons-material': 7.3.11(@mui/material@7.3.11(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(@types/react@19.2.14)(react@19.2.4)
-      '@mui/material': 7.3.11(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
-      '@mui/x-date-pickers': 8.29.2(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react@19.2.4))(@mui/material@7.3.11(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(@mui/system@7.3.11(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(dayjs@1.11.20)(luxon@3.7.2)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@mui/icons-material': 7.3.11(@mui/material@7.3.11(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react-dom@19.2.8(react@19.2.4))(react@19.2.4))(@types/react@19.2.14)(react@19.2.4)
+      '@mui/material': 7.3.11(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react-dom@19.2.8(react@19.2.4))(react@19.2.4)
+      '@mui/x-date-pickers': 8.29.2(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react@19.2.4))(@mui/material@7.3.11(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react-dom@19.2.8(react@19.2.4))(react@19.2.4))(@mui/system@7.3.11(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(dayjs@1.11.20)(luxon@3.7.2)(react-dom@19.2.8(react@19.2.4))(react@19.2.4)
       '@tanstack/match-sorter-utils': 8.19.4
-      '@tanstack/react-table': 8.20.6(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
-      '@tanstack/react-virtual': 3.11.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@tanstack/react-table': 8.20.6(react-dom@19.2.8(react@19.2.4))(react@19.2.4)
+      '@tanstack/react-virtual': 3.11.2(react-dom@19.2.8(react@19.2.4))(react@19.2.4)
       highlight-words: 2.0.0
       react: 19.2.4
-      react-dom: 19.2.4(react@19.2.4)
+      react-dom: 19.2.8(react@19.2.4)
 
   math-intrinsics@1.1.0: {}
 
@@ -6452,7 +6452,7 @@ snapshots:
       strip-json-comments: 2.0.1
     optional: true
 
-  react-dom@19.2.4(react@19.2.4):
+  react-dom@19.2.8(react@19.2.4):
     dependencies:
       react: 19.2.4
       scheduler: 0.27.0
@@ -6490,28 +6490,28 @@ snapshots:
       '@types/react': 19.2.14
       redux: 5.0.1
 
-  react-router-dom@7.13.1(react-dom@19.2.4(react@19.2.4))(react@19.2.4):
+  react-router-dom@7.13.1(react-dom@19.2.8(react@19.2.4))(react@19.2.4):
     dependencies:
       react: 19.2.4
-      react-dom: 19.2.4(react@19.2.4)
-      react-router: 7.13.1(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      react-dom: 19.2.8(react@19.2.4)
+      react-router: 7.13.1(react-dom@19.2.8(react@19.2.4))(react@19.2.4)
 
-  react-router@7.13.1(react-dom@19.2.4(react@19.2.4))(react@19.2.4):
+  react-router@7.13.1(react-dom@19.2.8(react@19.2.4))(react@19.2.4):
     dependencies:
       cookie: 1.1.1
       react: 19.2.4
       set-cookie-parser: 2.7.2
     optionalDependencies:
-      react-dom: 19.2.4(react@19.2.4)
+      react-dom: 19.2.8(react@19.2.4)
 
-  react-transition-group@4.4.5(react-dom@19.2.4(react@19.2.4))(react@19.2.4):
+  react-transition-group@4.4.5(react-dom@19.2.8(react@19.2.4))(react@19.2.4):
     dependencies:
       '@babel/runtime': 7.29.7
       dom-helpers: 5.2.1
       loose-envify: 1.4.0
       prop-types: 15.8.1
       react: 19.2.4
-      react-dom: 19.2.4(react@19.2.4)
+      react-dom: 19.2.8(react@19.2.4)
 
   react@19.2.4: {}
 
@@ -6529,7 +6529,7 @@ snapshots:
 
   real-require@0.2.0: {}
 
-  recharts@3.8.0(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react-is@19.2.7)(react@19.2.4)(redux@5.0.1):
+  recharts@3.8.0(@types/react@19.2.14)(react-dom@19.2.8(react@19.2.4))(react-is@19.2.7)(react@19.2.4)(redux@5.0.1):
     dependencies:
       '@reduxjs/toolkit': 2.11.2(react-redux@9.2.0(@types/react@19.2.14)(react@19.2.4)(redux@5.0.1))(react@19.2.4)
       clsx: 2.1.1
@@ -6538,7 +6538,7 @@ snapshots:
       eventemitter3: 5.0.4
       immer: 10.2.0
       react: 19.2.4
-      react-dom: 19.2.4(react@19.2.4)
+      react-dom: 19.2.8(react@19.2.4)
       react-is: 19.2.7
       react-redux: 9.2.0(@types/react@19.2.14)(react@19.2.4)(redux@5.0.1)
       reselect: 5.1.1
