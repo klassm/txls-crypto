@@ -3,10 +3,10 @@ packages:
   - "server"
   - "client"
   - "gui-tests"
-allowBuilds:
-  bcrypt: set this to true or false
-  core-js: set this to true or false
-  esbuild: set this to true or false
+onlyBuiltDependencies:
+  - bcrypt
+  - core-js
+  - esbuild
 minimumReleaseAgeExclude:
   - '@inversifyjs/container@3.1.2'
   - '@inversifyjs/core@15.0.0'
