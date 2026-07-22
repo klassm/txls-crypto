@@ -97,7 +97,7 @@ export function AssetDistributionSummary({ history, assets }: AssetDistributionS
 				<Typography variant="body2" color="text.secondary">
 					Total Value
 				</Typography>
-				<Typography variant="h5" fontWeight={600}>
+				<Typography variant="h5" sx={{ fontWeight: 600 }}>
 					{formatValue(totalValue)}
 				</Typography>
 			</Box>
@@ -165,7 +165,7 @@ export function AssetDistributionSummary({ history, assets }: AssetDistributionS
 									}}
 								/>
 								<Box>
-									<Typography variant="body2" fontWeight={500}>
+									<Typography variant="body2" sx={{ fontWeight: 500 }}>
 										{item.asset}
 									</Typography>
 									<Typography variant="caption" color="text.secondary">
@@ -175,7 +175,7 @@ export function AssetDistributionSummary({ history, assets }: AssetDistributionS
 							</Box>
 						<Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
 							<Box sx={{ textAlign: "right" }}>
-								<Typography variant="body2" fontWeight={500}>
+								<Typography variant="body2" sx={{ fontWeight: 500 }}>
 									{formatValue(item.value)}
 								</Typography>
 								{price ? (

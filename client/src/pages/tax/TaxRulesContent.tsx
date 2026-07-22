@@ -68,7 +68,7 @@ export function TaxRulesContent() {
           <Stack spacing={3}>
             {rules.map((rule, index) => (
               <Box key={index}>
-                <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: "bold" }}>
                   {rule.title}
                 </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: "pre-line" }}>
@@ -81,10 +81,10 @@ export function TaxRulesContent() {
         </Paper>
 
         <Paper variant="outlined" sx={{ p: 3 }}>
-          <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+          <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: "bold" }}>
             Documentation Requirements (2025+)
           </Typography>
-          <Typography variant="body2" color="text.secondary" paragraph>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
             Starting from 2025, stricter documentation requirements apply (BMF Schreiben March 2025):
           </Typography>
           <Box component="ul" sx={{ pl: 2.5, m: 0 }}>
@@ -97,7 +97,7 @@ export function TaxRulesContent() {
         </Paper>
 
         <Paper variant="outlined" sx={{ p: 3 }}>
-          <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+          <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: "bold" }}>
             Sources & Further Reading
           </Typography>
           <Stack component="ul" spacing={1} sx={{ pl: 2.5, m: 0 }}>

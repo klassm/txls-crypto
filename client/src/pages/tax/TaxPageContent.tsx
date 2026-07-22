@@ -51,8 +51,8 @@ function MetricCard({ label, tooltip, value, valueColor, icon }: MetricCardProps
     <Card>
       <CardContent>
         <Stack spacing={2}>
-          <Stack direction="row" alignItems="center" spacing={1}>
-            <Typography variant="caption" color="text.secondary" fontWeight="bold" textTransform="uppercase">
+          <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: "bold", textTransform: "uppercase" }}>
               {label}
             </Typography>
             <Tooltip title={tooltip} arrow>
@@ -125,7 +125,7 @@ export default function TaxPageContent() {
                 label="Taxable Gains"
                 tooltip={
                   <Box sx={{ p: 1, maxWidth: 400 }}>
-                    <Typography variant="body2" fontWeight="bold" gutterBottom>
+                    <Typography variant="body2" gutterBottom sx={{ fontWeight: "bold" }}>
                       Taxable Gains Explanation
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 1 }}>
@@ -136,7 +136,7 @@ export default function TaxPageContent() {
                       <Typography variant="body2">• €1,000 Freigrenze exemption for small gains</Typography>
                       <Typography variant="body2">• Loss carryover from previous years</Typography>
                     </Box>
-                    <Typography variant="caption" display="block" color="text.secondary" sx={{ mt: 1 }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: "block" }}>
                       Only short-term gains (≤365 days) above €1,000 total are taxable.
                     </Typography>
                   </Box>
@@ -151,7 +151,7 @@ export default function TaxPageContent() {
                 label="Taxable Losses"
                 tooltip={
                   <Box sx={{ p: 1, maxWidth: 400 }}>
-                    <Typography variant="body2" fontWeight="bold" gutterBottom>
+                    <Typography variant="body2" gutterBottom sx={{ fontWeight: "bold" }}>
                       Taxable Losses Explanation
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 1 }}>
@@ -161,7 +161,7 @@ export default function TaxPageContent() {
                       <Typography variant="body2">• Offset current year&apos;s taxable gains</Typography>
                       <Typography variant="body2">• Carry forward to future years (if not fully used)</Typography>
                     </Box>
-                    <Typography variant="caption" display="block" color="text.secondary" sx={{ mt: 1 }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: "block" }}>
                       German tax law allows unlimited loss carryforward to offset future gains.
                     </Typography>
                   </Box>
@@ -189,7 +189,7 @@ export default function TaxPageContent() {
                 label="Staking Rewards"
                 tooltip={
                   <Box sx={{ p: 1, maxWidth: 400 }}>
-                    <Typography variant="body2" fontWeight="bold" gutterBottom>
+                    <Typography variant="body2" gutterBottom sx={{ fontWeight: "bold" }}>
                       Staking Rewards
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 1 }}>
@@ -198,7 +198,7 @@ export default function TaxPageContent() {
                     <Typography variant="body2" sx={{ mb: 0.5 }}>
                       Taxable if total &gt; €256 (Freigrenze - all-or-nothing threshold)
                     </Typography>
-                    <Typography variant="caption" display="block" color="text.secondary" sx={{ mt: 1 }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: "block" }}>
                       Falls under § 22 EStG as "sonstige Leistungen" (other services)
                     </Typography>
                   </Box>
@@ -212,7 +212,7 @@ export default function TaxPageContent() {
 
           <Alert severity="info" sx={{ display: data.lossCarryover && data.lossCarryover.remaining > 0 ? "flex" : "none" }}>
             <Stack spacing={1}>
-              <Typography variant="body1" fontWeight="bold">
+              <Typography variant="body1" sx={{ fontWeight: "bold" }}>
                 Loss Carryover Detected
               </Typography>
               <Typography variant="body2">
@@ -356,7 +356,7 @@ export default function TaxPageContent() {
           </Paper>
 
           <Paper variant="outlined" sx={{ p: 2 }}>
-            <Stack direction="row" justifyContent="space-between" alignItems="center">
+            <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center" }}>
               <Box>
                 <Typography variant="subtitle2" color="text.secondary">
                   Need help understanding German crypto tax rules?

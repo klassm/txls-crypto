@@ -1,4 +1,4 @@
-import cron from "node-cron";
+import cron, { type ScheduledTask } from "node-cron";
 import type { DataSource } from "typeorm";
 import { injectable, inject } from "inversify";
 import { config } from "./config/env.js";
@@ -8,7 +8,7 @@ import { logger } from "./common/logger.js";
 
 @injectable()
 export class ApiSyncScheduler {
-  private cronJob: cron.ScheduledTask | null = null;
+  private cronJob: ScheduledTask | null = null;
   private isRunning = false;
 
   constructor(

@@ -81,7 +81,7 @@ export function AssetPriceChart({ data, height = 80 }: AssetPriceChartProps) {
 							fontSize: 12,
 						}}
 						labelFormatter={(label) => {
-							const date = new Date(label);
+							const date = new Date(Number(label));
 							return `${date.toLocaleDateString("de-DE", {
 								day: "2-digit",
 								month: "2-digit",

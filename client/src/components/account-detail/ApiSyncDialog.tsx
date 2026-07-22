@@ -78,7 +78,7 @@ export function ApiSyncDialog({
       onClose={isLoading ? undefined : handleClose}
       maxWidth="md"
       fullWidth
-      PaperProps={{ sx: { minHeight: 500 } }}
+      slotProps={{ paper: { sx: { minHeight: 500 } } }}
     >
       <DialogTitle>
         API Sync Setup

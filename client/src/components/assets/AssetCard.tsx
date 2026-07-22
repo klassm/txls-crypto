@@ -49,7 +49,7 @@ export function AssetCard({ asset }: AssetCardProps) {
 	if (!initialPriceHistory || initialPriceHistory.length === 0) {
 		return (
 			<Card sx={{ p: 2 }}>
-				<Typography variant="subtitle2" fontWeight={600}>
+				<Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
 					{asset.asset}
 				</Typography>
 				<Typography variant="body2" color="text.secondary">
@@ -90,7 +90,7 @@ export function AssetCard({ asset }: AssetCardProps) {
 
 	return (
 		<Card sx={{ p: { xs: 1.5, sm: 2 }, height: "100%" }}>
-			<Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1.5 }}>
+			<Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1.5 }}>
 				{asset.asset}
 			</Typography>
 
@@ -99,7 +99,7 @@ export function AssetCard({ asset }: AssetCardProps) {
 					<Typography variant="caption" color="text.secondary">
 						Position ({amount.toFixed(4)})
 					</Typography>
-					<Typography variant="body1" fontWeight={600}>
+					<Typography variant="body1" sx={{ fontWeight: 600 }}>
 						{formatPrice(positionValue)}
 					</Typography>
 					{overallChange && (
@@ -136,7 +136,7 @@ export function AssetCard({ asset }: AssetCardProps) {
 					<Typography variant="caption" color="text.secondary">
 						Price
 					</Typography>
-					<Typography variant="body1" fontWeight={600}>
+					<Typography variant="body1" sx={{ fontWeight: 600 }}>
 						{formatPrice(currentPrice)}
 					</Typography>
 

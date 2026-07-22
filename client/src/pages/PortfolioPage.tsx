@@ -61,7 +61,7 @@ function PortfolioStats({ history, assets, currentYearStakingRewards, totalStaki
 					<Typography variant="body2" color="text.secondary">
 						Total Value
 					</Typography>
-					<Typography variant="h5" fontWeight={600}>
+					<Typography variant="h5" sx={{ fontWeight: 600 }}>
 						{formatValue(latest.totalEurValue)}
 					</Typography>
 					<Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
@@ -75,7 +75,7 @@ function PortfolioStats({ history, assets, currentYearStakingRewards, totalStaki
 						<Typography variant="body2" color="text.secondary">
 							Staking Rewards ({currentYear})
 						</Typography>
-						<Typography variant="h5" fontWeight={600} color="success.main">
+						<Typography variant="h5" color="success.main" sx={{ fontWeight: 600 }}>
 							{formatValue(currentYearStakingRewards.eurValue)}
 						</Typography>
 						<Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
@@ -94,7 +94,7 @@ function PortfolioStats({ history, assets, currentYearStakingRewards, totalStaki
 					<Typography variant="body2" color="text.secondary">
 						Overall
 					</Typography>
-					<Typography variant="h6" fontWeight={600} sx={{ color: overallFormatted.color }}>
+					<Typography variant="h6" sx={{ fontWeight: 600, color: overallFormatted.color }}>
 						{overallFormatted.value}
 					</Typography>
 					<Typography variant="body2" sx={{ color: overallFormatted.color }}>
@@ -107,7 +107,7 @@ function PortfolioStats({ history, assets, currentYearStakingRewards, totalStaki
 					<Typography variant="body2" color="text.secondary">
 						24h
 					</Typography>
-					<Typography variant="h6" fontWeight={600} sx={{ color: dayFormatted.color }}>
+					<Typography variant="h6" sx={{ fontWeight: 600, color: dayFormatted.color }}>
 						{dayFormatted.value}
 					</Typography>
 					<Typography variant="body2" sx={{ color: dayFormatted.color }}>
@@ -120,7 +120,7 @@ function PortfolioStats({ history, assets, currentYearStakingRewards, totalStaki
 					<Typography variant="body2" color="text.secondary">
 						7d
 					</Typography>
-					<Typography variant="h6" fontWeight={600} sx={{ color: weekFormatted.color }}>
+					<Typography variant="h6" sx={{ fontWeight: 600, color: weekFormatted.color }}>
 						{weekFormatted.value}
 					</Typography>
 					<Typography variant="body2" sx={{ color: weekFormatted.color }}>
@@ -133,7 +133,7 @@ function PortfolioStats({ history, assets, currentYearStakingRewards, totalStaki
 					<Typography variant="body2" color="text.secondary">
 						30d
 					</Typography>
-					<Typography variant="h6" fontWeight={600} sx={{ color: monthFormatted.color }}>
+					<Typography variant="h6" sx={{ fontWeight: 600, color: monthFormatted.color }}>
 						{monthFormatted.value}
 					</Typography>
 					<Typography variant="body2" sx={{ color: monthFormatted.color }}>

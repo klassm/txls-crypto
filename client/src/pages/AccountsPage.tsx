@@ -66,7 +66,7 @@ export default function AccountsPage() {
 
 	return (
 		<PageLayout maxWidth="lg">
-			<Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 4 }}>
+			<Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center", mb: 4 }}>
 				<Typography variant="h4" component="h1">
 					Accounts
 				</Typography>

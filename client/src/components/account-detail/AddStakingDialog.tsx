@@ -130,7 +130,7 @@ export function AddStakingDialog({ open, onClose, onSubmit, isLoading }: AddStak
             fullWidth
             required
             disabled={isLoading}
-            inputProps={{ step: "any", min: 0 }}
+            slotProps={{ htmlInput: { step: "any", min: 0 } }}
             helperText="Amount of tokens received"
           />
 
@@ -142,7 +142,7 @@ export function AddStakingDialog({ open, onClose, onSubmit, isLoading }: AddStak
             fullWidth
             required
             disabled={isLoading}
-            inputProps={{ step: "0.01", min: 0 }}
+            slotProps={{ htmlInput: { step: "0.01", min: 0 } }}
             helperText="EUR value at time of reward"
           />
         </Box>

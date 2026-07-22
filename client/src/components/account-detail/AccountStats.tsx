@@ -51,7 +51,7 @@ export function AccountStats({ history, variant = "full" }: AccountStatsProps) {
 				<Typography variant="body2" color="text.secondary">
 					Overall
 				</Typography>
-				<Typography variant="body1" fontWeight={600} sx={{ color: overallFormatted.color }}>
+				<Typography variant="body1" sx={{ fontWeight: 600, color: overallFormatted.color }}>
 					{overallFormatted.value}
 				</Typography>
 				<Typography variant="caption" sx={{ color: overallFormatted.color }}>
@@ -68,7 +68,7 @@ export function AccountStats({ history, variant = "full" }: AccountStatsProps) {
 					<Typography variant="body2" color="text.secondary">
 						24h
 					</Typography>
-					<Typography variant="h6" fontWeight={600} sx={{ color: dayFormatted.color }}>
+					<Typography variant="h6" sx={{ fontWeight: 600, color: dayFormatted.color }}>
 						{dayFormatted.value}
 					</Typography>
 					<Typography variant="body2" sx={{ color: dayFormatted.color }}>
@@ -81,7 +81,7 @@ export function AccountStats({ history, variant = "full" }: AccountStatsProps) {
 					<Typography variant="body2" color="text.secondary">
 						7d
 					</Typography>
-					<Typography variant="h6" fontWeight={600} sx={{ color: weekFormatted.color }}>
+					<Typography variant="h6" sx={{ fontWeight: 600, color: weekFormatted.color }}>
 						{weekFormatted.value}
 					</Typography>
 					<Typography variant="body2" sx={{ color: weekFormatted.color }}>
@@ -94,7 +94,7 @@ export function AccountStats({ history, variant = "full" }: AccountStatsProps) {
 					<Typography variant="body2" color="text.secondary">
 						30d
 					</Typography>
-					<Typography variant="h6" fontWeight={600} sx={{ color: monthFormatted.color }}>
+					<Typography variant="h6" sx={{ fontWeight: 600, color: monthFormatted.color }}>
 						{monthFormatted.value}
 					</Typography>
 					<Typography variant="body2" sx={{ color: monthFormatted.color }}>
@@ -107,7 +107,7 @@ export function AccountStats({ history, variant = "full" }: AccountStatsProps) {
 					<Typography variant="body2" color="text.secondary">
 						90d
 					</Typography>
-					<Typography variant="h6" fontWeight={600} sx={{ color: quarterFormatted.color }}>
+					<Typography variant="h6" sx={{ fontWeight: 600, color: quarterFormatted.color }}>
 						{quarterFormatted.value}
 					</Typography>
 					<Typography variant="body2" sx={{ color: quarterFormatted.color }}>

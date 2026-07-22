@@ -488,6 +488,7 @@ export class AssetHoldingsService {
 	): PortfolioHistoryPoint | null {
 		let totalEurValue: number | null = null;
 		let totalEurInvested = 0;
+		let hasMissingPrice = false;
 		const assetsObj: Record<string, { amount: number; eurValue: number | null }> = {};
 
 		for (const [asset, data] of aggregatedHoldings) {
@@ -502,6 +503,9 @@ export class AssetHoldingsService {
 				price = this.getPriceAtTimestamp(priceHistories, asset, timestamp);
 			}
 			const eurValue = price !== null ? data.amount * price : null;
+			if (eurValue === null) {
+				hasMissingPrice = true;
+			}
 
 			assetsObj[asset] = { amount: data.amount, eurValue };
 			totalEurInvested += data.eurInvested;
@@ -511,7 +515,7 @@ export class AssetHoldingsService {
 			}
 		}
 
-		if (totalEurValue === null || Object.keys(assetsObj).length === 0) {
+		if (totalEurValue === null || hasMissingPrice || Object.keys(assetsObj).length === 0) {
 			return null;
 		}
 

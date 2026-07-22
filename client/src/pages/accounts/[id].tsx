@@ -188,7 +188,7 @@ export default function AccountDetailPage() {
 										<Typography variant="body2" color="text.secondary">
 											Total Value
 										</Typography>
-										<Typography variant="h4" fontWeight={600}>
+										<Typography variant="h4" sx={{ fontWeight: 600 }}>
 											{formatValue(latestPortfolioValue)}
 										</Typography>
 									</Box>
@@ -210,7 +210,7 @@ export default function AccountDetailPage() {
 										</Typography>
 										{stats && stats.staking.count > 0 ? (
 											<>
-												<Typography variant="h6" fontWeight={600}>
+												<Typography variant="h6" sx={{ fontWeight: 600 }}>
 													{formatValue(stats.staking.fiatAmount)}
 												</Typography>
 												<Typography variant="caption" color="text.secondary">

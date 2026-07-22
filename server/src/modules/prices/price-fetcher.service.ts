@@ -1,5 +1,5 @@
 import pino from "pino";
-import cron from "node-cron";
+import cron, { type ScheduledTask } from "node-cron";
 import { injectable, inject } from "inversify";
 import { DateTime } from "luxon";
 import { TYPES } from "../../di/types.js";
@@ -14,7 +14,7 @@ const PRICE_RETENTION_DAYS = 365;
 
 @injectable()
 export class PriceFetcherService {
-	private priceCronJob: cron.ScheduledTask | null = null;
+	private priceCronJob: ScheduledTask | null = null;
 	private isFetching = false;
 	private coinGeckoService: CoinGeckoService;
 	private pricesRepository: PricesRepository;

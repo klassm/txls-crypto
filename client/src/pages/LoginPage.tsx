@@ -70,7 +70,7 @@ export default function LoginPage() {
                 mb: 2,
               }}
             />
-            <Typography variant="h4" component="h1" fontWeight="bold" gutterBottom>
+            <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: "bold" }}>
               TXLS
             </Typography>
             <Typography variant="body1" color="text.secondary">

@@ -67,7 +67,7 @@ export function ImportCsvDialog({
       onClose={isImporting ? undefined : onClose}
       maxWidth="md"
       fullWidth
-      PaperProps={{ sx: { minHeight: 400 } }}
+      slotProps={{ paper: { sx: { minHeight: 400 } } }}
     >
       <DialogTitle>
         Import CSV

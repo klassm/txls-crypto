@@ -4,7 +4,7 @@ import { config } from "../config/env.js";
 import { logger } from "../common/logger.js";
 import { getDataSource } from "../database.js";
 import { getUsersService } from "../di/service-locator.js";
-import cookie from "cookie";
+import { parseCookie } from "cookie";
 import { HassSupervisorError } from "./errors.js";
 
 export { AUTH_COOKIE_NAME, verifyToken, getTokenExpiration, config, logger, getDataSource };
@@ -85,7 +85,7 @@ export function getUserIdFromCookie(req: Request): number | null {
     return null;
   }
 
-  const cookies = cookie.parse(cookieHeader);
+  const cookies = parseCookie(cookieHeader);
   const token = cookies[AUTH_COOKIE_NAME];
 
   if (!token) {
@@ -106,7 +106,7 @@ export function getTokenExpirationFromCookie(req: Request): number | null {
     return null;
   }
 
-  const cookies = cookie.parse(cookieHeader);
+  const cookies = parseCookie(cookieHeader);
   const token = cookies[AUTH_COOKIE_NAME];
 
   if (!token) {
@@ -122,7 +122,7 @@ export function getUserIdFromCookieExpress(req: { headers: { cookie?: string } }
     return null;
   }
 
-  const cookies = cookie.parse(cookieHeader);
+  const cookies = parseCookie(cookieHeader);
   const token = cookies[AUTH_COOKIE_NAME];
 
   if (!token) {

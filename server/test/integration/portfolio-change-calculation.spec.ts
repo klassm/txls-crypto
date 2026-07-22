@@ -251,7 +251,7 @@ describe("Portfolio Change Calculation Integration", () => {
 			expect(latestPoint.totalEurValue).toBeCloseTo(54800, 0);
 		});
 
-		it("should calculate 30d change using available historical data for partial assets", async () => {
+		it("should return null 30d change when historical price data is incomplete", async () => {
 			const history = await assetHoldingsService.getPortfolioHistoryWithPrices(userId, accountId, { days: 30, hourlyForDays: 30 });
 
 			expect(history.length).toBeGreaterThan(0);
@@ -260,23 +260,23 @@ describe("Portfolio Change Calculation Integration", () => {
 			expect(nonNullPoints.length).toBeGreaterThan(0);
 
 			const monthChange = calculatePortfolioChange(history, 30);
-			expect(monthChange).not.toBeNull();
+			expect(monthChange).toBeNull();
 		});
 
-		it("should have gaps in history where price data is missing", async () => {
+		it("should only contain points where all assets have prices", async () => {
 			const history = await assetHoldingsService.getPortfolioHistoryWithPrices(userId, accountId, { days: 30 });
 
-			// Verify that history has gaps - there should be fewer points than expected
-			// for a 30-day period with hourly granularity
-			// With full data, we'd expect many points; with partial data, many are null and skipped
+			// With Option A, historical points where XRP/SOL lack prices are dropped.
+			// XRP/SOL only have a price at "now", and getPriceAtTimestamp has a 24h tolerance,
+			// so only points within 24h of now survive.
+			expect(history.length).toBeGreaterThan(0);
 
-			// The history should be missing points from 30 days ago
 			const firstPointDate = DateTime.fromISO(history[0].date);
-			const lastPointDate = DateTime.fromISO(history[history.length - 1].date);
-
 			const thirtyDaysAgo = DateTime.utc().minus({ days: 30 });
 
-			expect(firstPointDate.toMillis()).toBeLessThanOrEqual(thirtyDaysAgo.toMillis() + 24 * 60 * 60 * 1000);
+			// The first (oldest) remaining point should be recent — well after 30 days ago,
+			// since older points were dropped due to missing XRP/SOL prices.
+			expect(firstPointDate.toMillis()).toBeGreaterThan(thirtyDaysAgo.toMillis());
 		});
 	});
 

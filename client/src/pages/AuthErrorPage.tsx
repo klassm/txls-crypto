@@ -57,13 +57,13 @@ export default function AuthErrorPage() {
                 mb: 2,
               }}
             />
-            <Typography variant="h4" component="h1" fontWeight="bold" gutterBottom>
+            <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: "bold" }}>
               TXLS
             </Typography>
           </Box>
 
           <Alert severity="error" sx={{ mb: 3 }}>
-            <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+            <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: "bold" }}>
               {title}
             </Typography>
             <Typography variant="body2">

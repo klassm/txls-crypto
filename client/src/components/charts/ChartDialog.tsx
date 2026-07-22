@@ -67,8 +67,10 @@ export function ChartDialog({
 			onClose={onClose}
 			maxWidth="lg"
 			fullWidth
-			PaperProps={{
-				sx: { height: "80vh" },
+			slotProps={{
+				paper: {
+					sx: { height: "80vh" },
+				},
 			}}
 		>
 			<DialogTitle>
