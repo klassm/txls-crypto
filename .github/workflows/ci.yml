@@ -207,7 +207,7 @@ jobs:
           name: build-artifacts
 
       - name: Install Playwright Browsers
-        run: pnpm exec playwright install --with-deps chromium
+        run: pnpm --filter @txls/gui-tests exec playwright install --with-deps chromium
 
       - name: Run GUI tests (local dev)
         run: pnpm run test:gui:local
@@ -261,7 +261,7 @@ jobs:
           name: build-artifacts
 
       - name: Install Playwright Browsers
-        run: pnpm exec playwright install --with-deps chromium
+        run: pnpm --filter @txls/gui-tests exec playwright install --with-deps chromium
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -329,7 +329,7 @@ jobs:
           name: build-artifacts
 
       - name: Install Playwright Browsers
-        run: pnpm exec playwright install --with-deps chromium
+        run: pnpm --filter @txls/gui-tests exec playwright install --with-deps chromium
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
