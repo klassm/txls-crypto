@@ -3,12 +3,12 @@ packages:
   - "server"
   - "client"
   - "gui-tests"
-onlyBuiltDependencies:
-  - bcrypt
-  - core-js
-  - esbuild
 minimumReleaseAgeExclude:
   - '@inversifyjs/container@3.1.2'
   - '@inversifyjs/core@15.0.0'
   - '@vitejs/plugin-react@6.0.4'
   - inversify@8.2.2
+allowBuilds:
+  bcrypt: true
+  core-js: true
+  esbuild: true
