@@ -17,7 +17,7 @@ jobs:
       has-commits: ${{ steps.check.outputs.has-commits }}
     
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       
@@ -50,7 +50,7 @@ jobs:
       version: ${{ steps.version.outputs.version }}
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Calculate new version
         id: version
@@ -96,7 +96,7 @@ jobs:
     if: needs.check-commits.outputs.has-commits == 'true'
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - uses: pnpm/action-setup@v6
 
@@ -136,7 +136,7 @@ jobs:
       packages: write
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
