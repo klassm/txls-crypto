@@ -165,7 +165,7 @@ describe("Portfolio Change Calculation Integration", () => {
 		});
 
 		it("should correctly calculate 7d change when all assets have complete price history", async () => {
-			const history = await assetHoldingsService.getPortfolioHistoryWithPrices(userId, accountId, { days: 30 });
+			const history = await assetHoldingsService.getPortfolioHistoryWithPrices(userId, accountId, { days: 30, hourlyForDays: 8 });
 
 			const weekChange = calculatePortfolioChange(history, 7);
 
