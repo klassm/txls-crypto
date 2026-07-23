@@ -167,7 +167,7 @@ jobs:
           sed -i "s|^FROM ghcr.io/klassm/txls-crypto:.*|FROM ghcr.io/klassm/txls-crypto:$VERSION|" hass-addon/Dockerfile
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v4
