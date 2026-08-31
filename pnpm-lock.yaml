@@ -19,7 +19,7 @@ importers:
         version: 9.0.10
       '@types/luxon':
         specifier: ^3.7.2
-        version: 3.7.2
+        version: 3.7.5
       '@types/node':
         specifier: ^26.1.1
         version: 26.1.1
@@ -256,7 +256,7 @@ importers:
     devDependencies:
       '@types/luxon':
         specifier: ^3.7.1
-        version: 3.7.2
+        version: 3.7.5
       '@types/node':
         specifier: ^25.5.0
         version: 25.9.5
@@ -1151,8 +1151,8 @@ packages:
   '@types/jsonwebtoken@9.0.10':
     resolution: {integrity: sha512-asx5hIG9Qmf/1oStypjanR7iKTv0gXQ1Ov/jfrX6kS/EO0OFni8orbmGCn0672NHR3kXHwpAwR+B368ZGN/2rA==}
 
-  '@types/luxon@3.7.2':
-    resolution: {integrity: sha512-gW+Oib+vUtGJBtNC8V9Reww0oIpusw+4m81uncg9REGZAJfqOQHfo/nkabnc7w0QReXyPqjrbWMJk6NuAkiX3Q==}
+  '@types/luxon@3.7.5':
+    resolution: {integrity: sha512-jJ41Q4z6ZVO260MNDdHfW7+7a5iMiX8Mr6ZJHcmgrvhZha6dz5704o/lF2kKl6URjH6ivEL97w9xS/MgpJEphg==}
 
   '@types/mdast@4.0.4':
     resolution: {integrity: sha512-kGaNbPh1k7AFzgpud/gMdvIm5xuECykRR+JnWKQno9TAXVa6WIVCGTPvYGekIDL4uwCZQSYbUxNBSb1aUo79oA==}
@@ -4365,7 +4365,7 @@ snapshots:
       '@types/ms': 2.1.0
       '@types/node': 26.1.1
 
-  '@types/luxon@3.7.2': {}
+  '@types/luxon@3.7.5': {}
 
   '@types/mdast@4.0.4':
     dependencies:
