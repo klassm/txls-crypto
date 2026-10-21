@@ -181,8 +181,8 @@ describe("Prices Repository Integration", () => {
 				expect(result.get("SOL")?.length).toBe(1);
 			});
 
-			it("should return one price per day (latest)", async () => {
-				const now = DateTime.utc();
+		it("should return one price per day (latest)", async () => {
+			const now = DateTime.utc(2024, 1, 15, 12, 0, 0);
 				const prices: CoinPrice[] = [
 					{ symbol: "BTC", priceEur: 50000, fetchedAt: now.minus({ hours: 5 }) },
 					{ symbol: "BTC", priceEur: 51000, fetchedAt: now.minus({ hours: 2 }) },

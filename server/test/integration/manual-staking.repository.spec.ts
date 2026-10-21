@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import { getDataSource, resetDataSource } from "../../src/database.js";
 import { TransactionsRepository } from "../../src/modules/transactions/transactions.repository.js";
 import { TransactionEntity } from "../../src/modules/transactions/transaction.entity.js";
@@ -35,6 +35,10 @@ describe("Manual Staking Repository Integration", () => {
     accountId = account.id;
   });
 
+  beforeEach(async () => {
+    await dataSource.getRepository(TransactionEntity).clear();
+  });
+
   afterAll(async () => {
     if (dataSource?.isInitialized) {
       await dataSource.destroy();
@@ -42,24 +46,34 @@ describe("Manual Staking Repository Integration", () => {
     resetDataSource();
   });
 
-  it("should save manual staking reward transaction", async () => {
-    const transactionsRepo = new TransactionsRepository(dataSource);
-    
+  const createRewardEntity = (
+    externalId: string,
+    isoDate: string,
+    quantity: number,
+    eurValue: number
+  ): TransactionEntity => {
     const entity = new TransactionEntity();
     entity.providerAccountId = accountId;
     entity.userId = userId;
-    entity.externalId = `manual-staking-2025-01-15T10:00:00-SOL`;
-    entity.timestamp = DateTime.fromISO("2025-01-15T10:00:00");
+    entity.externalId = externalId;
+    entity.timestamp = DateTime.fromISO(isoDate);
     entity.type = TransactionType.reward;
     entity.asset = "SOL";
-    entity.quantity = 0.5;
-    entity.eurValue = 75.0;
+    entity.quantity = quantity;
+    entity.eurValue = eurValue;
     entity.eurFee = 0;
     entity.eurRate = 150.0;
     entity.processed = false;
+    return entity;
+  };
 
-    const saved = await transactionsRepo.save(entity);
-    
+  it("should save manual staking reward transaction", async () => {
+    const transactionsRepo = new TransactionsRepository(dataSource);
+
+    const saved = await transactionsRepo.save(
+      createRewardEntity("manual-staking-2025-01-15T10:00:00-SOL", "2025-01-15T10:00:00", 0.5, 75.0)
+    );
+
     expect(saved).toBeDefined();
     expect(saved.type).toBe(TransactionType.reward);
     expect(saved.asset).toBe("SOL");
@@ -70,9 +84,12 @@ describe("Manual Staking Repository Integration", () => {
 
   it("should find manual staking transactions by account", async () => {
     const transactionsRepo = new TransactionsRepository(dataSource);
-    
+    await transactionsRepo.save(
+      createRewardEntity("manual-staking-2025-01-15T10:00:00-SOL", "2025-01-15T10:00:00", 0.5, 75.0)
+    );
+
     const transactions = await transactionsRepo.findByProviderAccountId(userId, accountId);
-    
+
     const reward = transactions.find(t => t.type === TransactionType.reward);
     expect(reward).toBeDefined();
     expect(reward?.asset).toBe("SOL");
@@ -80,28 +97,19 @@ describe("Manual Staking Repository Integration", () => {
 
   it("should calculate correct totals for manual staking rewards", async () => {
     const transactionsRepo = new TransactionsRepository(dataSource);
-    
-    const entity = new TransactionEntity();
-    entity.providerAccountId = accountId;
-    entity.userId = userId;
-    entity.externalId = `manual-staking-2025-02-15T10:00:00-SOL`;
-    entity.timestamp = DateTime.fromISO("2025-02-15T10:00:00");
-    entity.type = TransactionType.reward;
-    entity.asset = "SOL";
-    entity.quantity = 0.3;
-    entity.eurValue = 45.0;
-    entity.eurFee = 0;
-    entity.eurRate = 150.0;
-    entity.processed = false;
-    
-    await transactionsRepo.save(entity);
+    await transactionsRepo.save(
+      createRewardEntity("manual-staking-2025-01-15T10:00:00-SOL", "2025-01-15T10:00:00", 0.5, 75.0)
+    );
+    await transactionsRepo.save(
+      createRewardEntity("manual-staking-2025-02-15T10:00:00-SOL", "2025-02-15T10:00:00", 0.3, 45.0)
+    );
 
     const transactions = await transactionsRepo.findByProviderAccountId(userId, accountId);
     const rewards = transactions.filter(t => t.type === TransactionType.reward);
-    
+
     const totalQuantity = rewards.reduce((sum, t) => sum + Number(t.quantity), 0);
     const totalEurValue = rewards.reduce((sum, t) => sum + Number(t.eurValue), 0);
-    
+
     expect(totalQuantity).toBeCloseTo(0.8, 5);
     expect(totalEurValue).toBeCloseTo(120.0, 5);
   });
