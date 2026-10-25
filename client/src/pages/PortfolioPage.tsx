@@ -10,11 +10,12 @@ import { AssetDistributionSummary } from "../components/account-detail/AssetDist
 import { AccountDistributionChart } from "../components/charts/AccountDistributionChart";
 import { ChartDialog, type TimeSpan } from "../components/charts/ChartDialog";
 import { ExpandButton } from "../components/charts/ExpandButton";
+import { StakingRewardsBreakdown } from "../components/portfolio/StakingRewardsBreakdown";
 import { AssetCard } from "../components/assets/AssetCard";
-import type { PortfolioHistoryPoint, AssetOverview, StakingStats } from "../lib/client/prices-api";
+import type { PortfolioHistoryPoint, AssetOverview, StakingRewardByAsset, StakingStats } from "../lib/client/prices-api";
 import { calculatePortfolioChange, calculateOverallChange, type ChangeStats } from "@txls/shared";
 
-function PortfolioStats({ history, assets, currentYearStakingRewards, totalStakingRewards }: { history: PortfolioHistoryPoint[] | undefined; assets: AssetOverview[]; currentYearStakingRewards: StakingStats; totalStakingRewards: StakingStats }) {
+function PortfolioStats({ history, assets, currentYearStakingRewards, totalStakingRewards, stakingRewardsByAsset }: { history: PortfolioHistoryPoint[] | undefined; assets: AssetOverview[]; currentYearStakingRewards: StakingStats; totalStakingRewards: StakingStats; stakingRewardsByAsset: StakingRewardByAsset[] }) {
 	if (!history || history.length === 0) return null;
 
 	const latest = history[history.length - 1];
@@ -86,6 +87,7 @@ function PortfolioStats({ history, assets, currentYearStakingRewards, totalStaki
 								Overall: {formatValue(totalStakingRewards.eurValue)} ({totalStakingRewards.count} total)
 							</Typography>
 						)}
+						<StakingRewardsBreakdown rewards={stakingRewardsByAsset} />
 					</Card>
 				</Grid>
 			)}
@@ -158,6 +160,7 @@ export default function PortfolioPage() {
 	const accounts = overview?.accounts || [];
 	const currentYearStakingRewards = overview?.currentYearStakingRewards || { eurValue: 0, count: 0 };
 	const totalStakingRewards = overview?.totalStakingRewards || { eurValue: 0, count: 0 };
+	const stakingRewardsByAsset = overview?.stakingRewardsByAsset || [];
 	const isChartLoading = isFetching;
 
 	const getProviderName = (provider: string) => {
@@ -183,7 +186,7 @@ export default function PortfolioPage() {
 				</Typography>
 			) : (
 				<>
-					<PortfolioStats history={portfolioHistory} assets={assets} currentYearStakingRewards={currentYearStakingRewards} totalStakingRewards={totalStakingRewards} />
+					<PortfolioStats history={portfolioHistory} assets={assets} currentYearStakingRewards={currentYearStakingRewards} totalStakingRewards={totalStakingRewards} stakingRewardsByAsset={stakingRewardsByAsset} />
 
 				{portfolioHistory.length > 0 && (
 					<Box sx={{ mb: 4, position: "relative" }}>

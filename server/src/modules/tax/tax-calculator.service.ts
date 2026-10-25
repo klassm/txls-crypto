@@ -69,6 +69,23 @@ export class TaxCalculationService {
       .reduce((sum, t) => sum + t.eurValue, 0);
   }
 
+  getStakingRewardsByAssetForYear(
+    transactions: Transaction[],
+    year: number
+  ): Array<{ asset: string; eurValue: number; count: number }> {
+    const totals = new Map<string, { eurValue: number; count: number }>();
+    for (const t of transactions) {
+      if (t.type !== TransactionType.reward || getYear(t.timestamp) !== year) continue;
+      const existing = totals.get(t.asset) || { eurValue: 0, count: 0 };
+      existing.eurValue += t.eurValue;
+      existing.count += 1;
+      totals.set(t.asset, existing);
+    }
+    return Array.from(totals.entries())
+      .map(([asset, { eurValue, count }]) => ({ asset, eurValue, count }))
+      .sort((a, b) => b.eurValue - a.eurValue);
+  }
+
   calculateTax(transactions: Transaction[]): Map<string, TaxCalculation> {
     const assetCalculations = new Map<string, TaxCalculation>();
     const buyQueuesByAccount = new Map<number, Map<string, BuyLot[]>>();

@@ -12,6 +12,7 @@ import {
 	ReferenceLine,
 } from "recharts";
 import type { PortfolioHistoryPoint } from "../../lib/client/prices-api";
+import { formatChartTimestamp } from "../../lib/format";
 
 interface PortfolioValueChartProps {
 	data: PortfolioHistoryPoint[];
@@ -101,17 +102,7 @@ export function PortfolioValueChart({
 								border: `1px solid ${theme.palette.divider}`,
 								borderRadius: theme.shape.borderRadius,
 							}}
-						labelFormatter={(label) => {
-							const date = new Date(Number(label));
-							return `${date.toLocaleDateString("de-DE", {
-								day: "2-digit",
-								month: "2-digit",
-								year: "numeric",
-							})} ${date.toLocaleTimeString("de-DE", {
-								hour: "2-digit",
-								minute: "2-digit",
-							})}`;
-						}}
+						labelFormatter={(label) => formatChartTimestamp(label as string)}
 							formatter={(value) =>
 								value !== null && value !== undefined
 									? `€${Number(value).toLocaleString("de-DE", { minimumFractionDigits: 2 })}`

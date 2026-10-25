@@ -360,6 +360,33 @@ async getStatsByProviderAccountIdAndYear(
     };
   }
 
+  async getStakingRewardsByAsset(userId: number, year: number): Promise<Array<{ asset: string; eurValue: number; count: number }>> {
+    const startDate = toMillis(DateTime.utc(year, 1, 1, 0, 0, 0, 0));
+    const endDate = toMillis(DateTime.utc(year, 12, 31, 23, 59, 59, 999));
+
+    const rows = await this.qb
+      .select([
+        "transaction.asset AS asset",
+        "COALESCE(SUM(ABS(transaction.eurValue)), 0) AS totalEurValue",
+        "COUNT(transaction.id) AS count",
+      ])
+      .where("transaction.userId = :userId", { userId })
+      .andWhere("transaction.type = :type", { type: TransactionType.reward })
+      .andWhere("transaction.timestamp BETWEEN :startDate AND :endDate", {
+        startDate,
+        endDate,
+      })
+      .groupBy("transaction.asset")
+      .orderBy("totalEurValue", "DESC")
+      .getRawMany();
+
+    return rows.map((row) => ({
+      asset: row.asset,
+      eurValue: Number(row.totalEurValue) || 0,
+      count: Number(row.count) || 0,
+    }));
+  }
+
   async updateLinkedTransaction(
     userId: number,
     transactionId: number,
@@ -592,6 +619,24 @@ async getStatsByProviderAccountIdAndYear(
     }
 
     const result = await qb.execute();
+    return result.affected || 0;
+  }
+
+  async deleteByAccountFromTimestamp(
+    userId: number,
+    accountId: number,
+    fromMillis: number,
+    em?: EntityManager,
+  ): Promise<number> {
+    const result = await (em ?? this.dataSource)
+      .getRepository(TransactionEntity)
+      .createQueryBuilder()
+      .delete()
+      .where(
+        "user_id = :userId AND provider_account_id = :accountId AND timestamp >= :fromMillis AND external_id NOT LIKE 'manual-staking-%'",
+        { userId, accountId, fromMillis },
+      )
+      .execute();
     return result.affected || 0;
   }
 

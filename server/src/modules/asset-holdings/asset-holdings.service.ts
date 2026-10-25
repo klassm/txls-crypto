@@ -57,12 +57,19 @@ export interface StakingStats {
 	count: number;
 }
 
+export interface StakingRewardByAsset {
+	asset: string;
+	eurValue: number;
+	count: number;
+}
+
 export interface PortfolioOverview {
 	portfolioHistory: PortfolioHistoryPoint[];
 	assets: AssetOverview[];
 	accounts: AccountOverview[];
 	currentYearStakingRewards: StakingStats;
 	totalStakingRewards: StakingStats;
+	stakingRewardsByAsset: StakingRewardByAsset[];
 }
 
 @injectable()
@@ -532,6 +539,9 @@ export class AssetHoldingsService {
 		const startDate = now.minus({ days }).startOf("day");
 
 		const holdingsByAccount = await this.holdingsRepository.findLatestByUser(userId);
+		// Reward history lives in the transactions table, independent of current
+		// holdings — a user who sold everything still has a rewards breakdown.
+		const stakingRewardsByAsset = await this.transactionsRepository.getStakingRewardsByAsset(userId, now.year);
 
 		if (holdingsByAccount.size === 0) {
 			return {
@@ -540,6 +550,7 @@ export class AssetHoldingsService {
 				accounts: [],
 				currentYearStakingRewards: { eurValue: 0, count: 0 },
 				totalStakingRewards: { eurValue: 0, count: 0 },
+				stakingRewardsByAsset,
 			};
 		}
 
@@ -636,6 +647,7 @@ export class AssetHoldingsService {
 			accounts: accountsOverview,
 			currentYearStakingRewards: currentYearStaking,
 			totalStakingRewards: totalStaking,
+			stakingRewardsByAsset,
 		};
 	}
 

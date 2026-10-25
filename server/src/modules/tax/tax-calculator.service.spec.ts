@@ -145,6 +145,26 @@ describe("TaxCalculationService", () => {
     });
   });
 
+  describe("getStakingRewardsByAssetForYear", () => {
+    it("should break down rewards per asset for the tax year, sorted by value", () => {
+      const service = new TaxCalculationService();
+      const transactions: Transaction[] = [
+        createTransaction(1, "2024-03-01T00:00:00Z", "reward", "SOL", 1, 100, 0),
+        createTransaction(2, "2024-04-01T00:00:00Z", "reward", "SOL", 1, 50, 0),
+        createTransaction(3, "2024-05-01T00:00:00Z", "reward", "ETH", 1, 30, 0),
+        createTransaction(4, "2023-06-01T00:00:00Z", "reward", "SOL", 1, 999, 0),
+        createTransaction(5, "2024-07-01T00:00:00Z", "buy", "SOL", 1, 100, 0),
+      ];
+
+      const result = service.getStakingRewardsByAssetForYear(transactions, 2024);
+
+      expect(result).toEqual([
+        { asset: "SOL", eurValue: 150, count: 2 },
+        { asset: "ETH", eurValue: 30, count: 1 },
+      ]);
+    });
+  });
+
   describe("applyGermanTaxRules", () => {
     it("should mark holdings over 365 days as tax-free", () => {
       const service = new TaxCalculationService();

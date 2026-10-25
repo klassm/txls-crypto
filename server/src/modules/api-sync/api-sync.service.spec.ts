@@ -32,6 +32,7 @@ describe('ApiSyncService', () => {
 	let mockPriceBackfillService: any
 	let mockTransferMatchingService: any
 	let mockPricesService: any
+	let mockCoinGeckoService: any
 	let mockDataSource: any
 
 	beforeEach(async () => {
@@ -51,7 +52,7 @@ describe('ApiSyncService', () => {
 			saveMany: vi.fn().mockImplementation(async (entities: any[]) => entities),
 			findManyByExternalIds: vi.fn().mockResolvedValue([]),
 			findManyByExternalIdsIn: vi.fn().mockResolvedValue([]),
-			deleteAllByAccount: vi.fn().mockResolvedValue(0),
+			deleteByAccountFromTimestamp: vi.fn().mockResolvedValue(0),
 		}
 
 		mockDataSource = {
@@ -76,6 +77,11 @@ describe('ApiSyncService', () => {
 
 		mockPricesService = {
 			getPriceForDate: vi.fn().mockResolvedValue(null),
+			savePrices: vi.fn().mockResolvedValue(undefined),
+		}
+
+		mockCoinGeckoService = {
+			fetchHistoricalDailyPrices: vi.fn().mockResolvedValue([]),
 		}
 
 		service = new ApiSyncService(
@@ -86,7 +92,8 @@ describe('ApiSyncService', () => {
 			mockPriceBackfillService as any,
 			mockTransferMatchingService as any,
 			mockPricesService as any,
-			mockDataSource as any
+			mockDataSource as any,
+			mockCoinGeckoService as any
 		)
 	})
 
@@ -321,7 +328,7 @@ describe('ApiSyncService', () => {
 				expect.anything()
 			)
 			// The dedupe lookup must run inside the transaction, after the delete.
-			const deleteOrder = mockTransactionsRepo.deleteAllByAccount.mock.invocationCallOrder[0]
+			const deleteOrder = mockTransactionsRepo.deleteByAccountFromTimestamp.mock.invocationCallOrder[0]
 			const lookupOrder = mockTransactionsRepo.findManyByExternalIdsIn.mock.invocationCallOrder[0]
 			expect(lookupOrder).toBeGreaterThan(deleteOrder)
 			// The post-import pipeline sees only the imported subset.
@@ -330,7 +337,7 @@ describe('ApiSyncService', () => {
 
 		it('should still rebuild holdings when every fetched transaction exists in another account', async () => {
 			await setupFullSync([makeTx()])
-			mockTransactionsRepo.deleteAllByAccount.mockResolvedValue(5)
+			mockTransactionsRepo.deleteByAccountFromTimestamp.mockResolvedValue(5)
 			mockTransactionsRepo.findManyByExternalIdsIn.mockResolvedValue([makeTx()])
 			// Nothing was imported, so nothing can be saved for the pipeline.
 			mockTransactionsRepo.findManyByExternalIds.mockResolvedValue([])
@@ -363,12 +370,17 @@ describe('ApiSyncService', () => {
 
 			await service.syncAccount(1, 1)
 
-			expect(mockTransactionsRepo.deleteAllByAccount).toHaveBeenCalled()
+			expect(mockTransactionsRepo.deleteByAccountFromTimestamp).toHaveBeenCalled()
 			expect(mockTransactionsService.importTransactions).toHaveBeenCalled()
-			expect(mockTransactionsRepo.deleteAllByAccount.mock.invocationCallOrder[0]).toBeLessThan(
-				mockTransactionsService.importTransactions.mock.invocationCallOrder[0]
+			expect(
+				mockTransactionsRepo.deleteByAccountFromTimestamp.mock.invocationCallOrder[0]
+			).toBeLessThan(mockTransactionsService.importTransactions.mock.invocationCallOrder[0])
+			expect(mockTransactionsRepo.deleteByAccountFromTimestamp).toHaveBeenCalledWith(
+				1,
+				1,
+				DateTime.fromISO('2024-06-10T10:00:00Z', { zone: 'utc' }).toMillis(),
+				emToken
 			)
-			expect(mockTransactionsRepo.deleteAllByAccount).toHaveBeenCalledWith(1, 1, emToken)
 			expect(mockTransactionsService.importTransactions).toHaveBeenCalledWith(
 				1,
 				1,
@@ -540,6 +552,59 @@ describe('ApiSyncService', () => {
 			for (const saved of savedEntities) {
 				expect(saved.eurValue).toBe(30)
 			}
+		})
+
+		it('should value rewards via the CoinGecko fallback when no stored price exists', async () => {
+			const reward = makeReward(2, 'tx-reward-1')
+			await setupFullSync([reward])
+			mockPricesService.getPriceForDate
+				.mockResolvedValueOnce(null)
+				.mockResolvedValueOnce({
+					asset: 'ETH',
+					priceEur: 3000,
+					fetchedAt: reward.timestamp,
+					source: 'coingecko',
+				})
+			mockCoinGeckoService.fetchHistoricalDailyPrices.mockResolvedValue([
+				{
+					symbol: 'ETH',
+					priceEur: 3000,
+					fetchedAt: DateTime.fromISO('2024-06-15T00:00:00Z', { zone: 'utc' }),
+				},
+			])
+
+			const result = await service.syncAccount(1, 1)
+
+			expect(result.success).toBe(true)
+			expect(mockCoinGeckoService.fetchHistoricalDailyPrices).toHaveBeenCalledWith(
+				'ETH',
+				expect.any(Number)
+			)
+			expect(mockPricesService.savePrices).toHaveBeenCalledWith([
+				{
+					symbol: 'ETH',
+					priceEur: 3000,
+					fetchedAt: DateTime.fromISO('2024-06-15T00:00:00Z', { zone: 'utc' }),
+				},
+			])
+			const savedEntities = mockTransactionsRepo.saveMany.mock.calls[0][0]
+			const savedReward = savedEntities.find((t: any) => t.externalId === 'tx-reward-1')
+			expect(savedReward.eurValue).toBeCloseTo(30)
+			expect(savedReward.eurRate).toBe(3000)
+		})
+
+		it('should keep rewards unvalued when the CoinGecko fallback fails', async () => {
+			const reward = makeReward(2, 'tx-reward-1')
+			await setupFullSync([reward])
+			mockPricesService.getPriceForDate.mockResolvedValue(null)
+			mockCoinGeckoService.fetchHistoricalDailyPrices.mockRejectedValue(
+				new Error('CoinGecko down')
+			)
+
+			const result = await service.syncAccount(1, 1)
+
+			expect(result.success).toBe(true)
+			expect(mockTransactionsRepo.saveMany).not.toHaveBeenCalled()
 		})
 
 		it('should survive a failing error handler and keep syncing other accounts', async () => {

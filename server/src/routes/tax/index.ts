@@ -125,6 +125,7 @@ router.get("/", async (req: Request, res: Response) => {
       stakingRewards: taxResult.stakingRewardsExempt + taxResult.stakingRewardsTaxable,
       stakingRewardsExempt: taxResult.stakingRewardsExempt,
       stakingRewardsTaxable: taxResult.stakingRewardsTaxable,
+      stakingRewardsByAsset: taxCalculator.getStakingRewardsByAssetForYear(allTransactions, taxYear),
       lossCarryover: taxResult.lossCarryover,
       includedAccounts: accounts.map((a) => ({
         id: a.id,

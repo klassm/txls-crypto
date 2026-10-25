@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { TaxTransaction } from "@txls/shared";
 import { apiUrl } from "../lib/api-base";
+import type { StakingRewardByAsset } from "../lib/client/prices-api";
 
 export interface LossCarryover {
   year: number;
@@ -21,6 +22,7 @@ export interface CombinedTaxResult {
   totalStakingRewards: number;
   stakingRewardsExempt: number;
   stakingRewardsTaxable: number;
+  stakingRewardsByAsset: StakingRewardByAsset[];
   lossCarryover: LossCarryover;
   includedAccounts: Array<{ id: number; source: string }>;
 }

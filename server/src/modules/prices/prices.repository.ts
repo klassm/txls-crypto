@@ -141,6 +141,9 @@ export class PricesRepository {
 			.createQueryBuilder()
 			.delete()
 			.where("fetched_at < :cutoffDate", { cutoffDate: cutoffDate.toMillis() })
+			// Transaction-seeded rows carry the trade day as fetched_at; they are
+			// the price source for reward valuation and must never expire.
+			.andWhere("source != :transactionSource", { transactionSource: "transaction" })
 			.execute();
 
 		return result.affected || 0;

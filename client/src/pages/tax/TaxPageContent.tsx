@@ -33,10 +33,11 @@ import { useSearchParams, useNavigate, Link } from "react-router-dom";
 import { green, red, grey } from "@mui/material/colors";
 import { useExportTaxCsv } from "../../hooks/useAccountMutations";
 import { useCombinedTaxCalculations, useTaxYears } from "../../hooks/useCombinedTaxCalculations";
+import { StakingRewardsDialog } from "../../components/tax/StakingRewardsDialog";
 import { PageHeader } from "../../components/common/PageHeader";
 import { PageLayout } from "../../components/common/PageLayout";
 import { DateTime } from "luxon";
-import type { ReactElement } from "react";
+import { type ReactElement, useState } from "react";
 
 interface MetricCardProps {
   label: string;
@@ -44,11 +45,19 @@ interface MetricCardProps {
   value: string;
   valueColor: string;
   icon: ReactElement;
+  onOpen?: () => void;
 }
 
-function MetricCard({ label, tooltip, value, valueColor, icon }: MetricCardProps) {
+function MetricCard({ label, tooltip, value, valueColor, icon, onOpen }: MetricCardProps) {
   return (
-    <Card>
+    <Card
+      onClick={onOpen}
+      sx={
+        onOpen
+          ? { cursor: "pointer", transition: "box-shadow 0.2s", ":hover": { boxShadow: 4 } }
+          : undefined
+      }
+    >
       <CardContent>
         <Stack spacing={2}>
           <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
@@ -71,6 +80,7 @@ function MetricCard({ label, tooltip, value, valueColor, icon }: MetricCardProps
 export default function TaxPageContent() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const [stakingDialogOpen, setStakingDialogOpen] = useState(false);
 
   const currentYear = DateTime.now().year;
   const queryYear = searchParams.get("year");
@@ -186,6 +196,7 @@ export default function TaxPageContent() {
             </Grid>
             <Grid size={{ xs: 12, sm: 6, md: 3 }}>
               <MetricCard
+                onOpen={() => setStakingDialogOpen(true)}
                 label="Staking Rewards"
                 tooltip={
                   <Box sx={{ p: 1, maxWidth: 400 }}>
@@ -209,6 +220,13 @@ export default function TaxPageContent() {
               />
             </Grid>
           </Grid>
+
+          <StakingRewardsDialog
+            open={stakingDialogOpen}
+            onClose={() => setStakingDialogOpen(false)}
+            year={data.year}
+            rewards={data.stakingRewardsByAsset}
+          />
 
           <Alert severity="info" sx={{ display: data.lossCarryover && data.lossCarryover.remaining > 0 ? "flex" : "none" }}>
             <Stack spacing={1}>

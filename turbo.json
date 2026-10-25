@@ -1,5 +1,16 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "globalPassThroughEnv": [
+    "DB_CONNECTION_STRING",
+    "JWT_SECRET",
+    "ENCRYPTION_KEY",
+    "DATA_DIR",
+    "API_SYNC_ENABLED",
+    "API_SYNC_INTERVAL",
+    "LOG_LEVEL",
+    "NODE_ENV",
+    "PORT"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],

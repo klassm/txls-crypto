@@ -3,7 +3,8 @@ import { injectable, inject } from "inversify";
 import { DateTime } from "luxon";
 import { TYPES } from "../../di/types.js";
 import { PricesRepository } from "./prices.repository.js";
-import { AssetPriceEntity } from "./asset-price.entity.js";
+import type { AssetPriceEntity } from "./asset-price.entity.js";
+import type { CoinPrice } from "./coingecko.service.js";
 
 export interface AssetPrice {
 	asset: string;
@@ -63,6 +64,10 @@ export class PricesService {
 
 	async savePriceFromTransaction(asset: string, priceEur: number, date: DateTime): Promise<void> {
 		await this.repository.savePriceFromTransaction(asset, priceEur, date);
+	}
+
+	async savePrices(prices: CoinPrice[]): Promise<void> {
+		await this.repository.savePrices(prices);
 	}
 
 	async getPriceForDate(asset: string, date: DateTime): Promise<AssetPrice | null> {

@@ -357,6 +357,12 @@ router.post("/:id/transactions", async (req: Request, res: Response) => {
       return res.status(404).json({ error: "Account not found" });
     }
 
+    if (account.apiEnabled) {
+      return res
+        .status(400)
+        .json({ error: "Manual staking rewards are disabled while API sync is enabled" });
+    }
+
     const providerConfig = getProviderConfig(account.provider);
     if (!providerConfig.supportsManualStaking) {
       return res.status(400).json({ error: "This provider does not support manual staking entries" });

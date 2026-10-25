@@ -10,6 +10,7 @@ import {
 	Tooltip,
 	ResponsiveContainer,
 } from "recharts";
+import { formatChartTimestamp } from "../../lib/format";
 
 interface PositionChartProps {
 	data: { date: string; value: number | null }[];
@@ -65,17 +66,7 @@ export function PositionChart({ data, eurInvested, height = 50 }: PositionChartP
 							borderRadius: theme.shape.borderRadius,
 							fontSize: 12,
 						}}
-						labelFormatter={(label) => {
-							const date = new Date(Number(label));
-							return `${date.toLocaleDateString("de-DE", {
-								day: "2-digit",
-								month: "2-digit",
-								year: "numeric",
-							})} ${date.toLocaleTimeString("de-DE", {
-								hour: "2-digit",
-								minute: "2-digit",
-							})}`;
-						}}
+						labelFormatter={(label) => formatChartTimestamp(label as string)}
 						formatter={(value) =>
 							`€${Number(value).toLocaleString("de-DE", { minimumFractionDigits: 2 })}`
 						}

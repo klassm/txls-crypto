@@ -13,6 +13,7 @@ import type { AccountEntity } from '../accounts/account.entity.js'
 import type { AccountsRepository } from '../accounts/accounts.repository.js'
 import type { AssetHoldingsService } from '../asset-holdings/asset-holdings.service.js'
 import type { PriceBackfillService } from '../prices/price-backfill.service.js'
+import type { CoinGeckoService } from '../prices/coingecko.service.js'
 import type { PricesService } from '../prices/prices.service.js'
 import type { TransactionEntity } from '../transactions/transaction.entity.js'
 import type { TransactionsRepository } from '../transactions/transactions.repository.js'
@@ -45,7 +46,8 @@ export class ApiSyncService {
 		@inject(TYPES.PriceBackfillService) private priceBackfillService: PriceBackfillService,
 		@inject(TYPES.TransferMatchingService) private transferMatchingService: TransferMatchingService,
 		@inject(TYPES.PricesService) private pricesService: PricesService,
-		@inject(TYPES.DataSource) private dataSource: DataSource
+		@inject(TYPES.DataSource) private dataSource: DataSource,
+		@inject(TYPES.CoinGeckoService) private coinGeckoService: CoinGeckoService
 	) {}
 
 	async syncAllAccounts(): Promise<SyncResult[]> {
@@ -186,7 +188,15 @@ export class ApiSyncService {
 			toImport,
 			deletedRowCount,
 		} = await this.dataSource.transaction(async (em) => {
-			const deletedRowCount = await this.transactionsRepo.deleteAllByAccount(userId, accountId, em)
+			// Only replace the window the API actually serves: /v1/operations
+			// exposes roughly the last 17 months, so a full delete would wipe
+			// older history (legacy CSV imports, pre-window rewards) every sync.
+			const deletedRowCount = await this.transactionsRepo.deleteByAccountFromTimestamp(
+				userId,
+				accountId,
+				earliestTimestamp.toMillis(),
+				em
+			)
 
 			// The duplicate check in importTransactions is scoped by user, not
 			// account: rows this account just lost may still exist for the same
@@ -344,15 +354,71 @@ export class ApiSyncService {
 			valued.push(reward)
 		}
 
+		await this.backfillRewardValuesFromHistory(unvaluedRewards, valued, priceByAssetAndDay)
+
 		if (valued.length === 0) {
 			return
 		}
 
-		logger.info(
-			{ count: valued.length },
-			'[ApiSyncService] Valued staking rewards from stored prices'
-		)
+		logger.info({ count: valued.length }, '[ApiSyncService] Valued staking rewards')
 		await this.transactionsRepo.saveMany(valued)
+	}
+
+	// Rewards whose day had no stored price: fetch CoinGecko historical
+	// daily prices once per asset, store them, then re-look-up the missing
+	// days. Best-effort — a failure here leaves rewards unvalued but must
+	// never fail the sync.
+	private async backfillRewardValuesFromHistory(
+		unvaluedRewards: TransactionEntity[],
+		valued: TransactionEntity[],
+		priceByAssetAndDay: Map<string, number | null>
+	): Promise<void> {
+		const missingByAsset = new Map<string, TransactionEntity[]>()
+		for (const reward of unvaluedRewards) {
+			if (priceByAssetAndDay.get(`${reward.asset}|${reward.timestamp.toISODate()}`) != null) {
+				continue
+			}
+			const rewards = missingByAsset.get(reward.asset) ?? []
+			rewards.push(reward)
+			missingByAsset.set(reward.asset, rewards)
+		}
+		if (missingByAsset.size === 0) {
+			return
+		}
+
+		try {
+			for (const [asset, rewards] of missingByAsset) {
+				const earliest = rewards.reduce((min, r) => Math.min(min, r.timestamp.toMillis()), Number.POSITIVE_INFINITY)
+				// CoinGecko's public API only serves the last 365 days of
+				// historical data; older rewards stay unvalued.
+				const days = Math.min(
+					365,
+					Math.max(1, Math.ceil((DateTime.utc().toMillis() - earliest) / 86_400_000) + 1)
+				)
+				const historical = await this.coinGeckoService.fetchHistoricalDailyPrices(asset, days)
+				if (historical.length === 0) {
+					continue
+				}
+				await this.pricesService.savePrices(historical)
+
+				for (const reward of rewards) {
+					const price = await this.pricesService.getPriceForDate(reward.asset, reward.timestamp)
+					if (!price) {
+						continue
+					}
+					priceByAssetAndDay.set(`${reward.asset}|${reward.timestamp.toISODate()}`, price.priceEur)
+					reward.eurRate = price.priceEur
+					reward.eurValue = reward.quantity * price.priceEur
+					valued.push(reward)
+				}
+			}
+		} catch (error) {
+			const errorMessage = error instanceof Error ? error.message : String(error)
+			logger.warn(
+				{ error: errorMessage },
+				'[ApiSyncService] CoinGecko historical price fallback failed (rewards stay unvalued)'
+			)
+		}
 	}
 
 	private async runPipelineStage(

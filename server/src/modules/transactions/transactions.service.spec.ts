@@ -197,6 +197,7 @@ describe("TransactionsService", () => {
 			expect(mockRepository.findOneByExternalId).toHaveBeenCalledWith(
 				1,
 				"IMPORT-001",
+				undefined,
 			);
 			expect(mockRepository.save).toHaveBeenCalled();
 		});

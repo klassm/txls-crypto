@@ -283,6 +283,29 @@ describe('BitpandaApiClient', () => {
 			expect(withdrawalTx?.quantity).toBe(0.1)
 		})
 
+		it('should add asset-denominated fees to the withdrawal quantity (wallet debit is amount + fee)', async () => {
+			mockAssets([BTC_ASSET])
+			mockOperations([
+				operation([
+					transaction({
+						transaction_id: 'tx-withdrawal-fee',
+						transaction_type: 'withdrawal',
+						flow: 'OUTGOING',
+						asset_amount: { value: '-304.73', asset_id: BTC_ASSET_ID, currency_id: null },
+						fee_amount: { value: '0.5', asset_id: BTC_ASSET_ID, currency_id: null },
+						trade: null,
+					}),
+				]),
+			])
+
+			const result = await client.fetchTransactions(API_KEY)
+
+			expect(result.transactions).toHaveLength(1)
+			const tx = result.transactions[0]
+			expect(tx.type).toBe(TransactionType.withdrawal)
+			expect(tx.quantity).toBeCloseTo(305.23, 6)
+		})
+
 		it('should skip transactions with an unparseable asset amount', async () => {
 			mockAssets([BTC_ASSET])
 			mockOperations([
@@ -390,7 +413,7 @@ describe('BitpandaApiClient', () => {
 			}
 		})
 
-		it('should skip fee legs, seed clean prices and value buys with the effective rate', async () => {
+		it('should import in-kind fee legs as withdrawals and value buys with the effective rate', async () => {
 			mockAssets([BTC_ASSET])
 			mockOperations([
 				operation([
@@ -417,25 +440,21 @@ describe('BitpandaApiClient', () => {
 				]),
 			])
 
-			const infoSpy = vi.spyOn(logger, 'info')
-			try {
-				const result = await client.fetchTransactions(API_KEY)
+			const result = await client.fetchTransactions(API_KEY)
 
-				expect(result.transactions).toHaveLength(1)
-				const buyTx = result.transactions[0]
-				expect(buyTx.type).toBe(TransactionType.buy)
-				expect(buyTx.eurValue).toBeCloseTo(152.5, 2)
-				expect(buyTx.eurFee).toBeCloseTo(1.51, 2)
+				expect(result.transactions).toHaveLength(2)
+				const buyTx = result.transactions.find((t) => t.type === TransactionType.buy)
+				expect(buyTx?.eurValue).toBeCloseTo(152.5, 2)
+				expect(buyTx?.eurFee).toBeCloseTo(1.51, 2)
 				// eurRate is the clean market rate (fee excluded): it seeds the
 				// daily price table used for reward valuation.
-				expect(buyTx.eurRate).toBeCloseTo(74096.23331152, 4)
-				const tallyCall = infoSpy.mock.calls.find(
-					([arg]) => typeof arg === 'object' && arg !== null && 'skipCounts' in (arg as object)
-				)
-				expect(tallyCall?.[0]).toMatchObject({ skipCounts: { feeLeg: 1 } })
-			} finally {
-				infoSpy.mockRestore()
-			}
+				expect(buyTx?.eurRate).toBeCloseTo(74096.23331152, 4)
+				// The fee leg debited real BTC from the wallet (verified live:
+				// a swap fee paid in kind) — it must reduce holdings.
+				const feeTx = result.transactions.find((t) => t.type === TransactionType.withdrawal)
+				expect(feeTx?.externalId).toBe('tx-fee-leg')
+				expect(feeTx?.quantity).toBeCloseTo(94.82, 6)
+				expect(feeTx?.eurValue).toBe(0)
 		})
 
 		it('should import reward quantity net of the asset-denominated commission', async () => {

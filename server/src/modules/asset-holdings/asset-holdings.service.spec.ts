@@ -34,6 +34,7 @@ describe("AssetHoldingsService", () => {
 			calculateAllHoldingsByUser: vi.fn().mockResolvedValue(new Map()),
 			getStakingRewardsByYear: vi.fn().mockResolvedValue({ eurValue: 0, count: 0 }),
 			getTotalStakingRewards: vi.fn().mockResolvedValue({ eurValue: 0, count: 0 }),
+			getStakingRewardsByAsset: vi.fn().mockResolvedValue([]),
 		} as unknown as TransactionsRepository;
 
 		mockAccountsRepository = {
@@ -319,6 +320,21 @@ describe("AssetHoldingsService", () => {
 			expect(result.portfolioHistory).toEqual([]);
 			expect(result.assets).toEqual([]);
 			expect(result.accounts).toEqual([]);
+		});
+
+		it("includes the per-asset staking rewards breakdown for the current year", async () => {
+			(mockHoldingsRepository.findLatestByUser as any).mockResolvedValue(new Map());
+			(mockHoldingsRepository.getHoldingsUpToTimestamp as any).mockResolvedValue([]);
+			const breakdown = [
+				{ asset: "SOL", eurValue: 793.6, count: 53 },
+				{ asset: "ETH", eurValue: 250.18, count: 52 },
+			];
+			(mockTransactionsRepository.getStakingRewardsByAsset as any).mockResolvedValue(breakdown);
+
+			const result = await service.getPortfolioOverview(1);
+
+			expect(result.stakingRewardsByAsset).toEqual(breakdown);
+			expect(mockTransactionsRepository.getStakingRewardsByAsset).toHaveBeenCalledWith(1, expect.any(Number));
 		});
 	});
 

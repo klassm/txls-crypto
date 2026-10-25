@@ -378,17 +378,15 @@ export class BitpandaApiClient implements ApiSyncClient {
 		// operation type is the next-best signal for the mapping lookup. `||`
 		// also covers an empty-string type, which some APIs use for "absent".
 		const effectiveType = tx.transaction_type || operationType
-		// Swap fees paid in another asset arrive as their own OUTGOING 'fee' leg;
-		// the fee is already captured via trade.fee on the traded legs.
-		if (effectiveType === 'fee') {
-			logger.debug(
-				{ transactionId: tx.transaction_id },
-				'[BitpandaApiClient] Skipping fee leg (fee captured via trade.fee)'
-			)
-			skipped.feeLeg = (skipped.feeLeg ?? 0) + 1
-			return null
-		}
-		const type = TRANSACTION_TYPE_BY_KEY[`${tx.flow}/${effectiveType}`]
+		// Swap fees paid in another asset arrive as their own OUTGOING 'fee'
+		// leg (verified live: a swap fee paid in kind debited real VSN from
+		// the wallet). The EUR fee itself is captured via trade.fee on the
+		// traded legs; the leg still reduces holdings, so import it as a
+		// withdrawal.
+		const isFeeLeg = effectiveType === 'fee'
+		const type = isFeeLeg
+			? TransactionType.withdrawal
+			: TRANSACTION_TYPE_BY_KEY[`${tx.flow}/${effectiveType}`]
 		if (!type) {
 			logger.debug(
 				{
@@ -404,6 +402,23 @@ export class BitpandaApiClient implements ApiSyncClient {
 		}
 
 		let quantity = Math.abs(amountValue)
+		// Outgoing non-trade legs debit amount + fee from the wallet
+		// (verified live: a 304.73 EURCV withdrawal with a 0.5 asset-
+		// denominated fee moved 305.23 per balance_after). Add the fee so
+		// holdings stay accurate; fiat-denominated fees don't touch the
+		// asset quantity.
+		if (
+			tx.flow === 'OUTGOING' &&
+			!isFeeLeg &&
+			type !== TransactionType.reward &&
+			tx.fee_amount &&
+			tx.fee_amount.asset_id === tx.asset_id
+		) {
+			const outgoingFee = Math.abs(parseFloat(tx.fee_amount.value))
+			if (Number.isFinite(outgoingFee) && outgoingFee > 0) {
+				quantity = quantity + outgoingFee
+			}
+		}
 		if (type === TransactionType.reward && tx.fee_amount) {
 			// Live payloads show staking rewards credited net of an asset-
 			// denominated commission (verified: balance_after delta equals

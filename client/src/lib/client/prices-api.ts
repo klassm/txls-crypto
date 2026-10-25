@@ -68,12 +68,19 @@ export interface StakingStats {
   count: number;
 }
 
+export interface StakingRewardByAsset {
+  asset: string;
+  eurValue: number;
+  count: number;
+}
+
 export interface PortfolioOverview {
   portfolioHistory: PortfolioHistoryPoint[];
   assets: AssetOverview[];
   accounts: AccountOverview[];
   currentYearStakingRewards: StakingStats;
   totalStakingRewards: StakingStats;
+  stakingRewardsByAsset: StakingRewardByAsset[];
 }
 
 export const portfolioApi = {

@@ -202,6 +202,44 @@ export class CoinGeckoService {
 		}
 	}
 
+	async fetchHistoricalDailyPrices(symbol: string, days: number): Promise<CoinPrice[]> {
+		if (!this.symbolToIdCache.has(symbol.toUpperCase())) {
+			await this.lookupAndCacheSymbol(symbol)
+		}
+
+		const coinGeckoId = this.symbolToIdCache.get(symbol.toUpperCase())
+		if (!coinGeckoId) {
+			return []
+		}
+
+		const url = `${COINGECKO_API_BASE}/coins/${coinGeckoId}/market_chart?vs_currency=eur&days=${days}`
+		await this.enforceRateLimit()
+		const response = await fetch(url)
+		this.lastRequestTime = Date.now()
+		if (!response.ok) {
+			logger.warn({ status: response.status, symbol }, "[CoinGecko] Failed to fetch historical prices")
+			return []
+		}
+
+		const data = (await response.json()) as { prices?: [number, number][] }
+		const prices = data.prices ?? []
+
+		// Downsample to one price per UTC day. CoinGecko returns entries in
+		// ascending order, so the last entry of a day wins (end-of-day close).
+		const priceByDay = new Map<string, CoinPrice>()
+		for (const [ms, priceEur] of prices) {
+			if (!Number.isFinite(priceEur)) continue
+			const day = DateTime.fromMillis(ms, { zone: "utc" }).startOf("day")
+			priceByDay.set(day.toISODate()!, {
+				symbol: symbol.toUpperCase(),
+				priceEur,
+				fetchedAt: day,
+			})
+		}
+
+		return Array.from(priceByDay.values())
+	}
+
 	private async enforceRateLimit(): Promise<void> {
 		const elapsed = Date.now() - this.lastRequestTime;
 		if (elapsed < RATE_LIMIT_DELAY_MS) {
