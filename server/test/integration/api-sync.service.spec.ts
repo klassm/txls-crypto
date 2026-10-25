@@ -70,7 +70,9 @@ describe("API Sync Service Integration", () => {
   });
 
   describe("Full Sync", () => {
-    it("should delete all existing transactions before importing new ones", async () => {
+    it("should preserve pre-window history and replace in-window transactions", async () => {
+      // The API only exposes ~17 months of operations, so the sync deletes
+      // rows inside the fetched window only - older CSV/manual rows survive.
       const entity = new TransactionEntity();
       entity.providerAccountId = accountId;
       entity.userId = userId;
@@ -101,8 +103,8 @@ describe("API Sync Service Integration", () => {
       expect(result.imported).toBe(2);
 
       const transactions = await transactionsRepo.findByProviderAccountId(userId, accountId);
-      expect(transactions).toHaveLength(2);
-      expect(transactions.find(t => t.externalId === "old-csv-transaction")).toBeUndefined();
+      expect(transactions).toHaveLength(3);
+      expect(transactions.find(t => t.externalId === "old-csv-transaction")).toBeDefined();
       expect(transactions.find(t => t.externalId === "api-tx-1")).toBeDefined();
       expect(transactions.find(t => t.externalId === "api-tx-2")).toBeDefined();
     });
