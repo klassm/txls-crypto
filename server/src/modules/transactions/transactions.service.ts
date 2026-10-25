@@ -7,6 +7,7 @@ import { TYPES } from "../../di/types.js";
 import { TransactionEntity } from "./transaction.entity.js";
 import { TransactionsRepository } from "./transactions.repository.js";
 import { logger } from "../../common/logger.js";
+import type { EntityManager } from "typeorm";
 
 @injectable()
 export class TransactionsService {
@@ -102,6 +103,7 @@ async importTransactions(
 		userId: number,
 		providerAccountId: number,
 		transactions: Transaction[],
+		em?: EntityManager,
 	): Promise<{ imported: number; errors: string[] }> {
 		logger.info({
 			message: "Starting transaction import",
@@ -118,6 +120,7 @@ async importTransactions(
 				const existing = await this.repository.findOneByExternalId(
 					userId,
 					transaction.externalId,
+					em,
 				);
 
 				if (existing) {
@@ -132,7 +135,7 @@ async importTransactions(
 				}
 
 				const entity = this.dtoToEntity(transaction, userId, providerAccountId);
-				await this.repository.save(entity);
+				await this.repository.save(entity, em);
 
         imported++;
         logger.debug({

@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- TITLE: replace for every page -->
+<title>Bitpanda Staking API — Research</title>
+<style>
+  /* Design system — edit token values if the content demands it,
+     but never bypass tokens with hardcoded colors. */
+  :root {
+    --bg: #ffffff;
+    --surface: #f6f8fa;
+    --text: #1f2328;
+    --text-muted: #656d76;
+    --border: #d0d7de;
+    --accent: #0969da;
+    --accent-tint: rgba(9, 105, 218, 0.12);
+    --link: #0969da;
+    --success: #1a7f37;
+    --success-tint: rgba(26, 127, 55, 0.14);
+    --warning: #9a6700;
+    --warning-tint: #fff3c4;
+    --danger: #cf222e;
+    --danger-tint: rgba(207, 34, 46, 0.12);
+    --radius: 6px;
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 1rem;
+    --space-4: 1.5rem;
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --text: #e6edf3;
+      --text-muted: #8b949e;
+      --border: #30363d;
+      --accent: #4493f8;
+      --accent-tint: rgba(68, 147, 248, 0.16);
+      --link: #71b2ff;
+      --success: #3fb950;
+      --success-tint: rgba(63, 185, 80, 0.16);
+      --warning: #d29922;
+      --warning-tint: rgba(187, 128, 9, 0.18);
+      --danger: #f85149;
+      --danger-tint: rgba(248, 81, 73, 0.16);
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 16px;
+    line-height: 1.6;
+  }
+  .page { max-width: 60rem; margin: 0 auto; padding: 0 var(--space-4) var(--space-4); }
+
+  /* Header: title, generation date, one-line context. */
+  .page-header { padding: var(--space-4) 0 var(--space-3); }
+  .page-header h1 { margin: 0 0 var(--space-1); font-size: 1.6rem; }
+  .page-header .meta { color: var(--text-muted); font-size: 0.875rem; }
+  .page-header .meta .sep { margin: 0 var(--space-1); }
+
+  /* "On this page" bar: quiet row of pills, one anchor per section.
+     Delete this nav (and its CSS) on single-section pages. */
+  .toc {
+    position: sticky; top: 0; z-index: 10;
+    display: flex; flex-wrap: wrap; align-items: center;
+    gap: var(--space-1);
+    padding: var(--space-2) 0;
+    background: var(--surface); /* opaque — scrolled content must not bleed through */
+    border-bottom: 1px solid var(--border);
+  }
+  .toc .toc-label {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-right: var(--space-1);
+  }
+  .toc a {
+    display: inline-block;
+    padding: 0.25em 0.75em;
+    border-radius: var(--radius);
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.875rem;
+    line-height: 1.4;
+  }
+  .toc a:hover, .toc a:focus-visible {
+    color: var(--accent);
+    background: var(--accent-tint);
+    outline: none;
+  }
+  .toc a:focus-visible { box-shadow: 0 0 0 2px var(--accent-tint); }
+
+  /* Links: token-styled, underline kept (color is reinforcement). */
+  a { color: var(--link); text-underline-offset: 0.15em; }
+  a:hover, a:focus-visible { color: var(--accent); }
+
+  section { margin-top: var(--space-4); }
+  h2 { font-size: 1.25rem; padding-bottom: var(--space-1); border-bottom: 1px solid var(--border); }
+  h3 { font-size: 1.05rem; }
+
+  /* Badges: small filled labels for fixed value sets (e.g. status). */
+  .badge {
+    display: inline-block;
+    padding: 0.1em 0.6em;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.5;
+    white-space: nowrap;
+  }
+  .badge-success { background: var(--success-tint); color: var(--success); }
+  .badge-warning { background: var(--warning-tint); color: var(--warning); }
+  .badge-danger { background: var(--danger-tint); color: var(--danger); }
+
+  /* Chips: small outlined labels for open-ended tags/categories. */
+  .chip {
+    display: inline-block;
+    padding: 0.1em 0.6em;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
+  /* Cards: bordered surfaces, one item per card. */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: var(--space-3);
+    margin-top: var(--space-2);
+  }
+  .card h3 { margin: 0 0 var(--space-1); }
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr)); gap: var(--space-2); }
+
+  /* Expandable cards: collapsed by default, gist on the summary line. */
+  details.card > summary { cursor: pointer; list-style: revert; }
+  details.card > summary::marker { color: var(--text-muted); }
+  details.card > summary h3, details.card > summary .badge, details.card > summary .chip { display: inline; }
+
+  /* Manual items: whole-card / whole-row warning tint (never only a badge). */
+  .card.manual { background: var(--warning-tint); border-color: var(--warning); }
+  tbody tr.manual { background: var(--warning-tint); }
+  tbody tr.manual td:first-child { border-left: 3px solid var(--warning); }
+
+  /* Tables: comparable items with shared attributes. */
+  table { border-collapse: collapse; width: 100%; margin-top: var(--space-2); }
+  th, td { text-align: left; padding: var(--space-1) var(--space-2); border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--text-muted); font-size: 0.875rem; }
+
+  /* Empty section state: visible information, not a missing section. */
+  .empty { color: var(--text-muted); font-style: italic; margin-top: var(--space-2); }
+
+  /* Code and file paths. */
+  pre {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: var(--space-2);
+    overflow-x: auto;
+  }
+  code, .path { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.875em; }
+
+  /* Diagrams: token-styled inline SVG. */
+  .diagram { margin: var(--space-3) 0; }
+  .diagram svg { max-width: 100%; height: auto; display: block; }
+  .diagram .dg-box { fill: var(--surface); stroke: var(--border); }
+  .diagram .dg-text { fill: var(--text); }
+  .diagram .dg-muted { fill: var(--text-muted); }
+  .diagram .dg-accent { fill: var(--accent); }
+  .diagram .dg-arrow { stroke: var(--text-muted); fill: none; stroke-width: 1.5; }
+  .diagram .dg-arrowhead { fill: var(--text-muted); }
+  .diagram .dg-success-box { fill: var(--success-tint); stroke: var(--success); }
+  .diagram .dg-success-text { fill: var(--success); }
+  .diagram .dg-warning-box { fill: var(--warning-tint); stroke: var(--warning); }
+  .diagram .dg-warning-text { fill: var(--warning); }
+  .diagram .dg-danger-text { fill: var(--danger); }
+
+  @media print {
+    .toc { display: none; }
+    details::details-content { display: block; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="page-header">
+    <!-- TITLE: one <h1>, the deliverable's name -->
+    <h1>Bitpanda Staking API — Research</h1>
+    <!-- META: generation date · one-line context (what this covers, derived from what; caveats) -->
+    <p class="meta"><time datetime="2026-10-25">2026-10-25</time><span class="sep">·</span>Can a Bitpanda API auto-update inventory (incl. staking rewards) in TXLS? Findings from Bitpanda's official docs (<a href="https://docs.public.bitpanda.com/">docs.public.bitpanda.com</a>, <a href="https://developers.bitpanda.com/">developers.bitpanda.com</a>, <a href="https://techsolutions.bitpanda.com/openapi/">techsolutions.bitpanda.com</a>) and the TXLS codebase. Caveat: exact <code>transaction_type</code> values for rewards are unverified without a live API key.</p>
+  </header>
+
+  <!-- TOC: one <a href="#section-id"> per section; delete the whole nav on single-section pages -->
+  <nav class="toc">
+    <span class="toc-label">On this page</span>
+    <a href="#summary">Summary</a>
+    <a href="#current-state">Current state in TXLS</a>
+    <a href="#api-landscape">API landscape</a>
+    <a href="#new-public-api">New Public API</a>
+    <a href="#staking-rewards">Staking rewards</a>
+    <a href="#recommendation">Recommendation &amp; next steps</a>
+  </nav>
+
+  <main>
+
+    <section id="summary">
+      <h2>Summary</h2>
+      <p><strong>Yes — and it's better than expected.</strong> Three findings:</p>
+      <ol>
+        <li><strong>Auto inventory updates already exist in TXLS.</strong> We have a full Bitpanda API-sync stack (daily cron sync, encrypted API keys, holdings rebuild). The premise "manual CSV import only" is outdated — TradeRepublic is CSV-only, but Bitpanda already syncs via API.</li>
+        <li><strong>The known gap is staking rewards</strong> — the legacy Bitpanda API we use today (<a href="https://api.bitpanda.com/v1"><code>api.bitpanda.com/v1</code></a>) does not expose them, so reward-type inventory entries must come from CSV or manual entry (see <a href="#staking-gap">the gap card</a>).</li>
+        <li><strong>Bitpanda's new Public API closes that gap</strong> — its unified <a href="#ep-operations"><code>GET /v1/operations</code></a> endpoint returns <em>all</em> transaction types including rewards and staking. And because the legacy API is <a href="#deprecation">decommissioned on 31 Jan 2027</a>, migration to the new API is mandatory anyway — we can gain staking rewards in the same change.</li>
+      </ol>
+      <figure class="diagram" role="img" aria-label="TXLS currently syncs Bitpanda via two legacy endpoints that lack staking rewards; the new Public API offers one operations endpoint that includes rewards and staking.">
+        <svg viewBox="0 0 840 400" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+              <path class="dg-arrowhead" d="M0,0 L8,4 L0,8 z"/>
+            </marker>
+          </defs>
+          <!-- Column headers -->
+          <text class="dg-text" x="210" y="24" font-size="14" font-weight="600" text-anchor="middle">Legacy API (today)</text>
+          <text class="dg-text" x="630" y="24" font-size="14" font-weight="600" text-anchor="middle">New Public API (target)</text>
+          <!-- Left: TXLS box -->
+          <rect class="dg-box" x="100" y="48" width="220" height="48" rx="6"/>
+          <text class="dg-text" x="210" y="72" font-size="13" text-anchor="middle" dominant-baseline="central">TXLS api-client</text>
+          <!-- Left: endpoints -->
+          <rect class="dg-warning-box" x="32" y="160" width="160" height="48" rx="6"/>
+          <text class="dg-text" x="112" y="184" font-size="13" text-anchor="middle" dominant-baseline="central">/v1/trades</text>
+          <rect class="dg-warning-box" x="228" y="160" width="180" height="48" rx="6"/>
+          <text class="dg-text" x="318" y="184" font-size="13" text-anchor="middle" dominant-baseline="central">/v1/wallets/transactions</text>
+          <!-- Left arrows -->
+          <path class="dg-arrow" d="M160 96 L112 160" marker-end="url(#arrow)"/>
+          <path class="dg-arrow" d="M260 96 L318 160" marker-end="url(#arrow)"/>
+          <!-- Left annotations -->
+          <text class="dg-warning-text" x="210" y="248" font-size="13" font-weight="600" text-anchor="middle">no staking rewards</text>
+          <text class="dg-danger-text" x="210" y="276" font-size="13" font-weight="600" text-anchor="middle">decommissioned 31 Jan 2027</text>
+          <!-- Right: TXLS box -->
+          <rect class="dg-box" x="520" y="48" width="220" height="48" rx="6"/>
+          <text class="dg-text" x="630" y="72" font-size="13" text-anchor="middle" dominant-baseline="central">TXLS api-client</text>
+          <!-- Right: endpoint -->
+          <rect class="dg-success-box" x="500" y="160" width="260" height="48" rx="6"/>
+          <text class="dg-text" x="630" y="184" font-size="13" text-anchor="middle" dominant-baseline="central">/v1/operations</text>
+          <!-- Right arrow -->
+          <path class="dg-arrow" d="M630 96 L630 160" marker-end="url(#arrow)"/>
+          <!-- Right annotations -->
+          <text class="dg-success-text" x="630" y="248" font-size="13" font-weight="600" text-anchor="middle">all types incl. rewards &amp; staking</text>
+          <text class="dg-muted" x="630" y="276" font-size="13" text-anchor="middle">single unified timeline</text>
+          <!-- Shared bottom note -->
+          <text class="dg-muted" x="420" y="340" font-size="12" text-anchor="middle">Both APIs authenticate with an API key via the x-api-key header</text>
+          <text class="dg-muted" x="420" y="360" font-size="12" text-anchor="middle">Diagram: sync flows per API generation</text>
+        </svg>
+      </figure>
+    </section>
+
+    <section id="current-state">
+      <h2>Current state in TXLS</h2>
+      <p>Everything needed for automatic inventory updates is already built — only the staking-reward coverage is missing.</p>
+      <table>
+        <thead>
+          <tr><th>Building block</th><th>Where</th><th>What it does</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>API sync client</td>
+            <td><code class="path">server/src/providers/bitpanda/api-client.ts</code></td>
+            <td>Calls the <strong>legacy</strong> API (<code>https://api.bitpanda.com/v1</code>, <code>X-Api-Key</code> header). Paginates <code>/trades</code> and <code>/wallets/transactions</code> (max 200 pages), maps trades (buy/sell/staking→reward) and wallet transactions (deposit/withdrawal/transfer, skips stake/unstake transfers), handles swaps.</td>
+          </tr>
+          <tr>
+            <td>Sync service</td>
+            <td><code class="path">server/src/modules/api-sync/api-sync.service.ts</code></td>
+            <td>Full-replace sync per account: deletes all transactions, re-imports, backfills prices, matches transfers, rebuilds holdings. Per-account/user mutexes; WebSocket events for sync progress.</td>
+          </tr>
+          <tr>
+            <td>Scheduler (auto-sync)</td>
+            <td><code class="path">server/src/api-sync-scheduler.ts</code></td>
+            <td>node-cron, <code>API_SYNC_ENABLED</code> (default on), <code>API_SYNC_INTERVAL</code> (default <code>0 3 * * *</code> — daily 03:00).</td>
+          </tr>
+          <tr>
+            <td>Key storage</td>
+            <td><code class="path">server/src/modules/api-sync/encryption.service.ts</code></td>
+            <td>AES-256-GCM encrypted API keys on <code>provider_accounts</code> (<code>api_enabled</code>, <code>api_key_encrypted</code>, <code>last_sync_at</code>, <code>sync_error</code>).</td>
+          </tr>
+          <tr>
+            <td>UI</td>
+            <td><code class="path">client/src/components/account-detail/ApiSyncSettings.tsx</code></td>
+            <td>API-key entry, enable/disable sync; CSV import is disabled while API sync is on.</td>
+          </tr>
+        </tbody>
+      </table>
+      <details class="card manual" id="staking-gap">
+        <summary><h3>The gap: staking rewards are not in the API sync</h3> <span class="badge badge-warning">manual workaround today</span></summary>
+        <p>The Bitpanda client's own config (<code class="path">server/src/providers/bitpanda/config.ts</code>) documents that staking rewards are not available via API sync: <code>/trades</code> only covers buy/sell/staking types and wallet transactions only cover deposits/withdrawals. The app therefore instructs users to import rewards via CSV or the manual staking-entry endpoint (<code>POST /:id/transactions</code>, <code>supportsManualStaking</code> in the provider registry). The CSV importer has a proper <code>reward</code> type mapping — the API path is what's missing it.</p>
+      </details>
+    </section>
+
+    <section id="api-landscape">
+      <h2>API landscape</h2>
+      <p>Bitpanda runs three APIs. Only the middle one is relevant to us:</p>
+      <table>
+        <thead>
+          <tr><th>API</th><th>Base URL</th><th>Auth</th><th>Staking rewards?</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+          <tr class="manual">
+            <td><strong>Legacy Public API</strong></td>
+            <td><code>api.bitpanda.com/v1</code></td>
+            <td><code>X-Api-Key</code></td>
+            <td>No — trades + wallet transactions only</td>
+            <td><span class="badge badge-danger">Deprecated</span> ends 31 Jan 2027 (<a href="#deprecation" id="deprecation-ref">details</a>)</td>
+          </tr>
+          <tr>
+            <td><strong>New Public API</strong></td>
+            <td><code>api.public.bitpanda.com/v1</code></td>
+            <td><code>x-api-key</code> + scopes</td>
+            <td>Yes — unified operations timeline incl. rewards &amp; staking; Earn endpoints</td>
+            <td><span class="badge badge-success">Current</span></td>
+          </tr>
+          <tr>
+            <td><strong>Partner API</strong> (Tech Solutions)</td>
+            <td><code>techsolutions.bitpanda.com</code></td>
+            <td><code>bearerAuth</code> + <code>bp-user-id</code> header</td>
+            <td>Yes — staking actions V2 (<code>stake</code>/<code>unstake</code>/<code>reward</code>), staking overview, non-user-initiated transactions (<code>staking_reward</code>)</td>
+            <td><span class="badge badge-warning">Partner-only</span> not usable with end-user API keys</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="new-public-api">
+      <h2>New Public API — endpoints relevant to TXLS</h2>
+      <p>The new API consolidates wallets, fiat wallets and trades into unified entities and adds portfolio history and Earn management. Scopes are assigned per API key in <em>Account Settings → API</em>: <span class="chip">Balances</span> <span class="chip">Transaction</span> <span class="chip">Trade (Read/Write)</span> <span class="chip">Earn (Read/Write)</span> — prices, assets and currencies work with any key.</p>
+      <table>
+        <thead>
+          <tr><th>Endpoint</th><th>Scope</th><th>Relevance to TXLS</th></tr>
+        </thead>
+        <tbody>
+          <tr id="ep-operations">
+            <td><code>GET /v1/operations</code></td>
+            <td><span class="chip">Transaction</span></td>
+            <td><strong>The core endpoint for us.</strong> Unified timeline of all historical movements — trades, deposits, withdrawals, <em>rewards and staking</em>. Filters: <code>from</code>/<code>to</code> (date-time), <code>asset_id[]</code>, <code>currency_id[]</code>; cursor pagination. Each operation carries <code>operation_type</code>, and per-transaction: <code>transaction_type</code>, <code>flow</code> (INCOMING/OUTGOING), <code>asset_amount</code>, <code>fee_amount</code>, <code>credited_at</code>, <code>asset_balance_after</code>, and for trades <code>rate</code> / <code>to_eur_rate</code>.</td>
+          </tr>
+          <tr id="ep-portfolio">
+            <td><code>GET /v1/portfolio</code></td>
+            <td><span class="chip">Balances</span></td>
+            <td>Unified holdings view (replaces <code>/wallets</code>, <code>/fiatwallets</code>, <code>/asset-wallets</code>) — EUR-valued. Ideal as a reconciliation check: compare our computed holdings against actual balances after each sync.</td>
+          </tr>
+          <tr>
+            <td><code>GET /v1/portfolio-history</code></td>
+            <td><span class="chip">Balances</span></td>
+            <td>New: balances and performance over time. Could complement or replace parts of our price-backfill-driven portfolio history.</td>
+          </tr>
+          <tr>
+            <td><code>GET /v1/earn/configs</code></td>
+            <td><span class="chip">Earn (Read)</span></td>
+            <td>Staking/Earn configurations with APR and availability. Context for reward transactions; not needed for sync itself.</td>
+          </tr>
+          <tr>
+            <td><code>POST /v1/earn/actions/{STAKE|UNSTAKE}</code></td>
+            <td><span class="chip">Earn (Write)</span></td>
+            <td>Programmatic staking management. <strong>Out of scope for TXLS</strong> — we only observe, never trade or stake.</td>
+          </tr>
+          <tr>
+            <td><code>GET /v1/assets</code></td>
+            <td>any key</td>
+            <td>Assets, currencies and price tickers (replaces <code>/ticker</code>, <code>/currencies</code>).</td>
+          </tr>
+        </tbody>
+      </table>
+      <details class="card">
+        <summary><h3>Operations response shape (from the OpenAPI spec)</h3> <span class="chip">reference</span></summary>
+        <pre><code>{
+  "data": [
+    {
+      "operation_id": "uuid",
+      "operation_type": "string",        // open string — values need live verification
+      "transactions": [
+        {
+          "transaction_id": "uuid",
+          "asset_id": "uuid",
+          "currency_id": "uuid",
+          "wallet_id": "uuid",
+          "asset_amount": { "value": "string", "asset_id": "uuid", "currency_id": "uuid" },
+          "fee_amount": { "value": "string", ... },
+          "transaction_type": "string",  // open string — values need live verification
+          "flow": "INCOMING" | "OUTGOING",
+          "order_id": "string",
+          "credited_at": "2024-01-01T00:00:00.000Z",
+          "asset_balance_after": { "value": "string", ... },
+          "compensates": "uuid",          // reversal/correction linkage
+          "compensates_info": { "operation_type": "...", "transaction_type": "..." },
+          "trade": { "trade_id": "uuid", "fee": {...}, "fee_percentage": "...",
+                     "rate": "...", "rate_with_fee": "...", "to_eur_rate": "..." }
+        }
+      ]
+    }
+  ],
+  "self_cursor": "...", "next_cursor": "...", "has_next_page": true
+}</code></pre>
+      </details>
+    </section>
+
+    <section id="staking-rewards">
+      <h2>Staking rewards — how to get them</h2>
+      <p>This was the original question. The answer has three parts:</p>
+      <div class="card-grid">
+        <article class="card">
+          <h3><span class="badge badge-success">Works</span> New Public API</h3>
+          <p><code>GET /v1/operations</code> includes rewards and staking — Bitpanda's own CLI docs describe the operations log as the "full transaction log including rewards and staking", and the migration guide names staking management as a headline feature. The <code>to_eur_rate</code> on trades (and EUR-valued portfolio data) fits our EUR-based model.</p>
+        </article>
+        <article class="card manual">
+          <h3><span class="badge badge-danger">Blocked</span> Legacy API</h3>
+          <p>The API we currently call has no rewards endpoint. This is exactly why our sync skips staking rewards today — it's an API limitation, not a missing feature in our sync stack.</p>
+        </article>
+        <article class="card">
+          <h3><span class="badge badge-warning">Not for us</span> Partner API</h3>
+          <p><code>techsolutions.bitpanda.com</code> has dedicated staking endpoints (actions with <code>stake</code>/<code>unstake</code>/<code>reward</code> types, staking overview per fiat, non-user-initiated <code>staking_reward</code> transactions) but authenticates with <code>bp-user-id</code>/bearer auth for partner integrations — not usable with end-user API keys.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="recommendation">
+      <h2>Recommendation &amp; next steps</h2>
+      <p><strong>Migrate the Bitpanda API client to the new Public API.</strong> The legacy base URL dies on <strong id="deprecation">31 January 2027</strong>, so this work is required regardless — and doing it once gets us staking rewards for free, eliminating the CSV/manual-entry workaround for rewards.</p>
+      <p><span class="badge badge-success">Implemented</span> Steps 2, 3, 4, 5 and 6 are implemented (commits <code class="path">8cba58b</code>–<code class="path">a388abb</code>). Step 1 (live-key verification) is now the user's verification step.</p>
+      <table>
+        <thead>
+          <tr><th>#</th><th>Step</th><th>Notes</th></tr>
+        </thead>
+        <tbody>
+          <tr class="manual">
+            <td>1</td>
+            <td><strong>Spike: verify operations data with a live key</strong> <span class="chip">user verification</span></td>
+            <td>Generate an API key with <em>Balances</em> + <em>Transaction</em> scopes, call <code>GET /v1/operations</code>, and capture the actual <code>operation_type</code>/<code>transaction_type</code> values — especially for staking rewards, stake and unstake. The client maps <code>reward</code>/<code>staking_reward</code> (INCOMING) → reward and skips <code>transfer</code> and compensated transactions; any unmapped type is logged and skipped, so a sync log review confirms coverage. Also confirm which scope <code>/v1/operations</code> actually requires.</td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td>Migrate <code class="path">server/src/providers/bitpanda/api-client.ts</code> <span class="badge badge-success">done</span></td>
+            <td>New base URL <code>api.public.bitpanda.com/v1</code>; the two legacy calls are replaced by <code>/v1/operations</code> (top-level <code>next_cursor</code> pagination); <code>transaction_type</code> + <code>flow</code> map to the <code>TransactionType</code> enum; asset IDs → symbols via <code>/v1/assets</code>; <code>credited_at</code> and <code>trade.rate × trade.to_eur_rate</code> provide EUR values. 15 unit tests cover the mapping.</td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td>Handle stake/unstake semantics <span class="badge badge-success">done</span></td>
+            <td>All <code>transfer</code> transaction types are skipped (the new API represents wallet-internal and stake/unstake moves as transfers — subject to live-key verification in step 1), and transactions with a <code>compensates</code> linkage are skipped to avoid double-counting reversals.</td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td>Update scope guidance in the UI <span class="badge badge-success">done</span></td>
+            <td><code>apiSyncMarkdownInstructions</code> in the Bitpanda provider config now asks for <em>Balances</em> + <em>Transaction</em> (read only) and documents that rewards are synced.</td>
+          </tr>
+          <tr>
+            <td>4b</td>
+            <td>Value rewards from stored prices <span class="badge badge-success">done</span></td>
+            <td><code>ApiSyncService</code> values imported rewards that have no EUR value from the stored daily prices (<code>getPriceForDate</code>) after the price backfill; rewards without a stored price for their day stay at 0 (visible, best-effort).</td>
+          </tr>
+          <tr>
+            <td>5</td>
+            <td>Optional: balance reconciliation <span class="badge badge-success">done</span></td>
+            <td>After each sync, the rebuilt account holdings are compared against <code>GET /v1/portfolio</code> (per-asset quantities; the client resolves asset ids to symbols via <code>/v1/assets</code>, sums duplicate wallet rows and skips fiat/goods rows it cannot resolve, including <code>BCPEUR</code> like the transaction mapper). Drift beyond a small relative tolerance is logged as a warning — it never fails the sync. <em>Verify live:</em> the portfolio response shape and whether <code>balance</code> is the total (incl. staked/earn) quantity.</td>
+          </tr>
+          <tr>
+            <td>6</td>
+            <td>Retire the legacy client <span class="badge badge-success">done</span></td>
+            <td><code>api.bitpanda.com</code> calls are gone from the client. Unit tests (318 across shared/server/client) and typechecks pass; integration and GUI tests must run on the host (Docker is unavailable in the agent sandbox).</td>
+          </tr>
+        </tbody>
+      </table>
+      <details class="card">
+        <summary><h3>Open questions / risks</h3> <span class="chip">to resolve in the spike</span></summary>
+        <ul>
+          <li><strong>Resolved with live data</strong> — a real <code>/v1/operations</code> dump confirmed the type vocabulary: <code>transaction_type</code> is often <code>null</code> on non-trade movements (rewards, deposits, stakes) and the <code>operation_type</code> carries the signal (<code>reward</code>, <code>onetime_reward</code>, <code>stake</code>/<code>unstake</code>, <code>swap</code>, <code>deposit</code>). <code>api-client.ts</code> now falls back to <code>operation_type</code> when <code>transaction_type</code> is absent and skips <code>stake</code>/<code>unstake</code> operations explicitly (tally <code>stakeUnstake</code>).</li>
+          <li><strong>Scope mapping</strong> — docs name "Balances" and "Transaction" scopes for portfolio/history; confirm <code>/v1/operations</code> works with "Transaction" alone.</li>
+          <li><strong>History depth</strong> — unclear how far back operations data reaches; the sync does a full replace of all transactions, so gaps would surface as holdings drift (which the step-5 reconciliation would catch).</li>
+          <li><strong>Rate limits / pagination limits</strong> on the new API — the client caps at 200 pages; re-validate page size and any rate-limit headers.</li>
+          <li><strong>Fiat/other asset classes</strong> — operations may include commodity/stock/ETF transactions; assets unknown to <code>/v1/assets</code> are skipped with a warning — check the sync log for unexpected skips.</li>
+          <li><strong>Non-trade EUR values</strong> — deposits/withdrawals carry no EUR value from the new API (the legacy API provided <code>amount_eur</code>); rewards get valued from stored daily prices where available.</li>
+          <li><strong>Swap fees</strong> — resolved in code + confirmed live: a swap's fee appears on every leg of the trade pair via <code>trade.fee</code>; the client keeps it exactly once (dedup across legs). A swap can also carry a separate <code>fee</code> transaction leg paying the trade fee in kind (e.g. BEST) — that leg is skipped (tally <code>feeLeg</code>). The operation-level <code>fee_amount</code> on rewards is a commission (20% in the live sample) and is deducted from the credited reward quantity, so the app stores the <em>net</em> amount.</li>
+          <li><strong>Pending/corrected operations</strong> — the legacy client skipped non-<code>finished</code> entries; the new API exposes no status field. If the first sync contains pending operations, an explicit skip must be added.</li>
+          <li><strong>Hardening done in code (review round 1)</strong> — invalid <code>credited_at</code> timestamps are skipped, pagination aborts when <code>has_next_page</code> is true without a cursor, malformed responses throw instead of silently truncating, and a per-reason skip tally is logged after every sync. Still to confirm live: whether the operation-level <code>fee_amount</code> field (currently unread) carries the swap fee — if so, the fee source must move from <code>trade.fee</code>.</li>
+        </ul>
+      </details>
+      <details class="card">
+        <summary><h3>Manual verification guide (your part)</h3> <span class="chip">user verification</span></summary>
+        <ol>
+          <li><strong>Create the API key.</strong> Bitpanda → Account settings → API → create key with the <em>Balances</em> and <em>Transaction</em> scopes (read only — no Trade, no Earn Write).</li>
+          <li><strong>Probe the real response shapes</strong> (replace <code>$KEY</code>):
+            <pre><code>curl -s -H "x-api-key: $KEY" "https://api.public.bitpanda.com/v1/operations?page_size=5" | head -c 4000
+curl -s -H "x-api-key: $KEY" "https://api.public.bitpanda.com/v1/operations?page_size=50" \
+  | python3 -c "import json,sys; d=json.load(sys.stdin); types=sorted({(str(o.get('operation_type')), str(t.get('transaction_type'))) for o in d.get('data', []) for t in o.get('transactions', [])}); print('\n'.join(map(str, types)))"</code></pre>
+            Note the actual <code>operation_type</code>/<code>transaction_type</code> strings — especially for staking rewards, stake and unstake. If any value differs from what <code>api-client.ts</code> maps (<code>buy</code>/<code>sell</code>/<code>deposit</code>/<code>withdrawal</code>/<code>reward</code>/<code>staking_reward</code>/<code>onetime_reward</code> — <code>stake</code>/<code>unstake</code> operations, swap fiat legs and <code>fee</code> legs are deliberately skipped), extend the mapping in <code class="path">server/src/providers/bitpanda/api-client.ts</code>.</li>
+          <li><strong>Confirm which scope <code>/v1/operations</code> needs</strong> — repeat the probe with a key that has only <em>Transaction</em>; if it 403s, add <em>Balances</em>.</li>
+          <li><strong>Run a sync.</strong> Enable API sync on the Bitpanda account (or press "Sync now"), then check the server log for <code>[BitpandaApiClient]</code> skip warnings and the end-of-sync skip tally — every unmapped value shows up there with its reason and count. A separate <code>degradedCounts</code> warning (Degraded transactions imported) lists degraded rows: <code>unparseableTradeNumbers</code> were imported without EUR values (investigate before trusting tax numbers); <code>rewardCommissionMismatch</code>/<code>unparseableRewardCommission</code> rewards were imported with their gross quantity (holdings may slightly overstate until confirmed live). A <code>Duplicate transaction ids were skipped</code> warning reports payload duplicates (first occurrence wins).</li>
+          <li><strong>Compare results.</strong> Pick one recent reward and one recent trade in Bitpanda and check them in the app (transactions list, holdings, tax report): type, quantity, timestamp, and EUR value should match. Note: transactions whose ID already exists in <em>another</em> account of the same user (e.g. legacy CSV imports) are deliberately skipped in this account. Sweep fees: if a real swap reports the fee on both legs, the total imported fee must still equal Bitpanda's single fee (the client deduplicates fees across operation legs).</li>
+          <li><strong>Check the balance reconciliation.</strong> After each sync that imported or replaced transactions the log shows either <code>[ApiSyncService] Balance reconciliation passed</code> or a <code>Balance reconciliation drift detected</code> warning listing per-asset app-vs-Bitpanda quantities. Known false-positive sources: rows of the same Bitpanda account also held in a legacy CSV account (the comparison is per app account, the provider reports the whole Bitpanda account), assets deliberately skipped by the mapper, and portfolio rows that could not be resolved to assets (fiat/goods/BCPEUR rows are expected and only counted in the info log; a <code>Portfolio balances could not be parsed</code> warning fires only for known crypto assets with unparseable balance values). Small drift on assets with long reward histories can be rounding; consistent or large drift points to skipped/unmapped transaction types (see the skip tally above) or API history that does not reach back as far as the app's data — investigate before trusting holdings.</li>
+          <li><strong>Verify fee/cost-basis semantics on a real trade.</strong> The client imports <code>eurValue</code> from <code>rate_with_fee</code> (gross fiat movement) and keeps <code>eurFee</code> from <code>trade.fee</code> separately, matching the legacy CSV's <em>Amount Fiat</em> + <em>Fee</em> columns. Confirm against one real buy/sell that the tax report's cost basis does not count the fee twice (the tax calculator adds <code>eurFee</code> on top of <code>eurValue</code> for buys) and that sell proceeds match Bitpanda's own numbers.</li>
+          <li><strong>Run the deferred test suites on the host</strong> (sandbox had no Docker): integration tests (start the MySQL/Postgres containers first) and all three GUI-test variants, per the AGENTS.md flow.</li>
+        </ol>
+      </details>
+    </section>
+
+  </main>
+
+</div>
+</body>
+</html>

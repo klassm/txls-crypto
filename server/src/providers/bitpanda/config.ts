@@ -1,15 +1,15 @@
-import type { ProviderConfig } from "../types.js";
-import { BitpandaImporter } from "./importer.js";
-import { BitpandaApiClient } from "./api-client.js";
+import type { ProviderConfig } from '../types.js'
+import { BitpandaApiClient } from './api-client.js'
+import { BitpandaImporter } from './importer.js'
 
 export const bitpandaConfig: ProviderConfig = {
-  csvImporter: new BitpandaImporter(),
-  apiClient: new BitpandaApiClient(),
-  name: "Bitpanda",
-  logoBackgroundColor: "#27D17F",
-  logoForegroundColor: "#ffffff",
-  logoPath: "/assets/bitpanda.svg",
-  csvImportMarkdownInstructions: `# Bitpanda CSV Import Instructions
+	csvImporter: new BitpandaImporter(),
+	apiClient: new BitpandaApiClient(),
+	name: 'Bitpanda',
+	logoBackgroundColor: '#27D17F',
+	logoForegroundColor: '#ffffff',
+	logoPath: '/assets/bitpanda.svg',
+	csvImportMarkdownInstructions: `# Bitpanda CSV Import Instructions
 
 1. Log in to your Bitpanda account
 2. Go to **Overview** → **Trade History**
@@ -19,18 +19,19 @@ export const bitpandaConfig: ProviderConfig = {
 6. Import the file into this application
 
 **Note:** The file should contain all transaction types including buys, sells, deposits, withdrawals, and staking rewards.`,
-  apiSyncMarkdownInstructions: `# Bitpanda API Sync Setup
+	apiSyncMarkdownInstructions: `# Bitpanda API Sync Setup
 
 1. Log in to your Bitpanda account
 2. Go to **Settings** → **API**
 3. Click **Create new API key**
 4. Enter a name for your API key (e.g., "TXLS Tax App")
-5. Select the following permissions: **Trading** and **Transactions**
+5. Select the following scopes: **Balances** and **Transaction** (read only — no trade or earn permissions needed)
 
 **What gets synced:**
-- All trades (buys, sells)
+- All trades (buys, sells, swaps)
 - Crypto deposits and withdrawals
+- Staking rewards
 
-**Important:** Staking rewards are not included in API sync. Use CSV import or add them manually.`,
-  supportsManualStaking: true,
-};
+**Note:** Rewards are valued at the daily price recorded from your own trades where available; rewards without a stored price for that day are imported with value 0 and can be corrected manually.`,
+	supportsManualStaking: true,
+}

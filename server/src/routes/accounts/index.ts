@@ -752,7 +752,7 @@ router.post("/:id/sync", async (req: Request, res: Response) => {
 			}
 
 			return res.json({
-				status: syncService.isSyncing(accountId) ? "syncing" : "idle",
+				status: syncService.isSyncing(accountId, userId) ? "syncing" : "idle",
 				lastSyncAt: account.lastSyncAt ? toISOString(account.lastSyncAt) : null,
 				syncError: account.syncError,
 			});

@@ -1,7 +1,7 @@
 import "reflect-metadata";
 import { injectable, inject } from "inversify";
 import type { AssetStat, YearStats } from "@txls/shared";
-import type { DataSource, SelectQueryBuilder } from "typeorm";
+import type { DataSource, EntityManager, SelectQueryBuilder } from "typeorm";
 import { TransactionType } from "@txls/shared";
 import { Between } from "typeorm";
 import { TYPES } from "../../di/types.js";
@@ -47,8 +47,11 @@ async findByProviderAccountId(userId: number, providerAccountId: number): Promis
   async findOneByExternalId(
     userId: number,
     externalId: string,
+    em?: EntityManager,
   ): Promise<TransactionEntity | null> {
-    return this.qb
+    return (em ?? this.dataSource)
+      .getRepository(TransactionEntity)
+      .createQueryBuilder("transaction")
       .where("transaction.userId = :userId AND transaction.externalId = :externalId", { userId, externalId })
       .getOne();
   }
@@ -57,8 +60,8 @@ async findByProviderAccountId(userId: number, providerAccountId: number): Promis
     return this.qb.where("transaction.userId = :userId AND transaction.id = :id", { userId, id }).getOne();
   }
 
-  async save(entity: TransactionEntity): Promise<TransactionEntity> {
-    return this.dataSource.getRepository(TransactionEntity).save(entity);
+  async save(entity: TransactionEntity, em?: EntityManager): Promise<TransactionEntity> {
+    return (em ?? this.dataSource).getRepository(TransactionEntity).save(entity);
   }
 
   async saveMany(entities: TransactionEntity[]): Promise<TransactionEntity[]> {
@@ -234,11 +237,21 @@ async getStatsByProviderAccountIdAndYear(
     userId: number,
     externalIds: string[],
   ): Promise<TransactionEntity[]> {
+    return this.findManyByExternalIdsIn(userId, externalIds);
+  }
+
+  async findManyByExternalIdsIn(
+    userId: number,
+    externalIds: string[],
+    em?: EntityManager,
+  ): Promise<TransactionEntity[]> {
     if (externalIds.length === 0) {
       return [];
     }
 
-    return this.qb
+    return (em ?? this.dataSource)
+      .getRepository(TransactionEntity)
+      .createQueryBuilder("transaction")
       .where("transaction.userId = :userId AND transaction.externalId IN (:...externalIds)", { userId, externalIds })
       .getMany();
   }
@@ -582,8 +595,12 @@ async getStatsByProviderAccountIdAndYear(
     return result.affected || 0;
   }
 
-  async deleteAllByAccount(userId: number, accountId: number): Promise<number> {
-    const result = await this.dataSource
+  async deleteAllByAccount(
+    userId: number,
+    accountId: number,
+    em?: EntityManager,
+  ): Promise<number> {
+    const result = await (em ?? this.dataSource)
       .getRepository(TransactionEntity)
       .createQueryBuilder()
       .delete()
