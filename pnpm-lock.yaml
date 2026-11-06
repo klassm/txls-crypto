@@ -392,7 +392,7 @@ importers:
         version: 3.0.11
       nock:
         specifier: ^15.0.0
-        version: 15.0.5(supports-color@8.1.1)
+        version: 15.0.6(supports-color@8.1.1)
       tsx:
         specifier: ^4.23.15
         version: 4.23.15
@@ -790,8 +790,8 @@ packages:
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
 
-  '@mswjs/interceptors@0.44.0':
-    resolution: {integrity: sha512-IYHevRStF4ijM20GI9c9Ndhw483NSAjCydQhUr4/zIB0BNLsTVw3vFAxTo6TlvX4QnV60wEHttUa9539TTAq+A==}
+  '@mswjs/interceptors@0.45.11':
+    resolution: {integrity: sha512-+ISPERIRIHhSVnFQRGCP9jDJXxn0/z2+pWWbXUym6JUfpUCRW2Pvro4P9RBKGYUKTKAULszKurKMTQIsaJUIgQ==}
     engines: {node: '>=22'}
 
   '@mui/core-downloads-tracker@9.5.0':
@@ -2672,8 +2672,8 @@ packages:
     resolution: {integrity: sha512-NMPBRMJgiQHjbd8phG3Vebdx4kZ1H121rbl5IkMqeOsahptB9BKo/d7oJ3zTXqTgagn2bWlNSXkh0QUGM31RYg==}
     engines: {node: '>=18'}
 
-  nock@15.0.5:
-    resolution: {integrity: sha512-nVeuZGS2we1PyvqbW082Qj0EB4bd//6pZk/zOPDlaTPU72qcWrqfHg3kx9JcBcH1fJxwJHjmsfuQ4mss42su4w==}
+  nock@15.0.6:
+    resolution: {integrity: sha512-eyOJ1wemcgJZ+PQC3lecfF3gQc2SAmGlQ4mHGfFXcOa/+7v0qjnX+ft/NV2F+4vCwzkXZqik3gS6ZIjh+QcigQ==}
     engines: {node: '>=22.20.0'}
 
   node-addon-api@8.9.2:
@@ -3943,7 +3943,7 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.6.0
 
-  '@mswjs/interceptors@0.44.0(supports-color@8.1.1)':
+  '@mswjs/interceptors@0.45.11(supports-color@8.1.1)':
     dependencies:
       '@open-draft/until': 3.0.1
       '@types/debug': 4.1.13
@@ -5828,9 +5828,9 @@ snapshots:
     dependencies:
       content-type: 2.1.0
 
-  nock@15.0.5(supports-color@8.1.1):
+  nock@15.0.6(supports-color@8.1.1):
     dependencies:
-      '@mswjs/interceptors': 0.44.0(supports-color@8.1.1)
+      '@mswjs/interceptors': 0.45.11(supports-color@8.1.1)
     transitivePeerDependencies:
       - supports-color
 
