@@ -358,7 +358,7 @@ importers:
         version: 4.8.4(supports-color@8.1.1)
       typeorm:
         specifier: ^1.1.2
-        version: 1.1.2(babel-plugin-macros@3.1.0)(mysql2@3.24.6(@types/node@26.6.6))(pg@8.23.1)(supports-color@8.1.1)
+        version: 1.1.3(babel-plugin-macros@3.1.0)(mysql2@3.24.6(@types/node@26.6.6))(pg@8.23.1)(supports-color@8.1.1)
       umzug:
         specifier: ^3.8.3
         version: 3.8.3(@types/node@26.6.6)
@@ -3313,8 +3313,8 @@ packages:
     resolution: {integrity: sha512-faYHw0anBbc/kWF3zFTEnxSFOAGUX9GFbOBthvDdLsIlEoWOFOtS0zgCiQYwIskL9iGXZL3kAXD8OoZ4GmMATA==}
     engines: {node: '>= 18'}
 
-  typeorm@1.1.2:
-    resolution: {integrity: sha512-UDQ8++2oFCK4fETiRKEC0eCES/i+/1SB4NBqXWeJNosI1i2SVFCDPhqIsXHWpFzFHTBOA553upQZj0NKVbNdUQ==}
+  typeorm@1.1.3:
+    resolution: {integrity: sha512-zpBWklzlWjoPFKZ5Frf1TWT9OzXqtJaej7HvdGGvx0TQLsKgSoG2HeKVbORXZhJNWhJ8BNFK+WqsogyuMGN2dQ==}
     engines: {node: ^20.19.0 || ^22.13.0 || >=24.11.0}
     hasBin: true
     peerDependencies:
@@ -6561,7 +6561,7 @@ snapshots:
       media-typer: 1.1.1
       mime-types: 3.0.2
 
-  typeorm@1.1.2(babel-plugin-macros@3.1.0)(mysql2@3.24.6(@types/node@26.6.6))(pg@8.23.1)(supports-color@8.1.1):
+  typeorm@1.1.3(babel-plugin-macros@3.1.0)(mysql2@3.24.6(@types/node@26.6.6))(pg@8.23.1)(supports-color@8.1.1):
     dependencies:
       '@sqltools/formatter': 1.2.5
       ansis: 4.4.0
